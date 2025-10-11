@@ -1,0 +1,46 @@
+name: Nightly ETL Refresh
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs daily at 05:15 UTC (12:15 AM Eastern Standard Time, accounting for EST/EDT)
+    - cron: '15 5 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  run-etl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-audit --progress=false
+
+      - name: Run ETL
+        run: node etl.js
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push if data changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git add data
+          git commit -m "chore: nightly ETL refresh"
+          git push

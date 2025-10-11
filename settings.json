@@ -1,0 +1,7 @@
+{
+  "defaultAggregation": "sum",
+  "defaultChartType": "bar",
+  "maxFileSizeMB": 10,
+  "indexedDBName": "trak_eda_db",
+  "echartsTheme": "light"
+}

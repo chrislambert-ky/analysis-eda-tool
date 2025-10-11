@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>KYTC Exploratory Data Analysis Tool</title>
+	<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23007bff'/%3E%3Ctext x='8' y='11' font-size='9' text-anchor='middle' fill='white'%3EK%3C/text%3E%3C/svg%3E">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+	<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+	<link href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" rel="stylesheet">
+	<link href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" rel="stylesheet">
+	<style>
+		body { background-color: #f5f6f8; }
+		.chart-card { min-height: 420px; }
+		.chart-surface { height: 360px; }
+		.table-card { min-height: 420px; }
+		.controls-card .card-body { padding: 0.9rem; }
+		.controls-card select { font-size: 0.82rem; padding: 0.35rem 0.55rem; }
+		.controls-card label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.2rem; }
+		.controls-card .mb-3 { margin-bottom: 0.6rem !important; }
+		.btn-chart.active { color: #fff; background-color: #0d6efd; border-color: #0d6efd; }
+		.btn-chart:disabled { opacity: 0.5; cursor: not-allowed; }
+		#tableContainer { min-height: 200px; }
+		.table-scroll { overflow-x: auto; }
+		.tabulator { border-radius: 0.5rem; }
+		.progress-message { min-height: 1.5rem; }
+		#mapOptions .form-label { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; }
+		#mapOptions .form-check-label { font-size: 0.82rem; }
+		@media (max-width: 992px) {
+			.chart-card { min-height: 360px; }
+			.chart-surface { height: 320px; }
+		}
+	</style>
+</head>
+<body>
+	<div class="container py-4">
+		<header class="mb-4">
+			<h1 class="mb-1">Kentucky Transportation Cabinet EDA</h1>
+			<p class="text-muted mb-0">Incremental, in-browser analytics for district-partitioned datasets.</p>
+		</header>
+
+		<div class="row g-3 align-items-end mb-3">
+			<div class="col-lg-6">
+				<label for="datasetSelect" class="form-label">Dataset</label>
+				<div class="input-group">
+					<select id="datasetSelect" class="form-select"></select>
+					<button id="refreshButton" class="btn btn-outline-secondary" type="button">Refresh Cache</button>
+				</div>
+			</div>
+			<div class="col-lg-6 text-lg-end">
+				<div class="btn-group" role="group" aria-label="Chart Type">
+					<button class="btn btn-outline-primary btn-chart" data-chart="bar-horizontal" id="btnBarH">Horizontal Bar</button>
+					<button class="btn btn-outline-primary btn-chart" data-chart="bar-vertical" id="btnBarV">Vertical Bar</button>
+					<button class="btn btn-outline-primary btn-chart" data-chart="pie" id="btnPie">Pie</button>
+					<button class="btn btn-outline-primary btn-chart" data-chart="map" id="btnMap">Map</button>
+				</div>
+			</div>
+		</div>
+
+		<div class="row g-3 align-items-stretch">
+			<div class="col-lg-9">
+				<div class="d-flex flex-column gap-3">
+					<div class="card shadow-sm chart-card">
+						<div class="card-body d-flex flex-column">
+							<div id="chartArea" class="chart-surface flex-grow-1"></div>
+							<div id="progressMessage" class="progress-message text-muted small mt-3"></div>
+							<div id="dataSummary" class="text-secondary small mt-3"></div>
+						</div>
+					</div>
+					<div class="card shadow-sm table-card">
+						<div class="card-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center">
+							<div>
+								<h5 class="mb-0">Data Table</h5>
+								<small class="text-muted">Filters apply instantly in the header row.</small>
+							</div>
+							<div class="d-flex gap-2 mt-3 mt-lg-0">
+								<button id="downloadFullButton" class="btn btn-outline-secondary btn-sm" type="button">Download Full Dataset</button>
+								<button id="downloadFilteredButton" class="btn btn-outline-secondary btn-sm" type="button">Download Filtered Dataset</button>
+							</div>
+						</div>
+						<div class="card-body">
+							<div id="tableContainer" class="table-scroll"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-3">
+				<div class="card shadow-sm controls-card h-100">
+					<div class="card-body d-flex flex-column">
+						<div class="mb-3">
+							<label for="dimensionSelect" class="form-label">Dimension</label>
+							<select id="dimensionSelect" class="form-select form-select-sm"></select>
+						</div>
+						<div class="mb-3">
+							<label for="metricSelect" class="form-label">Metric</label>
+							<select id="metricSelect" class="form-select form-select-sm"></select>
+						</div>
+						<div class="mb-3">
+							<label for="aggregationSelect" class="form-label">Aggregation</label>
+							<select id="aggregationSelect" class="form-select form-select-sm"></select>
+						</div>
+						<div class="mb-3">
+							<label for="splitSelect" class="form-label">Split By</label>
+							<select id="splitSelect" class="form-select form-select-sm"></select>
+						</div>
+						<div class="mb-3">
+							<label for="orderBySelect" class="form-label">Order By</label>
+							<select id="orderBySelect" class="form-select form-select-sm"></select>
+						</div>
+						<div class="mb-3">
+							<label for="orderDirectionSelect" class="form-label">Order</label>
+							<select id="orderDirectionSelect" class="form-select form-select-sm">
+								<option value="desc">Descending</option>
+								<option value="asc">Ascending</option>
+							</select>
+						</div>
+						<div id="mapOptions" class="mt-3 pt-3 border-top d-none">
+							<h6 class="fw-semibold">Map Options</h6>
+							<div class="form-check form-switch mb-3">
+								<input class="form-check-input" type="checkbox" id="mapClusterToggle" checked>
+								<label class="form-check-label" for="mapClusterToggle">Clustering</label>
+							</div>
+							<div class="mb-3">
+								<label for="mapDistrictSelect" class="form-label">District</label>
+								<select id="mapDistrictSelect" class="form-select form-select-sm"></select>
+							</div>
+							<div class="mb-3">
+								<label for="mapCountySelect" class="form-label">County</label>
+								<select id="mapCountySelect" class="form-select form-select-sm"></select>
+							</div>
+							<div class="mb-1">
+								<label for="mapColorSelect" class="form-label">Color</label>
+								<select id="mapColorSelect" class="form-select form-select-sm"></select>
+							</div>
+						</div>
+						<div class="mt-auto">
+							<h6 class="fw-semibold">Dataset Info</h6>
+							<div id="datasetInfo" class="text-muted small">Select a dataset to load details.</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+	<script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+	<script>
+	(function () {
+		'use strict';
+
+		const DATA_ROOT = 'data/report';
+		const DISTRICTS = ['01','02','03','04','05','06','07','08','09','10','11','12','Various'];
+		const MAP_ALL_OPTION = '__all__';
+		const DATASETS = [
+			{ id: 'eda_assets_bridge_condition_owner_area', title: 'Bridge Condition & Owner Area' },
+			{ id: 'eda_construction_procurement', title: 'Construction Procurement' },
+			{ id: 'eda_current_enact_plan_data_set', title: 'Current Enacted Plan' },
+			{ id: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)' }
+		];
+		const DB_NAME = 'trak_eda_db';
+		const STORE_NAME = 'partitions';
+
+		const state = {
+			datasetId: null,
+			settings: null,
+			index: null,
+			allRows: [],
+			chartType: 'bar-horizontal',
+			chartInstance: null,
+			mapInstance: null,
+			mapLayer: null,
+			tabulator: null,
+			lastLoadedAt: null,
+			mapOptions: {
+				cluster: true,
+				district: MAP_ALL_OPTION,
+				county: MAP_ALL_OPTION,
+				colorField: null
+			}
+		};
+
+		let dbPromise;
+
+		document.addEventListener('DOMContentLoaded', init);
+
+		async function init() {
+			populateDatasetOptions();
+			bindUIEvents();
+			if (DATASETS.length) {
+				await selectDataset(DATASETS[0].id);
+			}
+		}
+
+		function populateDatasetOptions() {
+			const select = document.getElementById('datasetSelect');
+			select.innerHTML = '';
+			DATASETS.forEach(dataset => {
+				const option = document.createElement('option');
+				option.value = dataset.id;
+				option.textContent = dataset.title;
+				select.appendChild(option);
+			});
+		}
+
+		function bindUIEvents() {
+			document.getElementById('datasetSelect').addEventListener('change', async (event) => {
+				await selectDataset(event.target.value);
+			});
+
+			document.getElementById('refreshButton').addEventListener('click', async () => {
+				if (!state.datasetId) return;
+				updateProgress('Clearing cached partitions…');
+				await deleteDatasetFromCache(state.datasetId);
+				await loadDataset(state.datasetId);
+			});
+
+			document.querySelectorAll('.btn-chart').forEach(button => {
+				button.addEventListener('click', () => {
+					const chartType = button.getAttribute('data-chart');
+					if (chartType === 'map' && !state.settings?.map) return;
+					state.chartType = chartType;
+					updateChartButtons();
+					renderVisual();
+				});
+			});
+
+			['dimensionSelect','metricSelect','aggregationSelect','splitSelect','orderBySelect','orderDirectionSelect']
+				.forEach(id => {
+					document.getElementById(id).addEventListener('change', () => {
+						renderVisual();
+					});
+				});
+
+			document.getElementById('downloadFullButton').addEventListener('click', () => {
+				if (!state.allRows.length) return;
+				downloadAsCSV(state.allRows, `${state.datasetId}-full.csv`);
+			});
+
+			document.getElementById('downloadFilteredButton').addEventListener('click', () => {
+				if (!state.tabulator) return;
+				const filtered = state.tabulator.getData();
+				if (!filtered.length) return;
+				downloadAsCSV(filtered, `${state.datasetId}-filtered.csv`);
+			});
+
+			const clusterToggle = document.getElementById('mapClusterToggle');
+			if (clusterToggle) {
+				clusterToggle.addEventListener('change', (event) => {
+					state.mapOptions.cluster = event.target.checked;
+					if (state.chartType === 'map') renderVisual();
+				});
+			}
+
+			const districtSelect = document.getElementById('mapDistrictSelect');
+			if (districtSelect) {
+				districtSelect.addEventListener('change', (event) => {
+					state.mapOptions.district = event.target.value;
+					state.mapOptions.county = MAP_ALL_OPTION;
+					populateMapCountyOptions();
+					if (state.chartType === 'map') renderVisual();
+				});
+			}
+
+			const countySelect = document.getElementById('mapCountySelect');
+			if (countySelect) {
+				countySelect.addEventListener('change', (event) => {
+					state.mapOptions.county = event.target.value;
+					if (state.chartType === 'map') renderVisual();
+				});
+			}
+
+			const colorSelect = document.getElementById('mapColorSelect');
+			if (colorSelect) {
+				colorSelect.addEventListener('change', (event) => {
+					state.mapOptions.colorField = event.target.value;
+					if (state.chartType === 'map') renderVisual();
+				});
+			}
+		}
+
+		async function selectDataset(datasetId) {
+			if (!datasetId) return;
+			state.datasetId = datasetId;
+			await loadDataset(datasetId);
+		}
+
+		async function loadDataset(datasetId) {
+			try {
+				updateProgress('Loading dataset configuration…');
+				const settingsPath = `${DATA_ROOT}/${datasetId}/${datasetId}-bi-settings.json`;
+				const indexPath = `${DATA_ROOT}/${datasetId}/${datasetId}.index.json`;
+				const [settings, indexData] = await Promise.all([
+					fetchJSON(settingsPath),
+					fetchJSON(indexPath)
+				]);
+				state.settings = enrichSettings(settings);
+				state.index = indexData;
+				populateControls();
+				updateDatasetInfo();
+				updateChartButtons();
+				await loadPartitionsIntoState();
+				initializeMapControls();
+				state.lastLoadedAt = new Date();
+				renderSummary();
+				renderVisual();
+				renderTable();
+				updateProgress('All partitions loaded.');
+			} catch (error) {
+				console.error(error);
+				updateProgress('Failed to load dataset. Check console for details.');
+			}
+		}
+
+		function enrichSettings(settings) {
+			const clone = { ...settings };
+			if (!Array.isArray(clone.dimensions) || !clone.dimensions.length) {
+				clone.dimensions = ['DISTRICT'];
+			}
+			if (!Array.isArray(clone.metrics) || !clone.metrics.length) {
+				clone.metrics = ['Dataset Records'];
+			}
+			if (!Array.isArray(clone.aggregationTypes) || !clone.aggregationTypes.length) {
+				clone.aggregationTypes = ['Count'];
+			}
+			if (!Array.isArray(clone.orderBy) || !clone.orderBy.length) {
+				clone.orderBy = ['Dimension', 'Metric Agg Result'];
+			}
+			return clone;
+		}
+
+		function populateControls() {
+			const { dimensions, metrics, aggregationTypes, orderBy } = state.settings;
+			fillSelect('dimensionSelect', dimensions);
+			fillSelect('metricSelect', metrics);
+			fillSelect('aggregationSelect', aggregationTypes);
+			const splitOptions = ['None', ...dimensions];
+			fillSelect('splitSelect', splitOptions);
+			const orderValues = orderBy.map(option => ({
+				label: option,
+				value: option.toLowerCase().includes('dimension') ? 'dimension' : 'metric'
+			}));
+			fillSelect('orderBySelect', orderValues, true);
+			document.getElementById('orderDirectionSelect').value = 'desc';
+		}
+
+		function fillSelect(selectId, values, isObjectList = false) {
+			const select = document.getElementById(selectId);
+			select.innerHTML = '';
+			values.forEach(value => {
+				const option = document.createElement('option');
+				if (isObjectList && typeof value === 'object') {
+					option.value = value.value;
+					option.textContent = value.label;
+				} else {
+					option.value = value;
+					option.textContent = value;
+				}
+				select.appendChild(option);
+			});
+		}
+
+		function updateDatasetInfo() {
+			const info = document.getElementById('datasetInfo');
+			if (!state.settings || !state.index) {
+				info.textContent = 'Select a dataset to load details.';
+				return;
+			}
+			const datasetMeta = DATASETS.find(item => item.id === state.datasetId);
+			const totalRecords = state.index?.totalRecords ?? 0;
+			info.innerHTML = `
+				<div><strong>Name:</strong> ${datasetMeta ? datasetMeta.title : state.datasetId}</div>
+				<div><strong>ID:</strong> ${state.datasetId}</div>
+				<div><strong>Total Records:</strong> ${formatNumber(totalRecords)}</div>
+			`;
+		}
+
+		async function loadPartitionsIntoState() {
+			if (!state.datasetId || !state.index) return;
+			const combined = [];
+			let processed = 0;
+			updateProgress('Loading partitions…');
+			for (const district of DISTRICTS) {
+				const key = `${state.datasetId}-District-${district}.csv`;
+				const expected = state.index[key]?.records ?? 0;
+				const partitionRows = await loadPartition(district, expected);
+				combined.push(...partitionRows);
+				processed += 1;
+				updateProgress(`Loaded ${processed}/${DISTRICTS.length} partitions…`);
+			}
+			state.allRows = combined;
+		}
+
+		function initializeMapControls() {
+			const container = document.getElementById('mapOptions');
+			if (!container) return;
+			if (!state.settings?.map) {
+				container.classList.add('d-none');
+				state.mapOptions.cluster = true;
+				state.mapOptions.district = MAP_ALL_OPTION;
+				state.mapOptions.county = MAP_ALL_OPTION;
+				state.mapOptions.colorField = null;
+				if (state.chartType === 'map') {
+					state.chartType = 'bar-horizontal';
+				}
+				updateChartButtons();
+				return;
+			}
+
+			container.classList.remove('d-none');
+			const mapConfig = state.settings.map;
+			state.mapOptions.cluster = mapConfig.clusterDefault !== false;
+			state.mapOptions.district = MAP_ALL_OPTION;
+			state.mapOptions.county = MAP_ALL_OPTION;
+			state.mapOptions.colorField = mapConfig.defaultColorField || mapConfig.colorFieldOptions?.[0] || null;
+
+			const clusterToggle = document.getElementById('mapClusterToggle');
+			if (clusterToggle) {
+				clusterToggle.checked = state.mapOptions.cluster;
+			}
+
+			populateMapDistrictOptions();
+			populateMapCountyOptions();
+			populateMapColorOptions();
+			updateChartButtons();
+		}
+
+		function populateMapDistrictOptions() {
+			const select = document.getElementById('mapDistrictSelect');
+			if (!select) return;
+			const mapConfig = state.settings?.map;
+			if (!mapConfig?.districtField) {
+				fillSelect('mapDistrictSelect', [{ label: 'All Districts', value: MAP_ALL_OPTION }], true);
+				select.disabled = true;
+				select.value = MAP_ALL_OPTION;
+				return;
+			}
+			const values = getUniqueValues(state.allRows, mapConfig.districtField);
+			const options = [{ label: 'All Districts', value: MAP_ALL_OPTION }, ...values.map(value => ({ label: value, value }))];
+			fillSelect('mapDistrictSelect', options, true);
+			select.disabled = false;
+			if (!values.includes(state.mapOptions.district)) {
+				state.mapOptions.district = MAP_ALL_OPTION;
+			}
+			select.value = state.mapOptions.district;
+		}
+
+		function populateMapCountyOptions() {
+			const select = document.getElementById('mapCountySelect');
+			if (!select) return;
+			const mapConfig = state.settings?.map;
+			if (!mapConfig?.countyField) {
+				fillSelect('mapCountySelect', [{ label: 'All Counties', value: MAP_ALL_OPTION }], true);
+				select.disabled = true;
+				select.value = MAP_ALL_OPTION;
+				return;
+			}
+			const districtField = mapConfig.districtField;
+			let sourceRows = state.allRows;
+			if (districtField && state.mapOptions.district !== MAP_ALL_OPTION) {
+				sourceRows = sourceRows.filter(row => row[districtField] === state.mapOptions.district);
+			}
+			const values = getUniqueValues(sourceRows, mapConfig.countyField);
+			const options = [{ label: 'All Counties', value: MAP_ALL_OPTION }, ...values.map(value => ({ label: value, value }))];
+			fillSelect('mapCountySelect', options, true);
+			select.disabled = false;
+			if (!values.includes(state.mapOptions.county)) {
+				state.mapOptions.county = MAP_ALL_OPTION;
+			}
+			select.value = state.mapOptions.county;
+		}
+
+		function populateMapColorOptions() {
+			const select = document.getElementById('mapColorSelect');
+			if (!select) return;
+			const mapConfig = state.settings?.map;
+			const fields = mapConfig?.colorFieldOptions || [];
+			if (!fields.length) {
+				select.innerHTML = '';
+				select.disabled = true;
+				state.mapOptions.colorField = null;
+				return;
+			}
+			const options = fields.map(field => ({ label: field, value: field }));
+			fillSelect('mapColorSelect', options, true);
+			if (!fields.includes(state.mapOptions.colorField)) {
+				state.mapOptions.colorField = state.settings.map.defaultColorField || fields[0];
+			}
+			select.disabled = false;
+			select.value = state.mapOptions.colorField;
+		}
+
+		function getMapFilteredRows(mapConfig) {
+			return state.allRows.filter(row => {
+				if (mapConfig.districtField && state.mapOptions.district !== MAP_ALL_OPTION) {
+					if (row[mapConfig.districtField] !== state.mapOptions.district) return false;
+				}
+				if (mapConfig.countyField && state.mapOptions.county !== MAP_ALL_OPTION) {
+					if (row[mapConfig.countyField] !== state.mapOptions.county) return false;
+				}
+				return true;
+			});
+		}
+
+		async function loadPartition(district, expectedCount) {
+			const cacheEntry = await readPartitionFromCache(state.datasetId, district);
+			if (cacheEntry && cacheEntry.recordCount === expectedCount) {
+				return cacheEntry.data;
+			}
+			const partitionPath = `${DATA_ROOT}/${state.datasetId}/${state.datasetId}-District-${district}.csv`;
+			const csvText = await fetchText(partitionPath);
+			const rows = parseCSV(csvText);
+			await writePartitionToCache(state.datasetId, district, rows);
+			return rows;
+		}
+
+		function renderSummary() {
+			const summary = document.getElementById('dataSummary');
+			if (!state.index) {
+				summary.textContent = '';
+				return;
+			}
+			const totalRecords = state.index.totalRecords ?? state.allRows.length;
+			const timestamp = state.lastLoadedAt ? formatTimestamp(state.lastLoadedAt) : '—';
+			summary.textContent = `Records loaded: ${formatNumber(state.allRows.length)} · Index total: ${formatNumber(totalRecords)} · Last refreshed: ${timestamp}`;
+		}
+
+		function renderVisual() {
+			destroyVisuals();
+			if (!state.allRows.length) {
+				document.getElementById('chartArea').innerHTML = '<div class="text-muted">No data available for the current selection.</div>';
+				return;
+			}
+			if (state.chartType === 'map') {
+				renderMap();
+			} else {
+				renderChart();
+			}
+		}
+
+		function destroyVisuals() {
+			const chartArea = document.getElementById('chartArea');
+			chartArea.innerHTML = '';
+			if (state.chartInstance) {
+				state.chartInstance.dispose();
+				state.chartInstance = null;
+			}
+			if (state.mapInstance) {
+				state.mapInstance.remove();
+				state.mapInstance = null;
+			}
+			state.mapLayer = null;
+		}
+
+		function renderChart() {
+			const dimensionField = document.getElementById('dimensionSelect').value;
+			const splitValue = document.getElementById('splitSelect').value;
+			const orderMode = document.getElementById('orderDirectionSelect').value;
+			const orderBy = document.getElementById('orderBySelect').value;
+			const prepared = prepareSeries(state.allRows, dimensionField, splitValue);
+			sortSeries(prepared, orderBy, orderMode);
+			const chartArea = document.getElementById('chartArea');
+			const chartInstance = echarts.init(chartArea);
+			const option = buildChartOption(prepared);
+			chartInstance.setOption(option);
+			state.chartInstance = chartInstance;
+		}
+
+		function prepareSeries(rows, dimensionField, splitValue) {
+			const useSplit = splitValue && splitValue !== 'None';
+			const grouped = new Map();
+			rows.forEach(row => {
+				const dimensionKey = normalizeGroupValue(row[dimensionField]);
+				if (!grouped.has(dimensionKey)) {
+					grouped.set(dimensionKey, {});
+				}
+				if (useSplit) {
+					const splitKey = normalizeGroupValue(row[splitValue]);
+					const existing = grouped.get(dimensionKey);
+					existing[splitKey] = (existing[splitKey] || 0) + 1;
+				} else {
+					const existing = grouped.get(dimensionKey);
+					existing.__value = (existing.__value || 0) + 1;
+				}
+			});
+			const categories = Array.from(grouped.keys());
+			if (!useSplit) {
+				const values = categories.map(category => grouped.get(category).__value || 0);
+				return {
+					categories,
+					legend: [],
+					series: [{
+						name: 'Count',
+						type: state.chartType === 'pie' ? 'pie' : 'bar',
+						data: values
+					}]
+				};
+			}
+			const splitKeys = new Set();
+			grouped.forEach(value => {
+				Object.keys(value).forEach(key => {
+					if (key !== '__value') splitKeys.add(key);
+				});
+			});
+			const legend = Array.from(splitKeys);
+			const series = legend.map(splitKey => ({
+				name: splitKey,
+				type: 'bar',
+				stack: 'total',
+				data: categories.map(category => grouped.get(category)[splitKey] || 0)
+			}));
+			return { categories, legend, series };
+		}
+
+		function sortSeries(prepared, orderBy, orderMode) {
+			const { categories, series } = prepared;
+			if (!categories.length) return;
+			const totals = categories.map((category, index) => {
+				return series.reduce((sum, serie) => sum + (serie.data[index] || 0), 0);
+			});
+			const indices = categories.map((_, index) => index);
+			const ascendingMultiplier = orderMode === 'asc' ? 1 : -1;
+			indices.sort((a, b) => {
+				if (orderBy === 'dimension') {
+					const nameA = categories[a];
+					const nameB = categories[b];
+					return nameA.localeCompare(nameB) * ascendingMultiplier;
+				}
+				const valueA = totals[a];
+				const valueB = totals[b];
+				if (valueA === valueB) {
+					return categories[a].localeCompare(categories[b]) * ascendingMultiplier;
+				}
+				return (valueA - valueB) * ascendingMultiplier;
+			});
+			prepared.categories = indices.map(index => categories[index]);
+			prepared.series.forEach(serie => {
+				serie.data = indices.map(index => serie.data[index]);
+			});
+		}
+
+		function buildChartOption(prepared) {
+			const isPie = state.chartType === 'pie';
+			if (isPie) {
+				const pieData = prepared.categories.map((category, index) => ({
+					name: category,
+					value: prepared.series[0].data[index]
+				}));
+				return {
+					title: { text: 'Records by ' + document.getElementById('dimensionSelect').value, left: 'center' },
+					tooltip: { trigger: 'item' },
+					legend: { orient: 'vertical', left: 'left' },
+					series: [{
+						name: 'Count',
+						type: 'pie',
+						radius: '65%',
+						data: pieData,
+						label: { formatter: '{b}: {c} ({d}%)' }
+					}]
+				};
+			}
+			const isHorizontal = state.chartType === 'bar-horizontal';
+			const legendItems = Array.isArray(prepared.legend) ? prepared.legend : [];
+			let legendConfig;
+			if (legendItems.length > 0) {
+				legendConfig = legendItems.length > 13 ? { show: false } : { data: legendItems };
+			}
+			const option = {
+				tooltip: { trigger: 'axis' },
+				legend: legendConfig,
+				grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
+				xAxis: isHorizontal ? { type: 'value' } : { type: 'category', data: prepared.categories },
+				yAxis: isHorizontal ? { type: 'category', data: prepared.categories } : { type: 'value' },
+				series: prepared.series.map(serie => ({
+					...serie,
+					type: 'bar',
+					label: { show: true, position: isHorizontal ? 'right' : 'top' }
+				}))
+			};
+			if (isHorizontal) {
+				option.xAxis.name = 'Count';
+			} else {
+				option.yAxis.name = 'Count';
+			}
+			return option;
+		}
+
+		function renderMap() {
+			const mapConfig = state.settings?.map;
+			if (!mapConfig) {
+				updateProgress('Map configuration unavailable for this dataset.');
+				return;
+			}
+			const latField = mapConfig.latitudeField;
+			const lonField = mapConfig.longitudeField;
+			const filteredRows = getMapFilteredRows(mapConfig);
+			const colorField = state.mapOptions.colorField && mapConfig.colorFieldOptions?.includes(state.mapOptions.colorField)
+				? state.mapOptions.colorField
+				: mapConfig.defaultColorField;
+			const colorValues = colorField ? getColorValues(filteredRows, colorField) : [];
+			const colorMap = new Map(colorValues.map(value => [value, stringToColor(value)]));
+			const chartArea = document.getElementById('chartArea');
+			const mapDiv = document.createElement('div');
+			mapDiv.style.height = '100%';
+			mapDiv.style.minHeight = '360px';
+			chartArea.appendChild(mapDiv);
+			const map = L.map(mapDiv).setView([37.8, -85.7], 6);
+			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				maxZoom: 18,
+				attribution: '© OpenStreetMap contributors'
+			}).addTo(map);
+			const layerGroup = state.mapOptions.cluster ? L.markerClusterGroup() : L.featureGroup();
+			let markerCount = 0;
+			filteredRows.forEach(row => {
+				const lat = parseFloat(row[latField]);
+				const lon = parseFloat(row[lonField]);
+				if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+				const colorKey = colorField ? (row[colorField] ?? 'Unknown') : 'Feature';
+				const normalizedColorKey = colorKey === '' ? 'Unknown' : String(colorKey);
+				const strokeColor = colorMap.get(normalizedColorKey) || stringToColor(normalizedColorKey);
+				const marker = L.circleMarker([lat, lon], {
+					radius: 5,
+					weight: 1,
+					color: strokeColor,
+					fillColor: strokeColor,
+					fillOpacity: 0.75
+				});
+				const popupLines = [
+					`${latField}: ${lat}`,
+					`${lonField}: ${lon}`
+				];
+				if (mapConfig.districtField && row[mapConfig.districtField]) {
+					popupLines.push(`${mapConfig.districtField}: ${row[mapConfig.districtField]}`);
+				}
+				if (mapConfig.countyField && row[mapConfig.countyField]) {
+					popupLines.push(`${mapConfig.countyField}: ${row[mapConfig.countyField]}`);
+				}
+				if (colorField && row[colorField]) {
+					popupLines.push(`${colorField}: ${row[colorField]}`);
+				}
+				marker.bindPopup(popupLines.join('<br>'));
+				if (state.mapOptions.cluster) {
+					layerGroup.addLayer(marker);
+				} else {
+					marker.addTo(layerGroup);
+				}
+				markerCount += 1;
+			});
+			layerGroup.addTo(map);
+			if (markerCount) {
+				const bounds = layerGroup.getBounds();
+				if (bounds.isValid()) {
+					map.fitBounds(bounds, { padding: [24, 24] });
+				}
+				updateProgress(`${formatNumber(markerCount)} features on map.`);
+			} else {
+				updateProgress('No features match the current map filters.');
+			}
+			state.mapInstance = map;
+			state.mapLayer = layerGroup;
+		}
+
+		function renderTable() {
+			const container = document.getElementById('tableContainer');
+			if (state.tabulator) {
+				state.tabulator.destroy();
+				state.tabulator = null;
+			}
+			container.innerHTML = '';
+			if (!state.allRows.length) {
+				container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
+				return;
+			}
+			const columns = Object.keys(state.allRows[0]).map(key => ({
+				title: key,
+				field: key,
+				headerFilter: 'input',
+				headerFilterPlaceholder: 'Filter…',
+				headerSort: true,
+				minWidth: 160
+			}));
+			state.tabulator = new Tabulator(container, {
+				data: state.allRows,
+				layout: 'fitDataStretch',
+				height: '420px',
+				pagination: 'local',
+				paginationSize: 15,
+				paginationSizeSelector: [15, 25, 50, 100],
+				columns,
+				placeholder: 'No rows to display.',
+				resizableColumns: true,
+				autoColumns: false
+			});
+		}
+
+		function updateChartButtons() {
+			document.querySelectorAll('.btn-chart').forEach(button => {
+				const chartType = button.getAttribute('data-chart');
+				button.classList.toggle('active', chartType === state.chartType);
+				if (chartType === 'map') {
+					const enabled = Boolean(state.settings?.map);
+					button.disabled = !enabled;
+					button.setAttribute('title', enabled ? 'Show Leaflet map view' : 'Map not available for this dataset');
+				}
+			});
+		}
+
+		function updateProgress(message) {
+			document.getElementById('progressMessage').textContent = message || '';
+		}
+
+		function getUniqueValues(rows, field) {
+			const set = new Set();
+			rows.forEach(row => {
+				const raw = row[field];
+				if (raw === undefined || raw === null) return;
+				const value = String(raw).trim();
+				if (value) set.add(value);
+			});
+			return Array.from(set).sort((a, b) => a.localeCompare(b));
+		}
+
+		function getColorValues(rows, field) {
+			const set = new Set();
+			rows.forEach(row => {
+				let raw = row[field];
+				if (raw === undefined || raw === null || raw === '') {
+					raw = 'Unknown';
+				}
+				set.add(String(raw));
+			});
+			return Array.from(set).sort((a, b) => a.localeCompare(b));
+		}
+
+		function stringToColor(value) {
+			const hash = Math.abs(hashCode(value));
+			const hue = hash % 360;
+			return hslToHex(hue, 65, 50);
+		}
+
+		function hashCode(value) {
+			let hash = 0;
+			for (let i = 0; i < value.length; i += 1) {
+				hash = ((hash << 5) - hash) + value.charCodeAt(i);
+				hash |= 0;
+			}
+			return hash;
+		}
+
+		function hslToHex(h, s, l) {
+			s /= 100;
+			l /= 100;
+			const k = (n) => (n + h / 30) % 12;
+			const a = s * Math.min(l, 1 - l);
+			const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+			const toHex = (x) => Math.round(x * 255).toString(16).padStart(2, '0');
+			return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+		}
+
+		function normalizeGroupValue(value) {
+			if (value === undefined || value === null || value === '') return 'Unknown';
+			return String(value);
+		}
+
+		function formatNumber(value) {
+			return Number.isFinite(value) ? value.toLocaleString() : '0';
+		}
+
+		function formatTimestamp(date) {
+			const pad = (num) => String(num).padStart(2, '0');
+			return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+		}
+
+		async function fetchJSON(url) {
+			const response = await fetch(url, { cache: 'no-cache' });
+			if (!response.ok) {
+				throw new Error(`Failed to fetch JSON: ${url} (${response.status})`);
+			}
+			return response.json();
+		}
+
+		async function fetchText(url) {
+			const response = await fetch(url, { cache: 'no-cache' });
+			if (!response.ok) {
+				console.warn(`Partition fetch failed: ${url} (${response.status})`);
+				return '';
+			}
+			return response.text();
+		}
+
+		function parseCSV(text) {
+			if (!text) return [];
+			const rows = [];
+			let headers = null;
+			let current = '';
+			let fields = [];
+			let inQuotes = false;
+			const flushLine = () => {
+				fields.push(current);
+				current = '';
+				const hasContent = fields.some(value => value.length);
+				if (!headers) {
+					if (!hasContent) {
+						fields = [];
+						return;
+					}
+					headers = fields;
+				} else if (hasContent) {
+					const record = {};
+					headers.forEach((header, index) => {
+						record[header] = fields[index] !== undefined ? fields[index] : '';
+					});
+					rows.push(record);
+				}
+				fields = [];
+			};
+			for (let i = 0; i < text.length; i += 1) {
+				const char = text[i];
+				if (char === '"') {
+					if (inQuotes && text[i + 1] === '"') {
+						current += '"';
+						i += 1;
+					} else {
+						inQuotes = !inQuotes;
+					}
+				} else if (char === ',' && !inQuotes) {
+					fields.push(current);
+					current = '';
+				} else if ((char === '\n' || char === '\r') && !inQuotes) {
+					if (char === '\r' && text[i + 1] === '\n') {
+						i += 1;
+					}
+					flushLine();
+				} else {
+					current += char;
+				}
+			}
+			if (current.length || fields.length) {
+				flushLine();
+			}
+			return rows;
+		}
+
+		function downloadAsCSV(rows, filename) {
+			if (!rows.length) return;
+			const headers = Object.keys(rows[0]);
+			const csvLines = [headers.join(',')];
+			rows.forEach(row => {
+				const line = headers.map(header => {
+					const value = row[header] ?? '';
+					const escaped = String(value).replace(/"/g, '""');
+					if (escaped.search(/("|,|\n)/) >= 0) {
+						return `"${escaped}"`;
+					}
+					return escaped;
+				});
+				csvLines.push(line.join(','));
+			});
+			const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+			const url = URL.createObjectURL(blob);
+			const anchor = document.createElement('a');
+			anchor.href = url;
+			anchor.download = filename;
+			anchor.click();
+			URL.revokeObjectURL(url);
+		}
+
+		async function getDatabase() {
+			if (!dbPromise) {
+				dbPromise = new Promise((resolve, reject) => {
+					const request = indexedDB.open(DB_NAME, 1);
+					request.onupgradeneeded = () => {
+						const db = request.result;
+						if (!db.objectStoreNames.contains(STORE_NAME)) {
+							db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+						}
+					};
+					request.onsuccess = () => resolve(request.result);
+					request.onerror = () => reject(request.error);
+				});
+			}
+			return dbPromise;
+		}
+
+		async function readPartitionFromCache(datasetId, district) {
+			const db = await getDatabase();
+			return new Promise((resolve) => {
+				const tx = db.transaction(STORE_NAME, 'readonly');
+				const store = tx.objectStore(STORE_NAME);
+				const request = store.get(`${datasetId}|${district}`);
+				request.onsuccess = () => resolve(request.result || null);
+				request.onerror = () => resolve(null);
+			});
+		}
+
+		async function writePartitionToCache(datasetId, district, data) {
+			const db = await getDatabase();
+			return new Promise((resolve) => {
+				const tx = db.transaction(STORE_NAME, 'readwrite');
+				const store = tx.objectStore(STORE_NAME);
+				const payload = {
+					key: `${datasetId}|${district}`,
+					datasetId,
+					district,
+					recordCount: data.length,
+					data
+				};
+				store.put(payload);
+				tx.oncomplete = () => resolve();
+				tx.onerror = () => resolve();
+			});
+		}
+
+		async function deleteDatasetFromCache(datasetId) {
+			const db = await getDatabase();
+			return new Promise((resolve) => {
+				const tx = db.transaction(STORE_NAME, 'readwrite');
+				const store = tx.objectStore(STORE_NAME);
+				const request = store.openCursor();
+				request.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor) {
+						if (cursor.value.datasetId === datasetId) {
+							cursor.delete();
+						}
+						cursor.continue();
+					} else {
+						resolve();
+					}
+				};
+				request.onerror = () => resolve();
+			});
+		}
+	})();
+	</script>
+</body>
+</html>
+

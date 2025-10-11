@@ -1,0 +1,22 @@
+{
+  "datasetName": "eda_programmanagement_authorized_detailed",
+  "indexFile": "eda_programmanagement_authorized_detailed.index.json",
+  "dimensions": [
+    "DISTRICT",
+    "COUNTY"
+  ],
+  "metrics": [
+    "Dataset Records"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

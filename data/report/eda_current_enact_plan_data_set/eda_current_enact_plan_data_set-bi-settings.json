@@ -1,0 +1,22 @@
+{
+  "datasetName": "eda_current_enact_plan_data_set",
+  "indexFile": "eda_current_enact_plan_data_set.index.json",
+  "dimensions": [
+    "DISTRICT",
+    "COUNTY"
+  ],
+  "metrics": [
+    "Dataset Records"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

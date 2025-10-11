@@ -1,0 +1,37 @@
+{
+  "datasetName": "eda_assets_bridge_condition_owner_area",
+  "indexFile": "eda_assets_bridge_condition_owner_area.index.json",
+  "dimensions": [
+    "DISTRICT",
+    "COUNTY"
+  ],
+  "metrics": [
+    "Dataset Records"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ],
+  "map": {
+    "latitudeField": "LATITUDE",
+    "longitudeField": "LONGITUDE",
+    "clusterDefault": true,
+    "districtField": "DISTRICT",
+    "countyField": "COUNTY",
+    "defaultColorField": "GFP",
+    "colorFieldOptions": [
+      "GFP",
+      "OWNERSHIP",
+      "OWNER",
+      "LOAD_RATING_AGENCY",
+      "NHS"
+    ]
+  }
+}

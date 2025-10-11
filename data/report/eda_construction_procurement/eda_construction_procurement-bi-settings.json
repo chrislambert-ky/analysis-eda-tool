@@ -1,0 +1,22 @@
+{
+  "datasetName": "eda_construction_procurement",
+  "indexFile": "eda_construction_procurement.index.json",
+  "dimensions": [
+    "DISTRICT",
+    "COUNTY"
+  ],
+  "metrics": [
+    "Dataset Records"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}
