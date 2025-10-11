@@ -243,9 +243,9 @@
 
 			document.getElementById('downloadFilteredButton').addEventListener('click', () => {
 				if (!state.tabulator) return;
-				const filtered = state.tabulator.getData();
-				if (!filtered.length) return;
-				downloadAsCSV(filtered, `${state.datasetId}-filtered.csv`);
+				const filteredRows = state.tabulator.getRows('active').map(row => row.getData());
+				if (!filteredRows.length) return;
+				downloadAsCSV(filteredRows, `${state.datasetId}-filtered.csv`);
 			});
 
 			const clusterToggle = document.getElementById('mapClusterToggle');
