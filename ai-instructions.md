@@ -1,101 +1,118 @@
-# AI & Developer Instructions for trak_eda
+# AI & Developer Instructions for the EDA Tool
 
-## 1. Project Overview
-- Browser-based EDA tool for partitioned, large-scale datasets (transportation, infrastructure, etc.)
-- Uses IndexedDB for local, per-district caching and incremental loading
-- Visualizes data with Apache ECharts, Tabulator, and Leaflet
+This document is the source of truth for maintainers (human or AI). It captures the current architecture, data flow, conventions, and exact steps required to recreate the application from scratch.
 
-## 2. Coding Standards
-- Use modern JavaScript (ES6+)
-- Prefer async/await for all async operations
-- Write clear, concise comments for complex logic
-- Use modular, maintainable code (split ETL, UI, and data logic)
+## 1. Architecture Snapshot
 
-## 3. ETL & Partitioning
-- Download raw CSVs from public sources (see below)
-- Partition each dataset by DISTRICT (13 partitions: 01-12, Various)
-- Store partitioned files as `{dataset}-District-XX.csv` in `public/etl/{dataset}/`
-- Generate `{dataset}.index.json` (record counts per partition) and `{dataset}.settings.json` (BI config)
+**Front-end**
+- Single `index.html` at repository root; contains the entire UI (Bootstrap layout, inline scripts) and references CDN-hosted assets:
+  - Bootstrap 5.3
+  - Apache ECharts 5.5
+  - Tabulator 5.5
+  - Leaflet 1.9 + Leaflet MarkerCluster 1.5
+- IndexedDB (`trak_eda_db` store `partitions`) caches dataset partitions keyed by `dataset|district`.
+- UI supports charts (horizontal/vertical bar, pie), map mode, and a Tabulator grid with filterable columns and CSV export.
 
-### Data Sources
-- https://storage.googleapis.com/kytc-trak/data_hub_csv/eda_assets_bridge_condition_owner_area.csv
-- https://storage.googleapis.com/kytc-trak/data_hub_csv/eda_construction_procurement.csv
-- https://storage.googleapis.com/kytc-trak/data_hub_csv/eda_current_enact_plan_data_set.csv
-- https://storage.googleapis.com/kytc-trak/data_hub_csv/eda_programmanagement_authorized_detailed.csv
+**Data layer**
+- Partitioned data and configuration live in `data/report/<dataset>/` as:
+  - Partition CSVs: `<dataset>-District-XX.csv`
+  - Index file: `<dataset>.index.json` (record counts per partition)
+  - BI settings: `<dataset>-bi-settings.json` (dimensions, metrics, aggregation options, map metadata)
+- Raw source CSV downloads stored in `data/raw/` and overwritten each ETL run.
 
-## 4. Data Model & Settings
-- Each dataset folder contains:
-  - Partitioned CSVs by district
-  - `{dataset}.index.json` (partition record counts, file paths)
-  - `{dataset}.settings.json` (dimensions, metrics, aggregation, map config)
-- Settings file defines:
-  - Dimensions (fields for grouping)
-  - Metrics (fields for aggregation)
-  - Aggregation types (count, sum, min, avg)
-  - Order by options
-  - Map config (if applicable)
+**ETL**
+- `etl.js` (Node 20-compatible) downloads remote CSVs, filters rows to valid districts (`District ##` or `Various`), and writes partitioned outputs + settings using `csv-parse` and `csv-stringify`.
+- Map configuration for the bridge dataset includes clustering defaults and color-field options.
 
-## 5. Incremental Loading & Caching (IndexedDB)
-- On load, compare per-district record counts in index vs. IndexedDB
-- Only fetch and store missing or outdated partitions
-- Data is loaded incrementally, per district, into IndexedDB object stores/keys
-- Table/chart should only render from IndexedDB
-- UI should show progress as each partition loads
-- User can interact with the app while background loading continues
+**Automation**
+- `.github/workflows/nightly-etl.yml` runs nightly (05:15 UTC) to refresh data, commit, and push.
 
-## 6. User Interface & Visualization
-- Use Apache ECharts for all charts (bar, pie, etc.)
-- Use Tabulator for table views (with filtering, download)
-- Use Leaflet for map visualizations (if enabled in settings)
-- UI: Plain HTML/CSS/JS + Bootstrap (no frameworks)
-- All controls are populated dynamically from settings
+## 2. Recreating the Project
 
-### Screen Layout Diagram
+1. **Start a repo** (or clean folder) with the root files:
+   - `index.html` (copy from this repo if unavailable; see Section 4 for structure notes).
+   - `etl.js`, `package.json`, `package-lock.json`, `.gitignore`, `.github/workflows/nightly-etl.yml`.
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+   Packages used: `csv-parse`, `csv-stringify`, `fs-extra`, `node-fetch`.
+3. **Run ETL**
+   ```bash
+   node etl.js
+   ```
+   Outputs:
+   - `data/raw/*.csv` (raw downloads)
+   - `data/report/<dataset>/*.csv` partitions
+   - `data/report/<dataset>/<dataset>.index.json`
+   - `data/report/<dataset>/<dataset>-bi-settings.json`
+4. **Open the UI**
+   - Either double-click `index.html` or serve via a static server (`npx serve .`).
+5. **Configure GitHub Pages** (if desired)
+   - Set Pages source to the repo root.
+   - Ensure nightly workflow has push permission (default `contents: write`).
 
-```
-Title
-Subtitle
----------------------------------------------------------------
-| Dataset dropdown | Chart Selection buttons: [Bar][Pie][Map] |
----------------------------------------------------------------
-|                  | User selection dropdowns:                |
-|   75% of area    |  - Dimension                             |
-|                  |  - Metric                                |
-|  Apache ECHART   |  - Aggregation Type                      |
-|  (Default:       |  - Split by                              |
-|  Horizontal Bar) |  - Order By                              |
-|                  |                25% of area               |
----------------------------------------------------------------
-| Table view of the data with filters on the top              |
----------------------------------------------------------------
-| Download options: Full Dataset | Filtered Dataset            |
----------------------------------------------------------------
-```
+## 3. Dataset Configuration
 
-- The chart area uses Apache ECharts (and Leaflet for map-enabled datasets).
-- The table view supports filtering and download options.
-- All controls are populated dynamically based on the selected dataset's settings file.
+### Data sources
+- `eda_assets_bridge_condition_owner_area`
+- `eda_construction_procurement`
+- `eda_current_enact_plan_data_set`
+- `eda_programmanagement_authorized_detailed`
 
-## 7. Testing & Validation
-- Validate ETL output: partition counts, index, and settings
-- Validate IndexedDB cache matches index counts
-- Test UI: filtering, charting, map, and download features
-- Test incremental loading and progress UI
+Each dataset definition exists in `DATASETS` array at the top of `index.html`. The value of `id` must match the folder name under `data/report/`.
 
+### Partitioning rules
+- Recognize districts of the form `District ##` (case/spacing tolerant) or `Various`.
+- Skip all other values; log skip counts in ETL output.
+- Rewrite the `DISTRICT` column in partitions to a normalized `District 0X` or `Various` label.
 
-## 8. TODOs for Development Plan
-- [ ] Write/validate ETL script for partitioning and index/settings generation
-- [ ] Implement robust IndexedDB per-district caching and validation logic
-- [ ] Build UI: dataset selection, chart/table/map, progress indicator
-- [ ] Implement incremental loading with UI progress and background updates
-- [ ] Add download/export options for full/filtered datasets
-- [ ] Write tests for ETL, data loading, and UI features
-- [ ] Document all code and update this file as features are added
+### Map metadata
+- Bridge dataset (`eda_assets_bridge_condition_owner_area`) includes:
+  - `clusterDefault: true`
+  - `districtField: DISTRICT`
+  - `countyField: COUNTY`
+  - `defaultColorField: GFP`
+  - `colorFieldOptions`: `[GFP, OWNERSHIP, OWNER, LOAD_RATING_AGENCY, NHS]`
+- UI logic:
+  - Map controls replace the general chart controls when chart type is `map` and dataset has map config.
+  - Selecting “All Districts” re-enables clustering.
+  - Selecting a specific district or county auto-disables clustering (toggle remains available for manual override).
 
-## 9. Design Decisions
-- **ETL Script:** Must be written as a separate JavaScript file (e.g., `src/etl/etl.js`).
-- **Web UI:** All CSS and JavaScript for the browser-based app must be embedded directly in the HTML file (e.g., `public/index.html`).
-  - No external `.js` or `.css` files for the UI—everything should be self-contained within the HTML.
-  - This is a deliberate choice for portability and ease of distribution, even though it is contrary to common best practices.
+## 4. UI Behaviour Cheatsheet
 
-- Document this decision in all onboarding and planning materials.
+- **Dataset load**: fetch settings/index JSON, populate controls, then sequentially load partitions (respecting cache).
+- **Progress**: text hints (`progressMessage`) update during partition load and map rendering.
+- **Chart legends**: hidden automatically when split-by produces >13 series.
+- **Table downloads**: “Filtered” uses `getRows('active')` to honor filters; “Full” uses `state.allRows`.
+- **Map toggles**:
+  - Clustering toggle always displayed; auto-set based on district/county selection rules above.
+  - District dropdown cascades into county dropdown (county list filters to selected district).
+  - Color dropdown recolors markers deterministically (`stringToColor`).
+
+## 5. Coding Conventions
+- Use `async/await`; avoid `.then` for new logic.
+- Apply concise comments when behaviour is non-obvious (e.g., map clustering rules).
+- Stick to ASCII unless copying data that already includes Unicode.
+- Keep inline script modular by grouping related functionality (load/setup/render/helpers).
+- For ETL, prefer pure functions where possible and log informative status lines (`[ETL DEBUG]`, `[ETL INFO]`).
+
+## 6. Git & Deployment Notes
+- `data/` contents are intentionally tracked. Do not add them to `.gitignore`.
+- Nightly workflow commits with message `chore: nightly ETL refresh` when data changes.
+- If you add new datasets, ensure the workflow still completes in a reasonable time (<15 minutes) to avoid CI timeouts.
+- For manual ETL refresh, run `node etl.js` locally and commit the resulting `data/` changes.
+
+## 7. Extending the App
+- **New dataset**: update `DATASETS` array, verify ETL includes the source, run ETL, and adjust map settings if needed.
+- **New visualizations**: extend `prepareSeries` / `buildChartOption`. Maintain legend auto-hide logic.
+- **Additional filters**: adjust `mapOptions` or add new control sections. If controls only matter in certain chart modes, mimic the map behaviour (toggle sections on/off).
+- **Testing**: no automated tests yet; rely on manual smoke tests: load each dataset, flip through chart types, apply filters, download CSVs.
+
+## 8. Troubleshooting
+- **Map not available**: ensure BI settings JSON includes `map` block and that dataset entry is in `DATASETS`.
+- **Weird legend values**: confirm ETL filtered out invalid district labels; rerun `node etl.js` if necessary.
+- **Filtered download includes extra rows**: check Tabulator filters (should rely on `getRows('active')`).
+- **Cluster toggle stuck**: confirm district/county dropdowns are returning `MAP_ALL_OPTION` when reset.
+
+Keep this document synchronized whenever architectural choices change so future contributors (or AI assistants) can reproduce the environment with minimal guesswork.
