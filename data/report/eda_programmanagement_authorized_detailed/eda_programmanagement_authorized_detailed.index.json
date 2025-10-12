@@ -1,5 +1,5 @@
 {
-  "totalRecords": 32604,
+  "totalRecords": 32608,
   "eda_programmanagement_authorized_detailed-District-01.csv": {
     "records": 2177
   },
@@ -7,16 +7,16 @@
     "records": 2496
   },
   "eda_programmanagement_authorized_detailed-District-03.csv": {
-    "records": 2005
+    "records": 2006
   },
   "eda_programmanagement_authorized_detailed-District-04.csv": {
-    "records": 2383
+    "records": 2384
   },
   "eda_programmanagement_authorized_detailed-District-05.csv": {
     "records": 3088
   },
   "eda_programmanagement_authorized_detailed-District-06.csv": {
-    "records": 3008
+    "records": 3009
   },
   "eda_programmanagement_authorized_detailed-District-07.csv": {
     "records": 2923
@@ -31,7 +31,7 @@
     "records": 2919
   },
   "eda_programmanagement_authorized_detailed-District-11.csv": {
-    "records": 2721
+    "records": 2722
   },
   "eda_programmanagement_authorized_detailed-District-12.csv": {
     "records": 3860
