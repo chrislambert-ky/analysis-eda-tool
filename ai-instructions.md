@@ -10,7 +10,7 @@ This document is the source of truth for maintainers (human or AI). It captures 
   - Apache ECharts 5.5
   - Tabulator 5.5
   - Leaflet 1.9 + Leaflet MarkerCluster 1.5
-- IndexedDB (`trak_eda_db` store `partitions`) caches dataset partitions keyed by `dataset|district`.
+- IndexedDB (`analysis_eda_tool_db` store `partitions`) caches dataset partitions keyed by `dataset|district`.
 - UI supports charts (horizontal/vertical bar, pie), map mode, and a Tabulator grid with filterable columns and CSV export.
 
 **Data layer**
