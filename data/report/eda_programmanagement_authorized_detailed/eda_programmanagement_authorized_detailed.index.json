@@ -1,5 +1,5 @@
 {
-  "totalRecords": 28362,
+  "totalRecords": 28363,
   "eda_programmanagement_authorized_detailed-District-01.csv": {
     "records": 1837
   },
@@ -37,6 +37,6 @@
     "records": 3512
   },
   "eda_programmanagement_authorized_detailed-District-Various.csv": {
-    "records": 1417
+    "records": 1418
   }
 }
