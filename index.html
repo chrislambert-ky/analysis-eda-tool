@@ -794,6 +794,7 @@
 
 		function prepareSeries(rows, dimensionField, splitValue, metricField, aggregationType) {
 			const useSplit        = splitValue && splitValue !== 'None';
+			const splitField      = useSplit ? splitValue : null;
 			const isCountRecords  = !metricField || metricField === 'Dataset Records';
 			const agg             = (aggregationType || 'Count').toLowerCase();
 			const EMPTY_ACC       = () => ({ count: 0, sum: 0, min: Infinity, max: -Infinity });
@@ -844,6 +845,8 @@
 				return {
 					categories,
 					seriesLabel,
+					dimensionField,
+					splitField: null,
 					legend: [],
 					series: [{
 						name: seriesLabel,
@@ -862,7 +865,7 @@
 				stack: 'total',
 				data: categories.map(cat => resolve((grouped.get(cat).get(splitKey)) || fallbackAcc))
 			}));
-			return { categories, seriesLabel, legend, series };
+			return { categories, seriesLabel, dimensionField, splitField, legend, series };
 		}
 
 		function sortSeries(prepared, orderBy, orderMode) {
@@ -895,7 +898,8 @@
 		function buildChartOption(prepared) {
 			const isPie        = state.chartType === 'pie';
 			const seriesLabel  = prepared.seriesLabel || 'Count';
-			const dimensionVal = document.getElementById('dimensionSelect').value;
+			const dimensionVal = prepared.dimensionField || document.getElementById('dimensionSelect').value;
+			const splitField   = prepared.splitField;
 			if (isPie) {
 				const pieData = prepared.categories.map((category, index) => ({
 					name: category,
@@ -920,8 +924,21 @@
 			if (legendItems.length > 0) {
 				legendConfig = legendItems.length > 13 ? { show: false } : { data: legendItems };
 			}
+			const tooltipConfig = splitField
+				? {
+					trigger: 'item',
+					formatter: params => {
+						const marker = `<span style="display:inline-block;margin-right:4px;border-radius:50%;width:10px;height:10px;background-color:${params.color};"></span>`;
+						return `<div style="font-size:13px;">`
+							+ `<strong>${dimensionVal}:</strong> ${params.name}<br>`
+							+ `${marker}<strong>${splitField}:</strong> ${params.seriesName}<br>`
+							+ `<strong>${seriesLabel}:</strong> ${Number.isFinite(params.value) ? params.value.toLocaleString() : params.value}`
+							+ `</div>`;
+					}
+				  }
+				: { trigger: 'axis' };
 			const option = {
-				tooltip: { trigger: 'axis' },
+				tooltip: tooltipConfig,
 				legend: legendConfig,
 				grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
 				xAxis: isHorizontal ? { type: 'value' } : { type: 'category', data: prepared.categories },
