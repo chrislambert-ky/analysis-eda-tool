@@ -10,6 +10,9 @@
 	<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 	<link href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" rel="stylesheet">
 	<link href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" rel="stylesheet">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 	<!-- Google tag (gtag.js) -->
 	<script async src="https://www.googletagmanager.com/gtag/js?id=G-468B94S87K"></script>
 	<script>
@@ -42,6 +45,62 @@
 			.chart-card { min-height: 360px; }
 			.chart-surface { height: 320px; }
 		}
+		/* ── SQL Workbench ───────────────────────────────────────────────────── */
+		.sql-wb-wrap { display: flex; flex-direction: column; height: 100%; }
+		.sql-toolbar { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0 0.6rem; flex-shrink: 0; flex-wrap: wrap; }
+		.sql-toolbar-sep { width: 1px; height: 20px; background: #dee2e6; flex-shrink: 0; }
+		.sql-editor-container { position: relative; flex-shrink: 0; border: 1px solid #dee2e6; border-radius: 0.375rem; overflow: hidden; }
+		.sql-line-nums { position: absolute; top: 0; left: 0; padding: 10px 5px 10px 0; width: 34px; background: #f1f3f5; border-right: 1px solid #dee2e6; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.7; color: #888; pointer-events: none; user-select: none; overflow: hidden; }
+		.sql-editor { width: 100%; height: 180px; background: #fff; border: none; color: #212529; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.7; padding: 10px 12px 10px 44px; resize: none; outline: none; tab-size: 2; }
+		.sql-editor::placeholder { color: #adb5bd; }
+		.sql-resizer { height: 4px; background: #dee2e6; cursor: ns-resize; flex-shrink: 0; border-radius: 2px; margin: 4px 0; transition: background .2s; }
+		.sql-resizer:hover { background: #0d6efd; }
+		.sql-results-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #dee2e6; border-radius: 0.375rem; min-height: 140px; }
+		.sql-results-header { display: flex; align-items: center; gap: 0.5rem; padding: 5px 10px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; flex-shrink: 0; }
+		.sql-results-scroll { flex: 1; overflow: auto; }
+		.sql-results-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+		.sql-results-scroll::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 4px; }
+		.sql-results-table { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+		.sql-state-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 6px; color: #adb5bd; font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: center; }
+		.sql-status { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #888; display: flex; align-items: center; gap: 4px; margin-left: auto; }
+		.sql-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #adb5bd; display: inline-block; flex-shrink: 0; transition: background .3s; }
+		.sql-status-dot.ready   { background: #198754; box-shadow: 0 0 5px #198754; }
+		.sql-status-dot.loading { background: #0d6efd; animation: sql-pulse 1s infinite; }
+		.sql-status-dot.error   { background: #dc3545; }
+		@keyframes sql-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+		.sql-spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #dee2e6; border-top-color: #0d6efd; border-radius: 50%; animation: sql-spin .6s linear infinite; vertical-align: middle; }
+		@keyframes sql-spin { to { transform: rotate(360deg); } }
+		/* SQL sidebar */
+		.sql-source-label { padding: 5px 10px 2px; font-size: 9px; text-transform: uppercase; letter-spacing: 1.8px; color: #888; font-family: 'IBM Plex Mono', monospace; }
+		.sql-table-item-wrapper { display: flex; flex-direction: column; }
+		.sql-table-item { display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer; transition: background 0.12s; font-size: 12px; border-left: 2px solid transparent; }
+		.sql-table-item:hover { background: #f0f4ff; border-left-color: #aaa; }
+		.sql-table-item.active { background: rgba(13,110,253,0.1); color: #0d6efd; border-left-color: #0d6efd; }
+		.sql-table-name { font-family: 'IBM Plex Mono', monospace; font-size: 11px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.sql-field-list { padding: 2px 0 4px 28px; border-left: 1px solid #dee2e6; margin-left: 10px; }
+		.sql-field-item { display: flex; align-items: center; gap: 4px; padding: 2px 5px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #666; cursor: pointer; border-radius: 3px; }
+		.sql-field-item:hover { background: #f0f0f0; color: #212529; }
+		.sql-field-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.sql-field-type { font-size: 9px; color: #999; flex-shrink: 0; text-transform: uppercase; letter-spacing: .3px; }
+		.sql-expand-btn { background: none; border: none; color: #888; cursor: pointer; font-size: 9px; padding: 0; line-height: 1; width: 12px; text-align: center; transition: transform 0.15s, color 0.15s; flex-shrink: 0; }
+		.sql-expand-btn:hover:not(:disabled) { color: #212529; }
+		.sql-expand-btn.expanded { transform: rotate(90deg); color: #0d6efd; }
+		.sql-expand-btn:disabled { opacity: .25; cursor: default; }
+		/* CSS-driven show/hide for SQL active state on controls card */
+		.controls-card.sql-active #generalControls { display: none !important; }
+		.controls-card.sql-active #mapOptions      { display: none !important; }
+		.controls-card.sql-active .controls-dataset-info { display: none !important; }
+		.td-null { color: #adb5bd; font-style: italic; }
+		.td-num  { color: #003764; }
+		.td-bool { color: #6f42c1; }
+		/* delete button on user sources */
+		.sql-del-btn { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 11px; padding: 0 2px; line-height: 1; flex-shrink: 0; opacity: .6; transition: opacity .15s; }
+		.sql-del-btn:hover { opacity: 1; }
+		/* Add Source modal overlay */
+		.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1055; align-items: center; justify-content: center; }
+		.modal-overlay.open { display: flex; }
+		#sqlAddModal .card { width: 100%; max-width: 480px; border-radius: .5rem; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+		#sqlAddModal .modal-title { font-size: .95rem; font-weight: 600; }
 	</style>
 </head>
 <body>
@@ -65,6 +124,7 @@
 					<button class="btn btn-outline-primary btn-chart" data-chart="bar-vertical" id="btnBarV">Vertical Bar</button>
 					<button class="btn btn-outline-primary btn-chart" data-chart="pie" id="btnPie">Pie</button>
 					<button class="btn btn-outline-primary btn-chart" data-chart="map" id="btnMap">Map</button>
+				<button class="btn btn-outline-primary btn-chart" data-chart="sql" id="btnSQL">SQL</button>
 				</div>
 			</div>
 		</div>
@@ -77,6 +137,43 @@
 							<div id="chartArea" class="chart-surface flex-grow-1"></div>
 							<div id="progressMessage" class="progress-message text-muted small mt-3"></div>
 							<div id="dataSummary" class="text-secondary small mt-3"></div>
+							<!-- SQL Workbench Panel (shown when chart type = sql) -->
+							<div id="sqlWorkbenchPanel" class="flex-grow-1 flex-column" style="display:none;min-height:420px">
+								<div class="sql-wb-wrap">
+									<div class="sql-toolbar">
+										<button class="btn btn-primary btn-sm d-flex align-items-center gap-1" id="sqlRunBtn" disabled>&#x25BA; Run</button>
+										<kbd class="border rounded px-1 text-secondary" style="font-size:10px;background:#f8f9fa">Ctrl+Enter</kbd>
+										<div class="sql-toolbar-sep"></div>
+										<button class="btn btn-outline-secondary btn-sm" id="sqlClearBtn">&#x2715; Clear</button>
+										<button class="btn btn-outline-secondary btn-sm" id="sqlExampleBtn">&#x2937; Example</button>
+										<span class="sql-status">
+											<span class="sql-status-dot" id="sqlStatusDot"></span>
+											<span id="sqlStatusText">initializing&hellip;</span>
+										</span>
+									</div>
+									<div class="sql-editor-container">
+										<div class="sql-line-nums" id="sqlLineNums">1</div>
+										<textarea class="sql-editor" id="sqlEditorTA"
+											placeholder="-- Select a table from the left panel, then write SQL&#10;-- e.g. SELECT * FROM eda_construction_procurement LIMIT 100"
+											spellcheck="false"></textarea>
+									</div>
+									<div class="sql-resizer" id="sqlResizer"></div>
+									<div class="sql-results-area">
+										<div class="sql-results-header">
+											<span class="text-uppercase text-secondary fw-medium" style="font-size:10px;letter-spacing:1.5px">Results</span>
+											<span class="ms-1 text-success font-monospace" style="font-size:11px" id="sqlRowCount"></span>
+											<span class="ms-auto font-monospace text-secondary" style="font-size:11px" id="sqlExecTime"></span>
+											<button class="btn btn-outline-success btn-sm ms-2" id="sqlExportBtn" style="display:none;font-size:11px">&#x2193; CSV</button>
+										</div>
+										<div class="sql-results-scroll" id="sqlResultsContainer">
+											<div class="sql-state-msg">
+												<span style="font-size:22px">&#x29C1;</span>
+												<span>Run a query to see results</span>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 					<div class="card shadow-sm table-card">
@@ -128,6 +225,16 @@
 								</select>
 							</div>
 						</div>
+						<!-- SQL Sidebar Panel (shown when chart type = sql) -->
+						<div id="sqlSidebarPanel" style="display:none" class="flex-column flex-grow-1 mb-2">
+							<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Data Sources</div>
+							<div class="flex-grow-1 overflow-auto border rounded" id="sqlTableList" style="min-height:0">
+								<div class="sql-state-msg">Loading&hellip;</div>
+							</div>
+							<button class="btn btn-outline-info btn-sm w-100 mt-2" id="sqlAddSourceBtn" style="font-size:11px" disabled>
+								&#xff0b; Add Source
+							</button>
+						</div>
 						<div id="mapOptions" class="mt-3 pt-3 border-top d-none">
 							<h6 class="fw-semibold">Map Options</h6>
 							<div class="form-check form-switch mb-3">
@@ -147,12 +254,42 @@
 								<select id="mapColorSelect" class="form-select form-select-sm"></select>
 							</div>
 						</div>
-						<div class="mt-auto">
+						<div class="mt-auto controls-dataset-info">
 							<h6 class="fw-semibold">Dataset Info</h6>
 							<div id="datasetInfo" class="text-muted small">Select a dataset to load details.</div>
 						</div>
 					</div>
 				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- SQL Add Source Modal -->
+	<div class="modal-overlay" id="sqlAddModal">
+		<div class="card border shadow-lg" style="width:460px;max-width:94vw">
+			<div class="card-header d-flex align-items-center justify-content-between">
+				<span class="fw-semibold" style="font-family:'IBM Plex Mono',monospace;font-size:13px">Add Data Source</span>
+				<button type="button" class="btn-close" id="sqlAddModalClose" aria-label="Close"></button>
+			</div>
+			<div class="card-body d-flex flex-column gap-3">
+				<div>
+					<label class="form-label text-uppercase text-secondary fw-medium" style="font-size:10px;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace">Table Alias <span class="text-danger">*</span></label>
+					<input id="sqlNewAlias" class="form-control form-control-sm font-monospace" type="text" placeholder="my_table" autocomplete="off" spellcheck="false">
+					<div class="form-text">Used as the SQL table name &mdash; letters, numbers, underscores only.</div>
+				</div>
+				<div>
+					<label class="form-label text-uppercase text-secondary fw-medium" style="font-size:10px;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace">File URL <span class="text-danger">*</span></label>
+					<input id="sqlNewUrl" class="form-control form-control-sm font-monospace" type="url" placeholder="https://example.com/data.csv" autocomplete="off" spellcheck="false">
+				</div>
+				<p class="text-secondary mb-0" style="font-size:11px;font-family:'IBM Plex Mono',monospace;line-height:1.6">
+					Supports <strong>.csv</strong>, <strong>.parquet</strong>, and <strong>.json&nbsp;/&nbsp;.jsonl</strong>.<br>
+					The file must be publicly accessible (CORS headers required).<br>
+					Sources are saved in your browser and restored on next visit.
+				</p>
+			</div>
+			<div class="card-footer d-flex justify-content-end gap-2">
+				<button class="btn btn-outline-secondary btn-sm" id="sqlAddModalCancel">Cancel</button>
+				<button class="btn btn-info btn-sm" id="sqlAddModalSave">Add &amp; Load</button>
 			</div>
 		</div>
 	</div>
@@ -238,7 +375,12 @@
 					if (chartType === 'map' && !state.settings?.map) return;
 					state.chartType = chartType;
 					updateChartButtons();
-					renderVisual();
+					if (chartType === 'sql') {
+						// Signal the SQL workbench module to initialize (lazy)
+						document.dispatchEvent(new CustomEvent('eda:sql-activate'));
+					} else {
+						renderVisual();
+					}
 				});
 			});
 
@@ -316,6 +458,32 @@
 
 		async function selectDataset(datasetId) {
 			if (!datasetId) return;
+			// Check if this is a user-added source injected by the SQL module
+			const userDs = window._edaUserDatasets?.get(datasetId);
+			if (userDs) {
+				state.datasetId = datasetId;
+				state.allRows   = userDs.rows;
+				const cols    = Object.keys(userDs.rows[0] || {});
+				const numCols = cols.filter(c => userDs.rows.slice(0, 50)
+					.some(r => { const v = parseFloat(r[c]); return Number.isFinite(v) && String(r[c]).trim() !== ''; }));
+				// All columns are available as dimensions — numeric fields (e.g. district IDs) are valid grouping keys too
+				state.settings = enrichSettings({
+					dimensions:       cols,
+					metrics:          ['Dataset Records', ...numCols],
+					aggregationTypes: ['Count', 'Sum', 'Average', 'Min', 'Max']
+				});
+				state.index = { totalRecords: userDs.rows.length };
+				populateControls();
+				updateDatasetInfo();
+				updateChartButtons();
+				initializeMapControls();
+				state.lastLoadedAt = new Date();
+				renderSummary();
+				renderVisual();
+				renderTable();
+				updateProgress(`User source "${userDs.title}" loaded: ${userDs.rows.length.toLocaleString()} rows.`);
+				return;
+			}
 			state.datasetId = datasetId;
 			await loadDataset(datasetId);
 		}
@@ -335,6 +503,17 @@
 				updateDatasetInfo();
 				updateChartButtons();
 				await loadPartitionsIntoState();
+				// After rows load, merge any field not already in dimensions so numeric
+				// columns (e.g. DISTRICT stored as 1–12) are selectable as grouping keys.
+				if (state.allRows.length) {
+					const allCols  = Object.keys(state.allRows[0]);
+					const existing = new Set(state.settings.dimensions);
+					const extra    = allCols.filter(c => !existing.has(c));
+					if (extra.length) {
+						state.settings.dimensions = [...state.settings.dimensions, ...extra];
+						populateControls(); // refresh selects with the complete field list
+					}
+				}
 				initializeMapControls();
 				state.lastLoadedAt = new Date();
 				renderSummary();
@@ -355,8 +534,16 @@
 			if (!Array.isArray(clone.metrics) || !clone.metrics.length) {
 				clone.metrics = ['Dataset Records'];
 			}
+			// Always offer the full set of aggregations — Count-only is useless once
+			// numeric metrics are available, and Count still works for all metrics.
+			const ALL_AGGS = ['Count', 'Sum', 'Average', 'Min', 'Max'];
 			if (!Array.isArray(clone.aggregationTypes) || !clone.aggregationTypes.length) {
-				clone.aggregationTypes = ['Count'];
+				clone.aggregationTypes = ALL_AGGS;
+			} else {
+				// Merge any existing entries then append missing standard ones
+				const set = new Set([...clone.aggregationTypes]);
+				ALL_AGGS.forEach(a => set.add(a));
+				clone.aggregationTypes = Array.from(set);
 			}
 			if (!Array.isArray(clone.orderBy) || !clone.orderBy.length) {
 				clone.orderBy = ['Dimension', 'Metric Agg Result'];
@@ -376,7 +563,7 @@
 				value: option.toLowerCase().includes('dimension') ? 'dimension' : 'metric'
 			}));
 			fillSelect('orderBySelect', orderValues, true);
-			document.getElementById('orderDirectionSelect').value = 'desc';
+			document.getElementById('orderDirectionSelect').value = 'asc';
 		}
 
 		function fillSelect(selectId, values, isObjectList = false) {
@@ -561,6 +748,8 @@
 		}
 
 		function renderVisual() {
+			// SQL mode has its own rendering — DuckDB queries CSV files directly
+			if (state.chartType === 'sql') return;
 			destroyVisuals();
 			if (!state.allRows.length) {
 				document.getElementById('chartArea').innerHTML = '<div class="text-muted">No data available for the current selection.</div>';
@@ -588,11 +777,13 @@
 		}
 
 		function renderChart() {
-			const dimensionField = document.getElementById('dimensionSelect').value;
-			const splitValue = document.getElementById('splitSelect').value;
-			const orderMode = document.getElementById('orderDirectionSelect').value;
-			const orderBy = document.getElementById('orderBySelect').value;
-			const prepared = prepareSeries(state.allRows, dimensionField, splitValue);
+			const dimensionField  = document.getElementById('dimensionSelect').value;
+			const metricField     = document.getElementById('metricSelect').value;
+			const aggregationType = document.getElementById('aggregationSelect').value;
+			const splitValue      = document.getElementById('splitSelect').value;
+			const orderMode       = document.getElementById('orderDirectionSelect').value;
+			const orderBy         = document.getElementById('orderBySelect').value;
+			const prepared = prepareSeries(state.allRows, dimensionField, splitValue, metricField, aggregationType);
 			sortSeries(prepared, orderBy, orderMode);
 			const chartArea = document.getElementById('chartArea');
 			const chartInstance = echarts.init(chartArea);
@@ -601,50 +792,77 @@
 			state.chartInstance = chartInstance;
 		}
 
-		function prepareSeries(rows, dimensionField, splitValue) {
-			const useSplit = splitValue && splitValue !== 'None';
-			const grouped = new Map();
+		function prepareSeries(rows, dimensionField, splitValue, metricField, aggregationType) {
+			const useSplit        = splitValue && splitValue !== 'None';
+			const isCountRecords  = !metricField || metricField === 'Dataset Records';
+			const agg             = (aggregationType || 'Count').toLowerCase();
+			const EMPTY_ACC       = () => ({ count: 0, sum: 0, min: Infinity, max: -Infinity });
+
+			// Accumulate per (dimension, splitKey) bucket
+			const grouped = new Map(); // dimensionKey → Map<bucketKey, acc>
 			rows.forEach(row => {
 				const dimensionKey = normalizeGroupValue(row[dimensionField]);
-				if (!grouped.has(dimensionKey)) {
-					grouped.set(dimensionKey, {});
-				}
-				if (useSplit) {
-					const splitKey = normalizeGroupValue(row[splitValue]);
-					const existing = grouped.get(dimensionKey);
-					existing[splitKey] = (existing[splitKey] || 0) + 1;
+				if (!grouped.has(dimensionKey)) grouped.set(dimensionKey, new Map());
+				const dimBucket = grouped.get(dimensionKey);
+
+				const bucketKey = useSplit ? normalizeGroupValue(row[splitValue]) : '__value';
+				if (!dimBucket.has(bucketKey)) dimBucket.set(bucketKey, EMPTY_ACC());
+				const acc = dimBucket.get(bucketKey);
+
+				if (isCountRecords) {
+					acc.count += 1;
 				} else {
-					const existing = grouped.get(dimensionKey);
-					existing.__value = (existing.__value || 0) + 1;
+					const num = parseFloat(row[metricField]);
+					if (Number.isFinite(num)) {
+						acc.count += 1;
+						acc.sum   += num;
+						if (num < acc.min) acc.min = num;
+						if (num > acc.max) acc.max = num;
+					}
 				}
 			});
-			const categories = Array.from(grouped.keys());
+
+			// Resolve an accumulator to a single display value
+			function resolve(acc) {
+				if (isCountRecords) return acc.count;
+				switch (agg) {
+					case 'sum':     return acc.sum;
+					case 'average': return acc.count ? Math.round((acc.sum / acc.count) * 100) / 100 : 0;
+					case 'min':     return acc.min === Infinity  ? 0 : acc.min;
+					case 'max':     return acc.max === -Infinity ? 0 : acc.max;
+					default:        return acc.count; // 'count' of non-null numeric values
+				}
+			}
+
+			const seriesLabel = isCountRecords
+				? 'Count'
+				: `${aggregationType} of ${metricField}`;
+			const categories  = Array.from(grouped.keys());
+			const fallbackAcc = EMPTY_ACC();
+
 			if (!useSplit) {
-				const values = categories.map(category => grouped.get(category).__value || 0);
 				return {
 					categories,
+					seriesLabel,
 					legend: [],
 					series: [{
-						name: 'Count',
+						name: seriesLabel,
 						type: state.chartType === 'pie' ? 'pie' : 'bar',
-						data: values
+						data: categories.map(cat => resolve(grouped.get(cat).get('__value') || fallbackAcc))
 					}]
 				};
 			}
-			const splitKeys = new Set();
-			grouped.forEach(value => {
-				Object.keys(value).forEach(key => {
-					if (key !== '__value') splitKeys.add(key);
-				});
-			});
-			const legend = Array.from(splitKeys);
+
+			const splitKeySet = new Set();
+			grouped.forEach(dimBucket => dimBucket.forEach((_, k) => splitKeySet.add(k)));
+			const legend = Array.from(splitKeySet);
 			const series = legend.map(splitKey => ({
 				name: splitKey,
 				type: 'bar',
 				stack: 'total',
-				data: categories.map(category => grouped.get(category)[splitKey] || 0)
+				data: categories.map(cat => resolve((grouped.get(cat).get(splitKey)) || fallbackAcc))
 			}));
-			return { categories, legend, series };
+			return { categories, seriesLabel, legend, series };
 		}
 
 		function sortSeries(prepared, orderBy, orderMode) {
@@ -657,14 +875,14 @@
 			const ascendingMultiplier = orderMode === 'asc' ? 1 : -1;
 			indices.sort((a, b) => {
 				if (orderBy === 'dimension') {
-					const nameA = categories[a];
-					const nameB = categories[b];
-					return nameA.localeCompare(nameB) * ascendingMultiplier;
+					const nameA = String(categories[a]);
+					const nameB = String(categories[b]);
+					return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' }) * ascendingMultiplier;
 				}
 				const valueA = totals[a];
 				const valueB = totals[b];
 				if (valueA === valueB) {
-					return categories[a].localeCompare(categories[b]) * ascendingMultiplier;
+					return String(categories[a]).localeCompare(String(categories[b]), undefined, { numeric: true, sensitivity: 'base' }) * ascendingMultiplier;
 				}
 				return (valueA - valueB) * ascendingMultiplier;
 			});
@@ -675,18 +893,20 @@
 		}
 
 		function buildChartOption(prepared) {
-			const isPie = state.chartType === 'pie';
+			const isPie        = state.chartType === 'pie';
+			const seriesLabel  = prepared.seriesLabel || 'Count';
+			const dimensionVal = document.getElementById('dimensionSelect').value;
 			if (isPie) {
 				const pieData = prepared.categories.map((category, index) => ({
 					name: category,
 					value: prepared.series[0].data[index]
 				}));
 				return {
-					title: { text: 'Records by ' + document.getElementById('dimensionSelect').value, left: 'center' },
+					title: { text: `${seriesLabel} by ${dimensionVal}`, left: 'center' },
 					tooltip: { trigger: 'item' },
 					legend: { orient: 'vertical', left: 'left' },
 					series: [{
-						name: 'Count',
+						name: seriesLabel,
 						type: 'pie',
 						radius: '65%',
 						data: pieData,
@@ -695,7 +915,7 @@
 				};
 			}
 			const isHorizontal = state.chartType === 'bar-horizontal';
-			const legendItems = Array.isArray(prepared.legend) ? prepared.legend : [];
+			const legendItems  = Array.isArray(prepared.legend) ? prepared.legend : [];
 			let legendConfig;
 			if (legendItems.length > 0) {
 				legendConfig = legendItems.length > 13 ? { show: false } : { data: legendItems };
@@ -705,7 +925,7 @@
 				legend: legendConfig,
 				grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
 				xAxis: isHorizontal ? { type: 'value' } : { type: 'category', data: prepared.categories },
-				yAxis: isHorizontal ? { type: 'category', data: prepared.categories } : { type: 'value' },
+				yAxis: isHorizontal ? { type: 'category', data: prepared.categories, inverse: true } : { type: 'value' },
 				series: prepared.series.map(serie => ({
 					...serie,
 					type: 'bar',
@@ -713,9 +933,38 @@
 				}))
 			};
 			if (isHorizontal) {
-				option.xAxis.name = 'Count';
+				option.xAxis.name = seriesLabel;
+				// Show top 12 rows by default; add scroll when there are more
+				const CAT_VISIBLE = 12;
+				const catCount = prepared.categories.length;
+				if (catCount > CAT_VISIBLE) {
+					option.dataZoom = [
+						{
+							type: 'inside',
+							yAxisIndex: 0,
+							startValue: 0,
+							endValue: CAT_VISIBLE - 1,
+							zoomOnMouseWheel: false,
+							moveOnMouseWheel: true,
+							moveOnMouseMove: false
+						},
+						{
+							type: 'slider',
+							yAxisIndex: 0,
+							startValue: 0,
+							endValue: CAT_VISIBLE - 1,
+							width: 18,
+							right: 6,
+							brushSelect: false,
+							showDetail: false,
+							showDataShadow: false
+						}
+					];
+					// Make room for the slider on the right
+					option.grid.right = '40px';
+				}
 			} else {
-				option.yAxis.name = 'Count';
+				option.yAxis.name = seriesLabel;
 			}
 			return option;
 		}
@@ -842,16 +1091,28 @@
 		}
 
 		function updateControlVisibility() {
-			const controlsCard = document.getElementById('controlsCard');
-			const mapContainer = document.getElementById('mapOptions');
+			const controlsCard    = document.getElementById('controlsCard');
+			const mapContainer    = document.getElementById('mapOptions');
 			const generalControls = document.getElementById('generalControls');
-			const hasMap = Boolean(state.settings?.map);
+			const sqlSidebar      = document.getElementById('sqlSidebarPanel');
+			const chartArea       = document.getElementById('chartArea');
+			const progressMsg     = document.getElementById('progressMessage');
+			const dataSummary     = document.getElementById('dataSummary');
+			const sqlWorkbench    = document.getElementById('sqlWorkbenchPanel');
+			const tableCard       = document.querySelector('.table-card');
+			const hasMap  = Boolean(state.settings?.map);
 			const mapActive = state.chartType === 'map' && hasMap;
+			const sqlActive = state.chartType === 'sql';
+
+			// Controls card CSS classes drive CSS-based hiding of sub-panels
 			if (controlsCard) {
-				controlsCard.classList.toggle('map-active', mapActive);
+				controlsCard.classList.toggle('map-active', mapActive && !sqlActive);
+				controlsCard.classList.toggle('sql-active', sqlActive);
 			}
+
+			// Map options panel
 			if (mapContainer) {
-				if (hasMap) {
+				if (hasMap && !sqlActive) {
 					mapContainer.classList.toggle('d-none', !mapActive);
 					if (!mapActive) {
 						const clusterToggleElement = document.getElementById('mapClusterToggle');
@@ -863,13 +1124,29 @@
 					mapContainer.classList.add('d-none');
 				}
 			}
+
+			// General chart controls
 			if (generalControls) {
-				if (mapActive) {
+				if (mapActive || sqlActive) {
 					generalControls.setAttribute('aria-hidden', 'true');
 				} else {
 					generalControls.removeAttribute('aria-hidden');
 				}
 			}
+
+			// SQL sidebar panel (visibility toggled via inline style to work alongside d-flex)
+			if (sqlSidebar) {
+				sqlSidebar.style.display = sqlActive ? 'flex' : 'none';
+			}
+
+			// Chart area vs SQL workbench panel toggle
+			if (chartArea)    chartArea.style.display    = sqlActive ? 'none' : '';
+			if (progressMsg)  progressMsg.style.display  = sqlActive ? 'none' : '';
+			if (dataSummary)  dataSummary.style.display  = sqlActive ? 'none' : '';
+			if (sqlWorkbench) sqlWorkbench.style.display = sqlActive ? 'flex' : 'none';
+
+			// Hide the data table card when SQL is active (SQL workbench shows its own results)
+			if (tableCard) tableCard.style.display = sqlActive ? 'none' : '';
 		}
 
 		function updateProgress(message) {
@@ -1098,7 +1375,818 @@
 				request.onerror = () => resolve();
 			});
 		}
+		// Expose CSV parser for the SQL module to use when copying sources into EDA
+		window._edaParseCsv = parseCSV;
 	})();
+	</script>
+
+	<!-- ═══════════════════════════════════════════════════════════════════════
+	     SQL WORKBENCH MODULE
+	     Uses DuckDB-WASM to run SQL directly against the raw CSV files.
+	     Sources: data/raw/<dataset-id>.csv  (NOT the IndexedDB partition cache)
+	     Activated lazily on first click of the SQL chart-type button.
+	     ═══════════════════════════════════════════════════════════════════════ -->
+	<script type="module">
+	// ── Dataset sources (raw CSV files, not partitioned report data) ───────────
+	const SQL_DATASETS = [
+		{ alias: 'eda_assets_bridge_condition_owner_area',    title: 'Bridge Condition & Owner Area',                url: 'data/raw/eda_assets_bridge_condition_owner_area.csv' },
+		{ alias: 'eda_construction_procurement',              title: 'Construction Procurement',                     url: 'data/raw/eda_construction_procurement.csv' },
+		{ alias: 'eda_current_enact_plan_data_set',           title: 'Current Enacted Plan',                         url: 'data/raw/eda_current_enact_plan_data_set.csv' },
+		{ alias: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',     url: 'data/raw/eda_programmanagement_authorized_detailed.csv' }
+	];
+
+	// ── IndexedDB for user-added sources ────────────────────────────────────────
+	const USER_IDB_NAME    = 'eda_sql_user_sources';
+	const USER_IDB_VERSION = 2;   // bumped: added user_source_data store
+	const USER_STORE       = 'sources';
+	const USER_DATA_STORE  = 'user_source_data';
+	let   userIdb          = null;
+
+	function openUserIDB() {
+		return new Promise((resolve, reject) => {
+			const req = indexedDB.open(USER_IDB_NAME, USER_IDB_VERSION);
+			req.onupgradeneeded = e => {
+				const db = e.target.result;
+				if (!db.objectStoreNames.contains(USER_STORE))
+					db.createObjectStore(USER_STORE, { keyPath: 'alias' });
+				if (!db.objectStoreNames.contains(USER_DATA_STORE))
+					db.createObjectStore(USER_DATA_STORE, { keyPath: 'alias' });
+			};
+			req.onsuccess = e => resolve(e.target.result);
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbUserGetAll() {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_STORE, 'readonly').objectStore(USER_STORE).getAll();
+			req.onsuccess = e => resolve(e.target.result || []);
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbUserPut(record) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_STORE, 'readwrite').objectStore(USER_STORE).put(record);
+			req.onsuccess = () => resolve();
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbUserDelete(alias) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_STORE, 'readwrite').objectStore(USER_STORE).delete(alias);
+			req.onsuccess = () => resolve();
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbUserDataPut(alias, rows) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_DATA_STORE, 'readwrite')
+				.objectStore(USER_DATA_STORE).put({ alias, rows, savedAt: Date.now() });
+			req.onsuccess = () => resolve();
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbUserDataGet(alias) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_DATA_STORE, 'readonly')
+				.objectStore(USER_DATA_STORE).get(alias);
+			req.onsuccess = e => resolve(e.target.result?.rows || null);
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbUserDataDelete(alias) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_DATA_STORE, 'readwrite')
+				.objectStore(USER_DATA_STORE).delete(alias);
+			req.onsuccess = () => resolve();
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+
+	// ── State ──────────────────────────────────────────────────────────────────
+	let duck_db       = null;
+	let conn          = null;
+	let initialized   = false;
+	let initializing  = false;
+	let tableColumns  = new Map();   // alias → [{name, type}]
+	let lastResult    = null;        // { cols, rows } for CSV export
+	let sqlTabulator  = null;        // current Tabulator instance in the results pane
+	let userSources   = [];          // persisted user-added sources [{alias, title, url, addedAt}]
+	const SQL_ROW_LIMIT = 2000;      // max rows rendered in the preview table
+
+	// ── DOM helpers ────────────────────────────────────────────────────────────
+	const $  = id => document.getElementById(id);
+	const $$ = sel => document.querySelector(sel);
+
+	// ── Status indicator ───────────────────────────────────────────────────────
+	function setStatus(st, msg) {
+		const dot  = $('sqlStatusDot');
+		const text = $('sqlStatusText');
+		if (dot)  dot.className  = 'sql-status-dot ' + st;
+		if (text) text.textContent = msg;
+	}
+
+	// ── DuckDB initialization (lazy — called on first SQL mode activation) ─────
+	async function initDuckDB() {
+		if (initialized || initializing) return;
+		initializing = true;
+		try {
+			setStatus('loading', 'loading wasm\u2026');
+			const duckdb = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0/+esm');
+			const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
+			const workerUrl = URL.createObjectURL(
+				new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+			);
+			const worker = new Worker(workerUrl);
+			duck_db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
+			await duck_db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+			URL.revokeObjectURL(workerUrl);
+			conn = await duck_db.connect();
+			await conn.query(`SET enable_progress_bar=false;`);
+
+			setStatus('loading', 'registering sources\u2026');
+			userIdb     = await openUserIDB();
+			userSources = await idbUserGetAll();
+			renderSidebar();
+			for (const src of SQL_DATASETS) {
+				await registerSource(src);
+			}
+			for (const src of userSources) {
+				await registerSource(src);
+			}
+			// Restore cached row data into EDA for user sources (so ECharts works on reload)
+			for (const src of userSources) {
+				const cached = await idbUserDataGet(src.alias);
+				if (cached && cached.length) injectUserDatasetIntoEDA(src, cached);
+			}
+			initialized  = true;
+			initializing = false;
+			setStatus('ready', 'ready');
+			const runBtn = $('sqlRunBtn');
+			if (runBtn) runBtn.disabled = false;
+			const addBtn = $('sqlAddSourceBtn');
+			if (addBtn) addBtn.disabled = false;
+		} catch (e) {
+			initializing = false;
+			setStatus('error', 'init failed');
+			console.error('DuckDB init error:', e);
+		}
+	}
+
+	// ── Detect file type from URL ─────────────────────────────────────────────
+	function guessFileType(url) {
+		const lower = url.toLowerCase().split('?')[0];
+		if (lower.endsWith('.parquet')) return 'parquet';
+		if (lower.endsWith('.json') || lower.endsWith('.jsonl') || lower.endsWith('.ndjson')) return 'json';
+		return 'csv';
+	}
+
+	// ── Register a source as a DuckDB view ─────────────────────────────────────
+	async function registerSource(src) {
+		updateBadge(src.alias, 'loading');
+		try {
+			// Resolve to absolute URL — DuckDB Web Worker has no page-relative directory
+			const absUrl = new URL(src.url, location.href).href;
+			const ft     = guessFileType(absUrl);
+			const expr   = ft === 'parquet'
+				? `read_parquet('${absUrl}')`
+				: ft === 'json'
+				? `read_json_auto('${absUrl}')`
+				: `read_csv_auto('${absUrl}', header=true)`;
+			await conn.query(`CREATE OR REPLACE VIEW "${src.alias}" AS SELECT * FROM ${expr};`);
+			updateBadge(src.alias, 'loaded');
+			await fetchColumns(src.alias);
+		} catch (e) {
+			console.warn(`Failed to register ${src.alias}:`, e.message);
+			updateBadge(src.alias, 'error');
+		}
+	}
+
+	// ── Sidebar rendering ──────────────────────────────────────────────────────
+	function makeTableItem(src, isUser) {
+		const wrapper = document.createElement('div');
+		wrapper.className = 'sql-table-item-wrapper';
+		wrapper.id = `sql-tiw-${src.alias}`;
+
+		const item = document.createElement('div');
+		item.className = 'sql-table-item' + (isUser ? ' sql-table-item-user' : '');
+		item.id = `sql-ti-${src.alias}`;
+
+		const ft   = guessFileType(src.url);
+		const icon = ft === 'parquet' ? '&#x25c8;' : ft === 'json' ? '{}' : '&#x229e;';
+
+		item.innerHTML = `
+			<button class="sql-expand-btn" id="sql-exp-${escHtml(src.alias)}" disabled title="Expand columns">&#x25BA;</button>
+			<span style="font-size:10px;opacity:0.4;flex-shrink:0">${icon}</span>
+			<span class="sql-table-name" title="SQL alias: ${escHtml(src.alias)}">${escHtml(src.title || src.alias)}</span>
+			<span class="badge bg-secondary bg-opacity-25 text-secondary ms-auto" id="sql-badge-${escHtml(src.alias)}" style="font-size:10px">&#x2026;</span>
+			${isUser ? `<button class="sql-del-btn" title="Remove source" data-alias="${escHtml(src.alias)}">&#x2715;</button>` : ''}
+		`;
+
+		item.querySelector('.sql-expand-btn').addEventListener('click', e => { e.stopPropagation(); toggleExpand(src.alias); });
+		if (isUser) {
+			item.querySelector('.sql-del-btn').addEventListener('click', e => { e.stopPropagation(); removeUserSource(src.alias); });
+		}
+		item.addEventListener('click', e => {
+			if (!e.target.closest('.sql-expand-btn') && !e.target.closest('.sql-del-btn')) insertTableRef(src.alias);
+		});
+
+		const fieldList = document.createElement('div');
+		fieldList.className = 'sql-field-list';
+		fieldList.id = `sql-tf-${src.alias}`;
+		fieldList.style.display = 'none';
+
+		wrapper.appendChild(item);
+		wrapper.appendChild(fieldList);
+		return wrapper;
+	}
+
+	function renderSidebar() {
+		const list = $('sqlTableList');
+		if (!list) return;
+		list.innerHTML = '';
+
+		const managedLabel = document.createElement('div');
+		managedLabel.className = 'sql-source-label';
+		managedLabel.textContent = 'Managed';
+		list.appendChild(managedLabel);
+		SQL_DATASETS.forEach(src => list.appendChild(makeTableItem(src, false)));
+
+		if (userSources.length) {
+			const userLabel = document.createElement('div');
+			userLabel.className = 'sql-source-label';
+			userLabel.textContent = 'My Sources';
+			list.appendChild(userLabel);
+			userSources.forEach(src => list.appendChild(makeTableItem(src, true)));
+		}
+	}
+
+	function updateBadge(alias, st) {
+		const badge = $(`sql-badge-${alias}`);
+		if (!badge) return;
+		if (st === 'loading') {
+			badge.textContent = '\u2026';
+			badge.className   = 'badge bg-secondary bg-opacity-25 text-secondary ms-auto';
+		} else if (st === 'loaded') {
+			badge.textContent = 'ready';
+			badge.className   = 'badge bg-success bg-opacity-25 text-success ms-auto';
+			const btn = $(`sql-exp-${alias}`);
+			if (btn) btn.disabled = false;
+		} else {
+			badge.textContent = 'error';
+			badge.className   = 'badge bg-warning bg-opacity-25 text-warning ms-auto';
+		}
+	}
+
+	// ── Copy a source's rows into IndexedDB and inject into EDA ─────────────
+	async function copySourceToEDA(record) {
+		try {
+			const absUrl = new URL(record.url, location.href).href;
+			const ft     = guessFileType(absUrl);
+			let rows     = [];
+
+			if (ft === 'parquet') {
+				// Materialise via DuckDB (already registered as a VIEW)
+				const res  = await conn.query(`SELECT * FROM "${record.alias}";`);
+				const cols = res.schema.fields.map(f => f.name);
+				rows = res.toArray().map(r => {
+					const obj = {};
+					cols.forEach(c => {
+						const v = r[c];
+						obj[c] = (v === null || v === undefined) ? null
+							: typeof v === 'bigint' ? Number(v) : v;
+					});
+					return obj;
+				});
+			} else if (ft === 'json') {
+				const resp = await fetch(absUrl);
+				if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+				const json = await resp.json();
+				rows = Array.isArray(json) ? json
+					: (json.data || json.rows || json.features || []);
+			} else {
+				// CSV — prefer the IIFE's full parser if available
+				const resp = await fetch(absUrl);
+				if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+				const text = await resp.text();
+				rows = window._edaParseCsv ? window._edaParseCsv(text) : parseCsvSimple(text);
+			}
+
+			if (!rows.length) return null;
+			await idbUserDataPut(record.alias, rows);
+			return rows;
+		} catch (e) {
+			console.warn(`copySourceToEDA failed for "${record.alias}":`, e.message);
+			return null;
+		}
+	}
+
+	// Minimal RFC-4180 CSV parser (fallback if IIFE parser unavailable)
+	function parseCsvSimple(text) {
+		if (!text) return [];
+		const lines = text.split(/\r?\n/).filter(l => l.trim());
+		if (lines.length < 2) return [];
+		const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+		return lines.slice(1).map(line => {
+			const vals = line.split(',');
+			const obj  = {};
+			headers.forEach((h, i) => { obj[h] = (vals[i] ?? '').replace(/^"|"$/g, ''); });
+			return obj;
+		});
+	}
+
+	// Inject rows into window._edaUserDatasets and add to dataset <select>
+	function injectUserDatasetIntoEDA(record, rows) {
+		if (!window._edaUserDatasets) window._edaUserDatasets = new Map();
+		window._edaUserDatasets.set(record.alias, {
+			id:    record.alias,
+			title: record.title || record.alias,
+			rows
+		});
+		const sel = document.getElementById('datasetSelect');
+		if (sel && ![...sel.options].some(o => o.value === record.alias)) {
+			const opt = document.createElement('option');
+			opt.value       = record.alias;
+			opt.textContent = `[User] ${record.title || record.alias}`;
+			opt.dataset.userSource = 'true';
+			sel.appendChild(opt);
+		}
+	}
+
+	// Remove user dataset option and registry entry on delete
+	function removeUserDatasetFromEDA(alias) {
+		if (window._edaUserDatasets) window._edaUserDatasets.delete(alias);
+		const sel = document.getElementById('datasetSelect');
+		if (sel) {
+			const opt = [...sel.options].find(o => o.value === alias);
+			if (opt) opt.remove();
+		}
+	}
+
+	// ── Add / Remove user sources ─────────────────────────────────────────────
+	function openAddModal() {
+		$('sqlNewAlias').value = '';
+		$('sqlNewUrl').value   = '';
+		$('sqlAddModal').classList.add('open');
+		setTimeout(() => $('sqlNewAlias').focus(), 80);
+	}
+	function closeAddModal() {
+		$('sqlAddModal').classList.remove('open');
+	}
+
+	async function saveNewSource() {
+		const rawAlias = ($('sqlNewAlias').value || '').trim();
+		const url      = ($('sqlNewUrl').value   || '').trim();
+		const alias    = rawAlias.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || rawAlias;
+
+		if (!alias) { alert('Please provide a table alias.'); return; }
+		if (!url)   { alert('Please provide a file URL.');    return; }
+
+		const allAliases = [...SQL_DATASETS.map(s => s.alias), ...userSources.map(s => s.alias)];
+		if (allAliases.includes(alias)) {
+			alert(`Alias "${alias}" already exists. Please choose a different name.`);
+			return;
+		}
+
+		const saveBtn  = $('sqlAddModalSave');
+		const origHTML = saveBtn.innerHTML;
+		saveBtn.disabled  = true;
+		saveBtn.innerHTML = '<span class="sql-spinner"></span> Loading…';
+
+		try {
+			// Quick HEAD check to catch obvious CORS / 404 issues early
+			const record = { alias, title: alias, url, addedAt: Date.now() };
+			await idbUserPut(record);
+			userSources = await idbUserGetAll();
+			userSources.sort((a, b) => a.addedAt - b.addedAt);
+
+			closeAddModal();
+			renderSidebar();
+			// Restore badges for already-registered tables
+			[...SQL_DATASETS, ...userSources.filter(s => s.alias !== alias)]
+				.forEach(s => updateBadge(s.alias, tableColumns.has(s.alias) ? 'loaded' : 'error'));
+
+			// 1. Register in DuckDB so SQL workbench can query it immediately
+			await registerSource(record);
+
+			// 2. Copy rows into IndexedDB and inject into the EDA dataset selector + ECharts
+			saveBtn.innerHTML = '<span class="sql-spinner"></span> Copying to EDA…';
+			const rows = await copySourceToEDA(record);
+			if (rows && rows.length) {
+				injectUserDatasetIntoEDA(record, rows);
+			}
+		} catch (e) {
+			alert(`Could not add source:\n${e.message}`);
+		} finally {
+			saveBtn.disabled  = false;
+			saveBtn.innerHTML = origHTML;
+		}
+	}
+
+	async function removeUserSource(alias) {
+		if (!confirm(`Remove "${alias}" from your sources?\nThis only affects your browser.`)) return;
+		await idbUserDelete(alias);
+		await idbUserDataDelete(alias);
+		try { await conn.query(`DROP VIEW IF EXISTS "${alias}";`); } catch (_) {}
+		tableColumns.delete(alias);
+		userSources = userSources.filter(s => s.alias !== alias);
+		removeUserDatasetFromEDA(alias);
+		renderSidebar();
+		SQL_DATASETS.forEach(s => updateBadge(s.alias, tableColumns.has(s.alias) ? 'loaded' : 'error'));
+		userSources.forEach(s  => updateBadge(s.alias,  tableColumns.has(s.alias)  ? 'loaded' : 'error'));
+	}
+
+	// ── Column fetching & field browser ───────────────────────────────────────
+	async function fetchColumns(alias) {
+		try {
+			const res  = await conn.query(`DESCRIBE "${alias}";`);
+			const rows = res.toArray();
+			tableColumns.set(alias, rows.map(r => ({
+				name: String(r.column_name),
+				type: String(r.column_type)
+			})));
+		} catch (e) {
+			console.warn(`Could not describe ${alias}:`, e.message);
+		}
+	}
+
+	function toggleExpand(alias) {
+		const fieldList = $(`sql-tf-${alias}`);
+		const expBtn    = $(`sql-exp-${alias}`);
+		if (!fieldList) return;
+		const isOpen = fieldList.style.display !== 'none';
+		if (isOpen) {
+			fieldList.style.display = 'none';
+			expBtn?.classList.remove('expanded');
+		} else {
+			if (!fieldList.children.length) renderFields(alias, fieldList);
+			fieldList.style.display = 'block';
+			expBtn?.classList.add('expanded');
+		}
+	}
+
+	function renderFields(alias, container) {
+		const cols = tableColumns.get(alias);
+		if (!cols || !cols.length) {
+			container.innerHTML = '<div class="sql-field-item" style="cursor:default;font-style:italic;color:#aaa">no columns</div>';
+			return;
+		}
+		container.innerHTML = '';
+		cols.forEach(c => {
+			const row = document.createElement('div');
+			row.className = 'sql-field-item';
+			row.title = `Insert "${alias}"."${c.name}"`;
+			row.innerHTML = `<span class="sql-field-name">${escHtml(c.name)}</span><span class="sql-field-type">${escHtml(c.type.split('(')[0])}</span>`;
+			row.addEventListener('click', e => { e.stopPropagation(); insertFieldRef(alias, c.name); });
+			container.appendChild(row);
+		});
+	}
+
+	// ── Editor insertion helpers ──────────────────────────────────────────────
+	function insertTableRef(alias) {
+		const ta  = $('sqlEditorTA');
+		if (!ta) return;
+		const val = ta.value.trim();
+		if (!val) {
+			ta.value = `SELECT *\nFROM "${alias}"\nLIMIT 100;`;
+		} else {
+			const pos = ta.selectionStart;
+			ta.value = ta.value.slice(0, pos) + `"${alias}"` + ta.value.slice(pos);
+		}
+		ta.focus();
+		updateLineNums();
+		document.querySelectorAll('.sql-table-item').forEach(el => el.classList.remove('active'));
+		$(`sql-ti-${alias}`)?.classList.add('active');
+	}
+
+	function insertFieldRef(alias, field) {
+		const ta  = $('sqlEditorTA');
+		if (!ta) return;
+		const quoted = `"${alias}"."${field}"`;
+		const pos = ta.selectionStart;
+		ta.value = ta.value.slice(0, pos) + quoted + ta.value.slice(pos);
+		ta.selectionStart = ta.selectionEnd = pos + quoted.length;
+		ta.focus();
+		updateLineNums();
+	}
+
+	// ── Query execution ────────────────────────────────────────────────────────
+	async function runQuery() {
+		if (!conn) return;
+		const sql = $('sqlEditorTA')?.value.trim();
+		if (!sql) return;
+
+		const runBtn = $('sqlRunBtn');
+		if (runBtn) { runBtn.disabled = true; runBtn.innerHTML = '<span class="sql-spinner"></span> Running'; }
+		setStatus('loading', 'executing\u2026');
+		const rowCountEl = $('sqlRowCount');
+		const execTimeEl = $('sqlExecTime');
+		const exportBtn  = $('sqlExportBtn');
+		if (rowCountEl) rowCountEl.textContent = '';
+		if (execTimeEl) execTimeEl.textContent = '';
+		$('sqlResultsContainer').innerHTML =
+			'<div class="sql-state-msg"><span class="sql-spinner" style="width:20px;height:20px;border-width:3px"></span></div>';
+
+		const t0 = performance.now();
+		try {
+			const result  = await conn.query(sql);
+			const elapsed = ((performance.now() - t0) / 1000).toFixed(3);
+			renderResults(result, elapsed);
+			setStatus('ready', 'ready');
+		} catch (e) {
+			const elapsed = ((performance.now() - t0) / 1000).toFixed(3);
+			$('sqlResultsContainer').innerHTML =
+				`<div class="sql-state-msg"><span style="font-size:20px">\u26A0</span><span style="color:#dc3545;max-width:90%;text-align:center;line-height:1.6">${escHtml(e.message)}</span></div>`;
+			if (execTimeEl) execTimeEl.textContent = `${elapsed}s`;
+			setStatus('error', 'query error');
+		} finally {
+			if (runBtn) { runBtn.disabled = false; runBtn.innerHTML = '\u25BA Run'; }
+		}
+	}
+
+	// Make runQuery accessible to inline onclick (though we use addEventListener below)
+	window._sqlWBRunQuery = runQuery;
+
+	function renderResults(result, elapsed) {
+		const schema = result.schema;
+		const rows   = result.toArray();
+		const execTimeEl = $('sqlExecTime');
+		const rowCountEl = $('sqlRowCount');
+		const exportBtn  = $('sqlExportBtn');
+
+		if (execTimeEl) execTimeEl.textContent = `${elapsed}s`;
+
+		lastResult = null;
+		if (exportBtn) exportBtn.style.display = 'none';
+
+		// Destroy any previous Tabulator before touching the container DOM
+		if (sqlTabulator) {
+			try { sqlTabulator.destroy(); } catch (_) {}
+			sqlTabulator = null;
+		}
+
+		if (!rows.length) {
+			if (rowCountEl) rowCountEl.textContent = '0 rows';
+			$('sqlResultsContainer').innerHTML =
+				'<div class="sql-state-msg"><span style="font-size:20px">\u2205</span><span>Query returned 0 rows</span></div>';
+			return;
+		}
+
+		// Arrow type IDs: Date_=8, Timestamp=10, Time=11, Interval=12
+		const cols = schema.fields.map(f => {
+			const typeId = f.type?.typeId ?? -1;
+			// Timestamp unit: 0=s, 1=ms, 2=µs (DuckDB default), 3=ns
+			const tsUnit = (typeId === 10) ? (f.type?.unit ?? 2) : null;
+			// Date unit: 0=day, 1=ms
+			const dateUnit = (typeId === 8) ? (f.type?.unit ?? 0) : null;
+			return { name: f.name, type: f.type?.toString() || '', typeId, tsUnit, dateUnit };
+		});
+		const truncated = rows.length > SQL_ROW_LIMIT;
+		const preview   = truncated ? rows.slice(0, SQL_ROW_LIMIT) : rows;
+
+		if (rowCountEl) {
+			rowCountEl.textContent = truncated
+				? `${SQL_ROW_LIMIT.toLocaleString()} of ${rows.length.toLocaleString()} rows (preview capped — use LIMIT in your query for full control)`
+				: `${rows.length.toLocaleString()} row${rows.length !== 1 ? 's' : ''}`;
+			rowCountEl.style.color = truncated ? '#dc6c00' : '';
+		}
+
+		// Convert a raw Arrow timestamp/date BigInt to a readable local string
+		function arrowTemporalToStr(raw, col) {
+			try {
+				let ms;
+				if (col.typeId === 10) {
+					// Timestamp
+					const n = typeof raw === 'bigint' ? raw : BigInt(raw);
+					if      (col.tsUnit === 0) ms = Number(n) * 1000;        // seconds
+					else if (col.tsUnit === 1) ms = Number(n);               // milliseconds
+					else if (col.tsUnit === 2) ms = Number(n) / 1000;        // microseconds
+					else                       ms = Number(n) / 1_000_000;   // nanoseconds
+				} else {
+					// Date_
+					const n = typeof raw === 'bigint' ? Number(raw) : raw;
+					ms = col.dateUnit === 0 ? n * 86400000 : n;              // days or ms
+				}
+				const d = new Date(ms);
+				if (isNaN(d.getTime())) return String(raw);
+				// Show date-only for Date_ columns, full datetime for Timestamp
+				if (col.typeId === 8) return d.toLocaleDateString();
+				// Omit seconds+ms when they're zero for a cleaner display
+				return d.toLocaleString(undefined, {
+					year:'numeric', month:'2-digit', day:'2-digit',
+					hour:'2-digit', minute:'2-digit',
+					hour12: false
+				});
+			} catch (_) { return String(raw); }
+		}
+
+		// Convert Arrow rows to plain JS objects for Tabulator
+		const tabulatorData = preview.map(row => {
+			const obj = {};
+			cols.forEach(c => {
+				const raw = row[c.name];
+				if (raw === null || raw === undefined) {
+					obj[c.name] = null;
+				} else if (c.typeId === 10 || c.typeId === 8) {
+					obj[c.name] = arrowTemporalToStr(raw, c);
+				} else if (typeof raw === 'bigint') {
+					obj[c.name] = Number(raw);
+				} else {
+					obj[c.name] = raw;
+				}
+			});
+			return obj;
+		});
+
+		lastResult = { cols, rows: tabulatorData };
+		if (exportBtn) exportBtn.style.display = '';
+
+		// Clear container and mount Tabulator — same config as the main EDA data table
+		$('sqlResultsContainer').innerHTML = '';
+		sqlTabulator = new Tabulator($('sqlResultsContainer'), {
+			data: tabulatorData,
+			layout: 'fitDataStretch',
+			height: '350px',
+			pagination: 'local',
+			paginationSize: 15,
+			paginationSizeSelector: [15, 25, 50, 100],
+			resizableColumns: true,
+			autoColumns: false,
+			placeholder: 'No rows to display.',
+			columns: cols.map(c => ({
+				title: c.name,
+				field: c.name,
+				headerFilter: 'input',
+				headerFilterPlaceholder: 'Filter…',
+				headerSort: true,
+				minWidth: 120,
+				formatter: cell => {
+					const v = cell.getValue();
+					if (v === null || v === undefined)
+						return '<span style="color:#adb5bd;font-style:italic">null</span>';
+					return escHtml(String(v));
+				}
+			}))
+		});
+	}
+
+	// ── CSV export ─────────────────────────────────────────────────────────────
+	function exportCSV() {
+		if (!lastResult) return;
+		const { cols, rows } = lastResult;
+		const esc = v => {
+			if (v === null || v === undefined) return '';
+			const s = typeof v === 'bigint' ? String(v) : String(v);
+			return (s.includes(',') || s.includes('"') || s.includes('\n'))
+				? `"${s.replace(/"/g, '""')}"`
+				: s;
+		};
+		const lines = [
+			cols.map(c => esc(c.name)).join(','),
+			...rows.map(row => cols.map(c => esc(row[c.name])).join(','))
+		];
+		const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+		const a = Object.assign(document.createElement('a'), {
+			href: URL.createObjectURL(blob),
+			download: `eda_sql_${Date.now()}.csv`
+		});
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		URL.revokeObjectURL(a.href);
+	}
+
+	// ── Cell styling helpers ───────────────────────────────────────────────────
+	function cellClass(val, type) {
+		if (val === null || val === undefined) return 'td-null';
+		const t = (type || '').toLowerCase();
+		if (t.includes('int') || t.includes('float') || t.includes('double') || t.includes('decimal')) return 'td-num';
+		if (t.includes('bool')) return 'td-bool';
+		if (typeof val === 'number') return 'td-num';
+		if (typeof val === 'boolean') return 'td-bool';
+		return '';
+	}
+
+	function formatCell(val) {
+		if (val === null || val === undefined)
+			return '<span class="text-secondary fst-italic">null</span>';
+		if (typeof val === 'bigint') return String(val);
+		return escHtml(String(val));
+	}
+
+	function typeShort(t) {
+		const s = (t || '').toLowerCase();
+		if (s.includes('int'))                                   return 'int';
+		if (s.includes('float') || s.includes('double'))        return 'float';
+		if (s.includes('varchar') || s.includes('utf8') || s.includes('string')) return 'str';
+		if (s.includes('bool'))                                  return 'bool';
+		if (s.includes('date'))                                  return 'date';
+		if (s.includes('timestamp'))                             return 'ts';
+		return '';
+	}
+
+	function escHtml(str) {
+		return String(str)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
+	}
+
+	// ── Line-number counter ────────────────────────────────────────────────────
+	function updateLineNums() {
+		const ta   = $('sqlEditorTA');
+		const nums = $('sqlLineNums');
+		if (!ta || !nums) return;
+		const lines = (ta.value.match(/\n/g) || []).length + 1;
+		nums.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+	}
+
+	// ── Resizable editor ───────────────────────────────────────────────────────
+	function initResizer() {
+		const resizer    = $('sqlResizer');
+		const editorWrap = $$('.sql-editor-container');
+		if (!resizer || !editorWrap) return;
+		let isResizing = false;
+		resizer.addEventListener('mousedown', () => {
+			isResizing = true;
+			document.body.style.cursor = 'ns-resize';
+		});
+		document.addEventListener('mousemove', e => {
+			if (!isResizing) return;
+			const top  = editorWrap.getBoundingClientRect().top;
+			const newH = Math.max(80, Math.min(520, e.clientY - top));
+			const ta   = $('sqlEditorTA');
+			const nums = $('sqlLineNums');
+			if (ta)   ta.style.height   = newH + 'px';
+			if (nums) nums.style.height = newH + 'px';
+		});
+		document.addEventListener('mouseup', () => {
+			isResizing = false;
+			document.body.style.cursor = '';
+		});
+	}
+
+	// ── Wire up all DOM events after page load ─────────────────────────────────
+	document.addEventListener('DOMContentLoaded', () => {
+		$('sqlRunBtn')?.addEventListener('click', runQuery);
+
+		$('sqlClearBtn')?.addEventListener('click', () => {
+			const ta = $('sqlEditorTA');
+			if (ta) { ta.value = ''; updateLineNums(); ta.focus(); }
+		});
+
+		$('sqlExampleBtn')?.addEventListener('click', () => {
+			const ta = $('sqlEditorTA');
+			if (ta) {
+				ta.value = `SELECT *\nFROM "eda_construction_procurement"\nLIMIT 100;`;
+				updateLineNums();
+				ta.focus();
+			}
+		});
+
+		$('sqlExportBtn')?.addEventListener('click', exportCSV);
+
+		$('sqlAddSourceBtn')?.addEventListener('click', openAddModal);
+		$('sqlAddModalClose')?.addEventListener('click',  closeAddModal);
+		$('sqlAddModalCancel')?.addEventListener('click', closeAddModal);
+		$('sqlAddModalSave')?.addEventListener('click',   saveNewSource);
+		$('sqlAddModal')?.addEventListener('click', e => { if (e.target === $('sqlAddModal')) closeAddModal(); });
+		$('sqlNewUrl')?.addEventListener('keydown',   e => { if (e.key === 'Enter') saveNewSource(); });
+		$('sqlNewAlias')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('sqlNewUrl').focus(); });
+
+		const ta = $('sqlEditorTA');
+		if (ta) {
+			ta.addEventListener('input', updateLineNums);
+			ta.addEventListener('scroll', () => {
+				const n = $('sqlLineNums');
+				if (n) n.scrollTop = ta.scrollTop;
+			});
+			ta.addEventListener('keydown', e => {
+				if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+					e.preventDefault();
+					if (!$('sqlRunBtn')?.disabled) runQuery();
+				}
+				if (e.key === 'Tab') {
+					e.preventDefault();
+					const s = ta.selectionStart;
+					ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
+					ta.selectionStart = ta.selectionEnd = s + 2;
+					updateLineNums();
+				}
+			});
+		}
+
+		initResizer();
+		updateLineNums();
+	});
+
+	// ── Fired by the main EDA script when user clicks the SQL button ───────────
+	// DuckDB is initialised lazily so the WASM bundle is only downloaded on demand.
+	document.addEventListener('eda:sql-activate', async () => {
+		if (!initialized && !initializing) {
+			await initDuckDB();
+		}
+	});
 	</script>
 </body>
 </html>

@@ -6,10 +6,19 @@
     "COUNTY"
   ],
   "metrics": [
-    "Dataset Records"
+    "Dataset Records",
+    "DECK_AREA",
+    "ADT",
+    "DECK_RATING",
+    "SUB_RATING",
+    "SUPER_RATING"
   ],
   "aggregationTypes": [
-    "Count"
+    "Count",
+    "Sum",
+    "Average",
+    "Min",
+    "Max"
   ],
   "orderBy": [
     "Dimension",

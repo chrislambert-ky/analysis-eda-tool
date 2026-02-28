@@ -6,10 +6,18 @@
     "COUNTY"
   ],
   "metrics": [
-    "Dataset Records"
+    "Dataset Records",
+    "AUTHORIZED",
+    "LENGTH",
+    "STATE_FISCAL_YEAR",
+    "FISCAL_YEAR"
   ],
   "aggregationTypes": [
-    "Count"
+    "Count",
+    "Sum",
+    "Average",
+    "Min",
+    "Max"
   ],
   "orderBy": [
     "Dimension",
