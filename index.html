@@ -41,6 +41,13 @@
 		#mapOptions { order: 10; }
 		#mapOptions .form-label { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; }
 		#mapOptions .form-check-label { font-size: 0.82rem; }
+		/* Map config saved-state summary */
+		.map-cfg-summary { background:#f0f4ff; border:1px solid #c5d5fb; border-radius:6px; padding:6px 8px; }
+		.map-cfg-row { display:flex; align-items:baseline; gap:5px; margin-bottom:2px; }
+		.map-cfg-lbl { color:#888; font-size:9px; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.5px; min-width:48px; flex-shrink:0; }
+		.map-cfg-val { color:#0d3d8e; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+		.map-cfg-val.none { color:#adb5bd; font-weight:400; font-style:italic; font-size:10px; }
+		.map-opt-filter-lbl { font-size:10px; font-family:'IBM Plex Mono',monospace; font-weight:600; color:#333; padding:2px 0 2px; }
 		@media (max-width: 992px) {
 			.chart-card { min-height: 360px; }
 			.chart-surface { height: 320px; }
@@ -90,6 +97,18 @@
 		.controls-card.sql-active #generalControls { display: none !important; }
 		.controls-card.sql-active #mapOptions      { display: none !important; }
 		.controls-card.sql-active .controls-dataset-info { display: none !important; }
+		.controls-card.sql-active #colPickerPanel  { display: none !important; }
+		/* Column picker panel */
+		.col-picker-item { display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-left: 2px solid transparent; transition: background .1s; }
+		.col-picker-item:hover:not(.col-picker-locked) { background: #f0f4ff; border-left-color: #aaa; cursor: pointer; }
+		.col-picker-item.col-picker-locked { background: rgba(13,110,253,0.06); border-left-color: #0d6efd; }
+		.col-picker-item.col-picker-hidden { opacity: .45; }
+		.col-picker-cb { width: 12px !important; height: 12px !important; flex-shrink: 0; cursor: pointer; }
+		.col-picker-cb:disabled { cursor: default; }
+		.col-picker-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+		.col-picker-locked .col-picker-name { color: #0d6efd; }
+		.col-picker-lock { font-size: 9px; color: #0d6efd; flex-shrink: 0; opacity: .7; }
+		.col-picker-empty { padding: 12px; text-align: center; color: #adb5bd; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
 		.td-null { color: #adb5bd; font-style: italic; }
 		.td-num  { color: #003764; }
 		.td-bool { color: #6f42c1; }
@@ -181,6 +200,13 @@
 							<div>
 								<h5 class="mb-0">Data Table</h5>
 								<small class="text-muted">Filters apply instantly in the header row.</small>
+								<div id="chartFilterBadge" class="mt-1" style="display:none">
+									<span class="badge bg-primary d-inline-flex align-items-center gap-1 py-1 px-2">
+										<i class="bi bi-funnel-fill" style="font-size:0.75em"></i>
+										<span id="chartFilterText" style="font-size:0.8em"></span>
+										<button id="chartFilterClear" type="button" class="btn-close btn-close-white ms-1" style="font-size:0.55em" aria-label="Clear chart filter"></button>
+									</span>
+								</div>
 							</div>
 							<div class="d-flex gap-2 mt-3 mt-lg-0">
 								<button id="downloadFullButton" class="btn btn-outline-secondary btn-sm" type="button">Download Full Dataset</button>
@@ -225,6 +251,20 @@
 								</select>
 							</div>
 						</div>
+						<!-- Column Visibility Picker -->
+						<div id="colPickerPanel" class="mt-3 pt-3 border-top">
+							<div class="d-flex align-items-center mb-1">
+								<span class="text-uppercase text-secondary fw-medium" style="font-size:10px;letter-spacing:1.5px">Table Columns</span>
+								<span id="colPickerBadge" class="ms-1 badge text-bg-warning" style="font-size:9px;display:none"></span>
+								<div class="d-flex gap-2 ms-auto">
+									<button id="colPickerClearAll" class="btn btn-link btn-sm p-0 text-danger" style="font-size:10px;text-decoration:none" title="Hide all non-required columns">Clear All</button>
+									<button id="colPickerShowAll" class="btn btn-link btn-sm p-0 text-secondary" style="font-size:10px;text-decoration:none" title="Restore all hidden columns">Show All</button>
+								</div>
+							</div>
+							<div class="border rounded overflow-auto" id="colPickerList" style="max-height:190px;min-height:48px">
+								<div class="col-picker-empty">No dataset loaded.</div>
+							</div>
+						</div>
 						<!-- SQL Sidebar Panel (shown when chart type = sql) -->
 						<div id="sqlSidebarPanel" style="display:none" class="flex-column flex-grow-1 mb-2">
 							<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Data Sources</div>
@@ -236,22 +276,59 @@
 							</button>
 						</div>
 						<div id="mapOptions" class="mt-3 pt-3 border-top d-none">
-							<h6 class="fw-semibold">Map Options</h6>
-							<div class="form-check form-switch mb-3">
-								<input class="form-check-input" type="checkbox" id="mapClusterToggle" checked>
-								<label class="form-check-label" for="mapClusterToggle">Clustering</label>
+							<!-- ── Section 1: Map Configuration ──────────────── -->
+							<div id="mapConfigSection">
+								<!-- FORM (edit mode, shown by default) -->
+								<div id="mapConfigForm">
+									<div class="text-uppercase text-secondary fw-medium mb-2" style="font-size:9px;letter-spacing:1.5px">Map Configuration</div>
+									<div class="mb-2">
+										<label class="form-label">Latitude</label>
+										<select id="mapCfgLat" class="form-select form-select-sm"></select>
+									</div>
+									<div class="mb-2">
+										<label class="form-label">Longitude</label>
+										<select id="mapCfgLon" class="form-select form-select-sm"></select>
+									</div>
+									<div class="mb-2">
+										<label class="form-label">Filter 1 Column</label>
+										<select id="mapCfgFilter1" class="form-select form-select-sm"></select>
+									</div>
+									<div class="mb-2">
+										<label class="form-label">Filter 2 Column</label>
+										<select id="mapCfgFilter2" class="form-select form-select-sm"></select>
+									</div>
+									<div class="mb-2">
+										<label class="form-label">Filter 3 Column</label>
+										<select id="mapCfgFilter3" class="form-select form-select-sm"></select>
+									</div>
+									<div class="mb-3">
+										<label class="form-label">Color By</label>
+										<select id="mapCfgColor" class="form-select form-select-sm"></select>
+									</div>
+									<button id="mapSaveConfigBtn" class="btn btn-primary btn-sm w-100">&#10003; Save Config</button>
+								</div>
+								<!-- SUMMARY (saved mode) -->
+								<div id="mapConfigSummary" style="display:none">
+									<div id="mapConfigSummaryContent" class="map-cfg-summary mb-1"></div>
+									<button id="mapEditConfigBtn" class="btn btn-outline-secondary btn-sm w-100" style="font-size:11px">&#9998; Edit Config</button>
+								</div>
 							</div>
-							<div class="mb-3">
-								<label for="mapDistrictSelect" class="form-label">District</label>
-								<select id="mapDistrictSelect" class="form-select form-select-sm"></select>
-							</div>
-							<div class="mb-3">
-								<label for="mapCountySelect" class="form-label">County</label>
-								<select id="mapCountySelect" class="form-select form-select-sm"></select>
-							</div>
-							<div class="mb-1">
-								<label for="mapColorSelect" class="form-label">Color</label>
-								<select id="mapColorSelect" class="form-select form-select-sm"></select>
+							<!-- ── Section 2: Map Options (visible only after config is saved) ── -->
+							<div id="mapOptionsSection" style="display:none">
+								<hr class="my-2">
+								<div class="text-uppercase text-secondary fw-medium mb-2" style="font-size:9px;letter-spacing:1.5px">Map Options</div>
+								<div class="form-check form-switch mb-2">
+									<input class="form-check-input" type="checkbox" id="mapClusterToggle" checked>
+									<label class="form-check-label" for="mapClusterToggle">Clustering</label>
+								</div>
+								<!-- Filter value dropdowns (rebuilt dynamically) -->
+								<div id="mapOptFiltersSection" class="mb-2"></div>
+								<!-- Popup Fields -->
+								<div class="mb-1 text-uppercase text-secondary fw-medium" style="font-size:9px;letter-spacing:1.5px">Popup Fields</div>
+								<div class="border rounded overflow-auto mb-2" id="mapPopupFieldList" style="max-height:110px;min-height:28px"></div>
+								<!-- Table Fields -->
+								<div class="mb-1 text-uppercase text-secondary fw-medium" style="font-size:9px;letter-spacing:1.5px">Table Fields</div>
+								<div class="border rounded overflow-auto" id="mapTableFieldList" style="max-height:110px;min-height:28px"></div>
 							</div>
 						</div>
 						<div class="mt-auto controls-dataset-info">
@@ -326,11 +403,20 @@
 			mapLayer: null,
 			tabulator: null,
 			lastLoadedAt: null,
+			chartFilter: null,   // { field, value, seriesIndex, dataIndex } | null
+			hiddenColumns: new Set(),   // columns toggled off in the table view
+			mapConfig: {
+				saved: false,
+				latField: null,
+				lonField: null,
+				filterFields: [null, null, null],
+				colorField: null
+			},
 			mapOptions: {
 				cluster: true,
-				district: MAP_ALL_OPTION,
-				county: MAP_ALL_OPTION,
-				colorField: null
+				filterValues: [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION],
+				popupHidden: new Set(),
+				tableHidden: new Set()
 			}
 		};
 
@@ -341,8 +427,77 @@
 		async function init() {
 			populateDatasetOptions();
 			bindUIEvents();
+			// Restore any user-added datasets from IndexedDB before the first
+			// dataset selection so they appear in the dropdown immediately — without
+			// requiring the user to visit the SQL tab first.
+			await loadPersistedUserDatasets();
 			if (DATASETS.length) {
 				await selectDataset(DATASETS[0].id);
+			}
+		}
+
+		/**
+		 * Reads user-added sources and their cached row data from the SQL
+		 * module's IndexedDB and injects them into the dataset dropdown.
+		 * Runs at page load so users never need to open the SQL tab first.
+		 */
+		async function loadPersistedUserDatasets() {
+			const IDB_NAME    = 'eda_sql_user_sources';
+			const IDB_VERSION = 2;
+			const META_STORE  = 'sources';
+			const DATA_STORE  = 'user_source_data';
+			try {
+				const db = await new Promise((resolve, reject) => {
+					const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+					req.onupgradeneeded = e => {
+						const d = e.target.result;
+						if (!d.objectStoreNames.contains(META_STORE))
+							d.createObjectStore(META_STORE, { keyPath: 'alias' });
+						if (!d.objectStoreNames.contains(DATA_STORE))
+							d.createObjectStore(DATA_STORE, { keyPath: 'alias' });
+					};
+					req.onsuccess = e => resolve(e.target.result);
+					req.onerror   = e => reject(e.target.error);
+				});
+
+				const sources = await new Promise((resolve, reject) => {
+					const req = db.transaction(META_STORE, 'readonly')
+						.objectStore(META_STORE).getAll();
+					req.onsuccess = e => resolve(e.target.result || []);
+					req.onerror   = e => reject(e.target.error);
+				});
+
+				sources.sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+
+				for (const src of sources) {
+					const cached = await new Promise((resolve, reject) => {
+						const req = db.transaction(DATA_STORE, 'readonly')
+							.objectStore(DATA_STORE).get(src.alias);
+						req.onsuccess = e => resolve(e.target.result?.rows || null);
+						req.onerror   = e => reject(e.target.error);
+					});
+					if (!cached || !cached.length) continue;
+					// Populate the shared user dataset registry (same as SQL module does)
+					if (!window._edaUserDatasets) window._edaUserDatasets = new Map();
+					window._edaUserDatasets.set(src.alias, {
+						id:    src.alias,
+						title: src.title || src.alias,
+						rows:  cached
+					});
+					// Add to the dataset <select> if not already present
+					const sel = document.getElementById('datasetSelect');
+					if (sel && ![...sel.options].some(o => o.value === src.alias)) {
+						const opt = document.createElement('option');
+						opt.value            = src.alias;
+						opt.textContent      = `[User] ${src.title || src.alias}`;
+						opt.dataset.userSource = 'true';
+						sel.appendChild(opt);
+					}
+				}
+				db.close();
+			} catch (e) {
+				// Non-fatal — user sources simply won't appear until SQL tab is visited
+				console.warn('loadPersistedUserDatasets:', e);
 			}
 		}
 
@@ -364,6 +519,24 @@
 
 			document.getElementById('refreshButton').addEventListener('click', async () => {
 				if (!state.datasetId) return;
+				// User-added datasets: re-fetch from source URL via the SQL module helper
+				if (window._edaUserDatasets?.has(state.datasetId)) {
+					if (typeof window._edaRefreshUserSource !== 'function') {
+						// SQL module not yet initialised — reload from cached IDB rows
+						updateProgress('Reloading user dataset from cache…');
+						await selectDataset(state.datasetId);
+						return;
+					}
+					updateProgress('Re-fetching user dataset from source URL…');
+					const rows = await window._edaRefreshUserSource(state.datasetId);
+					if (rows && rows.length) {
+						await selectDataset(state.datasetId);
+					} else {
+						updateProgress('Refresh failed — check the source URL is accessible.');
+					}
+					return;
+				}
+				// Built-in partitioned dataset
 				updateProgress('Clearing cached partitions…');
 				await deleteDatasetFromCache(state.datasetId);
 				await loadDataset(state.datasetId);
@@ -372,7 +545,7 @@
 			document.querySelectorAll('.btn-chart').forEach(button => {
 				button.addEventListener('click', () => {
 					const chartType = button.getAttribute('data-chart');
-					if (chartType === 'map' && !state.settings?.map) return;
+					if (chartType === 'map' && !state.allRows.length) return;
 					state.chartType = chartType;
 					updateChartButtons();
 					if (chartType === 'sql') {
@@ -396,6 +569,32 @@
 				downloadAsCSV(state.allRows, `${state.datasetId}-full.csv`);
 			});
 
+			document.getElementById('colPickerShowAll').addEventListener('click', () => {
+				state.hiddenColumns.clear();
+				renderTable();
+			});
+
+			document.getElementById('colPickerClearAll').addEventListener('click', () => {
+				if (!state.allRows.length) return;
+				const locked = getLockedColumns();
+				Object.keys(state.allRows[0]).forEach(col => {
+					if (!locked.has(col)) state.hiddenColumns.add(col);
+				});
+				renderTable();
+			});
+
+			document.getElementById('chartFilterClear').addEventListener('click', () => {
+				if (state.chartInstance && state.chartFilter) {
+					state.chartInstance.dispatchAction({
+						type: 'unselect',
+						seriesIndex: state.chartFilter.seriesIndex,
+						dataIndex: state.chartFilter.dataIndex
+					});
+				}
+				state.chartFilter = null;
+				applyChartFilter();
+			});
+
 			document.getElementById('downloadFilteredButton').addEventListener('click', () => {
 				if (!state.tabulator) return;
 				const filteredRows = state.tabulator.getRows('active').map(row => row.getData());
@@ -411,49 +610,22 @@
 				});
 			}
 
-			const districtSelect = document.getElementById('mapDistrictSelect');
-			if (districtSelect) {
-				districtSelect.addEventListener('change', (event) => {
-					const selectedDistrict = event.target.value;
-					state.mapOptions.district = selectedDistrict;
-					state.mapOptions.county = MAP_ALL_OPTION;
-					populateMapCountyOptions();
-					const clusterToggleElement = document.getElementById('mapClusterToggle');
-					if (selectedDistrict === MAP_ALL_OPTION) {
-						state.mapOptions.cluster = true;
-						if (clusterToggleElement) clusterToggleElement.checked = true;
-					} else {
-						state.mapOptions.cluster = false;
-						if (clusterToggleElement) clusterToggleElement.checked = false;
-					}
-					if (state.chartType === 'map') renderVisual();
-				});
-			}
+			document.getElementById('mapSaveConfigBtn').addEventListener('click', saveMapConfig);
+			document.getElementById('mapEditConfigBtn').addEventListener('click', editMapConfig);
 
-			const countySelect = document.getElementById('mapCountySelect');
-			if (countySelect) {
-				countySelect.addEventListener('change', (event) => {
-					const selectedCounty = event.target.value;
-					state.mapOptions.county = selectedCounty;
-					const clusterToggleElement = document.getElementById('mapClusterToggle');
-					if (selectedCounty !== MAP_ALL_OPTION) {
-						state.mapOptions.cluster = false;
-						if (clusterToggleElement) clusterToggleElement.checked = false;
-					} else if (state.mapOptions.district === MAP_ALL_OPTION) {
-						state.mapOptions.cluster = true;
-						if (clusterToggleElement) clusterToggleElement.checked = true;
-					}
-					if (state.chartType === 'map') renderVisual();
-				});
-			}
-
-			const colorSelect = document.getElementById('mapColorSelect');
-			if (colorSelect) {
-				colorSelect.addEventListener('change', (event) => {
-					state.mapOptions.colorField = event.target.value;
-					if (state.chartType === 'map') renderVisual();
-				});
-			}
+			// Delegate filter-value changes inside #mapOptFiltersSection
+			document.getElementById('mapOptFiltersSection').addEventListener('change', e => {
+				if (!e.target.matches('[data-filter-idx]')) return;
+				const idx = parseInt(e.target.dataset.filterIdx, 10);
+				state.mapOptions.filterValues[idx] = e.target.value;
+				// Cascade: refresh downstream dropdowns to only show values
+				// present in rows matched by the upstream selections
+				refreshCascadeFilters(idx + 1);
+				if (state.chartType === 'map') {
+					renderVisual();
+					applyMapTableFilters();
+				}
+			});
 		}
 
 		async function selectDataset(datasetId) {
@@ -473,6 +645,7 @@
 					aggregationTypes: ['Count', 'Sum', 'Average', 'Min', 'Max']
 				});
 				state.index = { totalRecords: userDs.rows.length };
+				state.hiddenColumns = new Set();
 				populateControls();
 				updateDatasetInfo();
 				updateChartButtons();
@@ -485,6 +658,7 @@
 				return;
 			}
 			state.datasetId = datasetId;
+			state.hiddenColumns = new Set();
 			await loadDataset(datasetId);
 		}
 
@@ -616,112 +790,238 @@
 		function initializeMapControls() {
 			const container = document.getElementById('mapOptions');
 			if (!container) return;
-			if (!state.settings?.map) {
+			if (!state.allRows.length) {
 				container.classList.add('d-none');
-				state.mapOptions.cluster = true;
-				state.mapOptions.district = MAP_ALL_OPTION;
-				state.mapOptions.county = MAP_ALL_OPTION;
-				state.mapOptions.colorField = null;
-				if (state.chartType === 'map') {
-					state.chartType = 'bar-horizontal';
-				}
-				updateChartButtons();
 				return;
 			}
+			const mapCfg  = state.settings?.map;
+			const cols    = Object.keys(state.allRows[0]);
 
-			container.classList.remove('d-none');
-			const mapConfig = state.settings.map;
-			state.mapOptions.cluster = mapConfig.clusterDefault !== false;
-			state.mapOptions.district = MAP_ALL_OPTION;
-			state.mapOptions.county = MAP_ALL_OPTION;
-			state.mapOptions.colorField = mapConfig.defaultColorField || mapConfig.colorFieldOptions?.[0] || null;
+			// Reset to edit (unconfigured) state on dataset change
+			state.mapConfig = {
+				saved:        false,
+				latField:     (mapCfg?.latitudeField  && cols.includes(mapCfg.latitudeField))  ? mapCfg.latitudeField  : null,
+				lonField:     (mapCfg?.longitudeField && cols.includes(mapCfg.longitudeField)) ? mapCfg.longitudeField : null,
+				filterFields: [null, null, null],
+				colorField:   (mapCfg?.defaultColorField && cols.includes(mapCfg.defaultColorField)) ? mapCfg.defaultColorField : null
+			};
+			state.mapOptions = {
+				cluster:      mapCfg?.clusterDefault !== false,
+				filterValues: [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION],
+				popupHidden:  new Set(),
+				tableHidden:  new Set()
+			};
 
 			const clusterToggle = document.getElementById('mapClusterToggle');
-			if (clusterToggle) {
-				clusterToggle.checked = state.mapOptions.cluster;
-			}
+			if (clusterToggle) clusterToggle.checked = state.mapOptions.cluster;
 
-			populateMapDistrictOptions();
-			populateMapCountyOptions();
-			populateMapColorOptions();
+			populateMapConfigForm(cols);
+			// Show form, hide summary + options
+			document.getElementById('mapConfigForm').style.display    = '';
+			document.getElementById('mapConfigSummary').style.display = 'none';
+			document.getElementById('mapOptionsSection').style.display = 'none';
+
 			updateChartButtons();
 		}
 
-		function populateMapDistrictOptions() {
-			const select = document.getElementById('mapDistrictSelect');
-			if (!select) return;
-			const mapConfig = state.settings?.map;
-			if (!mapConfig?.districtField) {
-				fillSelect('mapDistrictSelect', [{ label: 'All Districts', value: MAP_ALL_OPTION }], true);
-				select.disabled = true;
-				select.value = MAP_ALL_OPTION;
-				return;
-			}
-			const values = getUniqueValues(state.allRows, mapConfig.districtField);
-			const options = [{ label: 'All Districts', value: MAP_ALL_OPTION }, ...values.map(value => ({ label: value, value }))];
-			fillSelect('mapDistrictSelect', options, true);
-			select.disabled = false;
-			if (!values.includes(state.mapOptions.district)) {
-				state.mapOptions.district = MAP_ALL_OPTION;
-			}
-			select.value = state.mapOptions.district;
+		function populateMapConfigForm(cols) {
+			const noOpt   = [{ label: '\u2014 select \u2014', value: '' }];
+			const noFilt  = [{ label: '\u2014 none \u2014',   value: '' }];
+			const colOpts = cols.map(c => ({ label: c, value: c }));
+			fillSelect('mapCfgLat',     [...noOpt,  ...colOpts], true);
+			fillSelect('mapCfgLon',     [...noOpt,  ...colOpts], true);
+			fillSelect('mapCfgFilter1', [...noFilt, ...colOpts], true);
+			fillSelect('mapCfgFilter2', [...noFilt, ...colOpts], true);
+			fillSelect('mapCfgFilter3', [...noFilt, ...colOpts], true);
+			fillSelect('mapCfgColor',   [...noFilt, ...colOpts], true);
+			// Pre-fill from mapConfig state
+			document.getElementById('mapCfgLat').value     = state.mapConfig.latField    || '';
+			document.getElementById('mapCfgLon').value     = state.mapConfig.lonField    || '';
+			document.getElementById('mapCfgFilter1').value = state.mapConfig.filterFields[0] || '';
+			document.getElementById('mapCfgFilter2').value = state.mapConfig.filterFields[1] || '';
+			document.getElementById('mapCfgFilter3').value = state.mapConfig.filterFields[2] || '';
+			document.getElementById('mapCfgColor').value   = state.mapConfig.colorField   || '';
 		}
 
-		function populateMapCountyOptions() {
-			const select = document.getElementById('mapCountySelect');
-			if (!select) return;
-			const mapConfig = state.settings?.map;
-			if (!mapConfig?.countyField) {
-				fillSelect('mapCountySelect', [{ label: 'All Counties', value: MAP_ALL_OPTION }], true);
-				select.disabled = true;
-				select.value = MAP_ALL_OPTION;
-				return;
-			}
-			const districtField = mapConfig.districtField;
-			let sourceRows = state.allRows;
-			if (districtField && state.mapOptions.district !== MAP_ALL_OPTION) {
-				sourceRows = sourceRows.filter(row => row[districtField] === state.mapOptions.district);
-			}
-			const values = getUniqueValues(sourceRows, mapConfig.countyField);
-			const options = [{ label: 'All Counties', value: MAP_ALL_OPTION }, ...values.map(value => ({ label: value, value }))];
-			fillSelect('mapCountySelect', options, true);
-			select.disabled = false;
-			if (!values.includes(state.mapOptions.county)) {
-				state.mapOptions.county = MAP_ALL_OPTION;
-			}
-			select.value = state.mapOptions.county;
+		function saveMapConfig() {
+			state.mapConfig.latField     = document.getElementById('mapCfgLat').value     || null;
+			state.mapConfig.lonField     = document.getElementById('mapCfgLon').value     || null;
+			state.mapConfig.filterFields[0] = document.getElementById('mapCfgFilter1').value || null;
+			state.mapConfig.filterFields[1] = document.getElementById('mapCfgFilter2').value || null;
+			state.mapConfig.filterFields[2] = document.getElementById('mapCfgFilter3').value || null;
+			state.mapConfig.colorField   = document.getElementById('mapCfgColor').value   || null;
+			state.mapConfig.saved        = true;
+			// Reset filter values whenever config changes
+			state.mapOptions.filterValues = [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION];
+
+			renderMapConfigSummary();
+			document.getElementById('mapConfigForm').style.display     = 'none';
+			document.getElementById('mapConfigSummary').style.display  = '';
+			populateMapOptionsSection();
+			document.getElementById('mapOptionsSection').style.display = '';
+			if (state.chartType === 'map') renderVisual();
+			renderTable(); // refresh table with new tableHidden if any
 		}
 
-		function populateMapColorOptions() {
-			const select = document.getElementById('mapColorSelect');
-			if (!select) return;
-			const mapConfig = state.settings?.map;
-			const fields = mapConfig?.colorFieldOptions || [];
-			if (!fields.length) {
-				select.innerHTML = '';
-				select.disabled = true;
-				state.mapOptions.colorField = null;
-				return;
-			}
-			const options = fields.map(field => ({ label: field, value: field }));
-			fillSelect('mapColorSelect', options, true);
-			if (!fields.includes(state.mapOptions.colorField)) {
-				state.mapOptions.colorField = state.settings.map.defaultColorField || fields[0];
-			}
-			select.disabled = false;
-			select.value = state.mapOptions.colorField;
+		function editMapConfig() {
+			state.mapConfig.saved = false;
+			const cols = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+			populateMapConfigForm(cols);
+			document.getElementById('mapConfigForm').style.display     = '';
+			document.getElementById('mapConfigSummary').style.display  = 'none';
+			document.getElementById('mapOptionsSection').style.display = 'none';
 		}
 
-		function getMapFilteredRows(mapConfig) {
+		function renderMapConfigSummary() {
+			const c   = state.mapConfig;
+			const el  = document.getElementById('mapConfigSummaryContent');
+			const row = (lbl, val) => {
+				const hasVal = val && val !== '';
+				return `<div class="map-cfg-row">`
+					+ `<span class="map-cfg-lbl">${lbl}</span>`
+					+ `<span class="map-cfg-val${hasVal ? '' : ' none'}">${hasVal ? val : 'none'}</span>`
+					+ `</div>`;
+			};
+			el.innerHTML =
+				row('Lat',   c.latField)
+				+ row('Lon',   c.lonField)
+				+ row('Flt 1', c.filterFields[0])
+				+ row('Flt 2', c.filterFields[1])
+				+ row('Flt 3', c.filterFields[2])
+				+ row('Color', c.colorField);
+		}
+
+		function populateMapOptionsSection() {
+			const cols = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+			// Rebuild filter value dropdowns
+			const filtersEl = document.getElementById('mapOptFiltersSection');
+			filtersEl.innerHTML = '';
+			state.mapConfig.filterFields.forEach((field, idx) => {
+				if (!field) return;
+				const vals = getUniqueValues(state.allRows, field);
+				const wrap = document.createElement('div');
+				wrap.className = 'mb-2';
+				wrap.innerHTML = `<div class="map-opt-filter-lbl mb-1">${field}</div>`;
+				const sel = document.createElement('select');
+				sel.className = 'form-select form-select-sm';
+				sel.dataset.filterIdx = idx;
+				const allOpt = document.createElement('option');
+				allOpt.value = MAP_ALL_OPTION;
+				allOpt.textContent = '\u2014 all \u2014';
+				sel.appendChild(allOpt);
+				vals.forEach(v => {
+					const o = document.createElement('option');
+					o.value = v; o.textContent = v;
+					sel.appendChild(o);
+				});
+				sel.value = state.mapOptions.filterValues[idx];
+				wrap.appendChild(sel);
+				filtersEl.appendChild(wrap);
+			});
+			// Checklist helpers
+			buildFieldChecklist(
+				document.getElementById('mapPopupFieldList'),
+				state.mapOptions.popupHidden, cols
+			);
+			buildFieldChecklist(
+				document.getElementById('mapTableFieldList'),
+				state.mapOptions.tableHidden, cols,
+				() => { if (state.chartType === 'map') renderTable(); }
+			);
+		}
+
+		function buildFieldChecklist(listEl, hiddenSet, cols, onChange) {
+			if (!listEl) return;
+			listEl.innerHTML = '';
+			cols.forEach(col => {
+				const isHidden = hiddenSet.has(col);
+				const item = document.createElement('div');
+				item.className = 'col-picker-item' + (isHidden ? ' col-picker-hidden' : '');
+				const cb = document.createElement('input');
+				cb.type = 'checkbox'; cb.className = 'col-picker-cb form-check-input mt-0'; cb.checked = !isHidden;
+				const lbl = document.createElement('label');
+				lbl.className = 'col-picker-name'; lbl.textContent = col; lbl.title = col;
+				item.appendChild(cb); item.appendChild(lbl);
+				cb.addEventListener('change', () => {
+					if (cb.checked) hiddenSet.delete(col); else hiddenSet.add(col);
+					item.classList.toggle('col-picker-hidden', !cb.checked);
+					if (onChange) onChange();
+				});
+				listEl.appendChild(item);
+			});
+		}
+
+		function getMapFilteredRows() {
 			return state.allRows.filter(row => {
-				if (mapConfig.districtField && state.mapOptions.district !== MAP_ALL_OPTION) {
-					if (row[mapConfig.districtField] !== state.mapOptions.district) return false;
-				}
-				if (mapConfig.countyField && state.mapOptions.county !== MAP_ALL_OPTION) {
-					if (row[mapConfig.countyField] !== state.mapOptions.county) return false;
+				for (let i = 0; i < 3; i++) {
+					const field = state.mapConfig.filterFields[i];
+					const val   = state.mapOptions.filterValues[i];
+					if (field && val !== MAP_ALL_OPTION) {
+						if (String(row[field] ?? '') !== val) return false;
+					}
 				}
 				return true;
 			});
+		}
+
+		/**
+		 * Rebuilds filter-value <select> options for indexes fromIdx..2,
+		 * restricting each dropdown to values that exist in rows already
+		 * matched by all upstream (lower-index) filter selections.
+		 */
+		function refreshCascadeFilters(fromIdx) {
+			for (let i = fromIdx; i < 3; i++) {
+				const field = state.mapConfig.filterFields[i];
+				if (!field) continue;
+				// Rows that pass all filters before index i
+				const upstream = state.allRows.filter(row => {
+					for (let j = 0; j < i; j++) {
+						const f = state.mapConfig.filterFields[j];
+						const v = state.mapOptions.filterValues[j];
+						if (f && v !== MAP_ALL_OPTION && String(row[f] ?? '') !== v) return false;
+					}
+					return true;
+				});
+				const vals = getUniqueValues(upstream, field);
+				const sel = document.querySelector(`#mapOptFiltersSection [data-filter-idx="${i}"]`);
+				if (!sel) continue;
+				const currentVal = state.mapOptions.filterValues[i];
+				sel.innerHTML = '';
+				const allOpt = document.createElement('option');
+				allOpt.value = MAP_ALL_OPTION; allOpt.textContent = '\u2014 all \u2014';
+				sel.appendChild(allOpt);
+				vals.forEach(v => {
+					const o = document.createElement('option');
+					o.value = v; o.textContent = v;
+					sel.appendChild(o);
+				});
+				// If the previously selected value no longer exists, reset to "all"
+				if (currentVal !== MAP_ALL_OPTION && !vals.includes(currentVal)) {
+					state.mapOptions.filterValues[i] = MAP_ALL_OPTION;
+				}
+				sel.value = state.mapOptions.filterValues[i];
+			}
+		}
+
+		/**
+		 * Applies the current map filter selections as Tabulator row filters
+		 * so the data table reflects the same rows shown on the map.
+		 */
+		function applyMapTableFilters() {
+			if (!state.tabulator) return;
+			const filters = [];
+			for (let i = 0; i < 3; i++) {
+				const field = state.mapConfig.filterFields[i];
+				const val   = state.mapOptions.filterValues[i];
+				if (field && val !== MAP_ALL_OPTION) {
+					filters.push({ field, type: '=', value: val });
+				}
+			}
+			if (filters.length) {
+				state.tabulator.setFilter(filters);
+			} else {
+				state.tabulator.clearFilter();
+			}
 		}
 
 		async function loadPartition(district, expectedCount) {
@@ -750,6 +1050,11 @@
 		function renderVisual() {
 			// SQL mode has its own rendering — DuckDB queries CSV files directly
 			if (state.chartType === 'sql') return;
+			// Clear any active chart-click filter when the chart is refreshed
+			if (state.chartFilter !== null) {
+				state.chartFilter = null;
+				applyChartFilter();
+			}
 			destroyVisuals();
 			if (!state.allRows.length) {
 				document.getElementById('chartArea').innerHTML = '<div class="text-muted">No data available for the current selection.</div>';
@@ -760,6 +1065,8 @@
 			} else {
 				renderChart();
 			}
+			// Refresh lock indicators whenever BI selects change
+			populateColumnPicker();
 		}
 
 		function destroyVisuals() {
@@ -790,6 +1097,58 @@
 			const option = buildChartOption(prepared);
 			chartInstance.setOption(option);
 			state.chartInstance = chartInstance;
+
+			// ── Chart-click → filter the data table ─────────────────────────────
+			chartInstance.on('click', function (params) {
+				const clickedValue = params.name;
+				if (state.chartFilter && state.chartFilter.value === clickedValue) {
+					// Same element clicked again → toggle the filter off
+					chartInstance.dispatchAction({
+						type: 'unselect',
+						seriesIndex: params.seriesIndex,
+						dataIndex: params.dataIndex
+					});
+					state.chartFilter = null;
+				} else {
+					state.chartFilter = {
+						field: dimensionField,
+						value: clickedValue,
+						seriesIndex: params.seriesIndex,
+						dataIndex: params.dataIndex
+					};
+				}
+				applyChartFilter();
+			});
+		}
+
+		/**
+		 * Apply (or clear) a Tabulator row-filter based on state.chartFilter.
+		 * Also shows/hides the #chartFilterBadge indicator in the table header.
+		 */
+		function applyChartFilter() {
+			const badge    = document.getElementById('chartFilterBadge');
+			const badgeText = document.getElementById('chartFilterText');
+
+			if (!state.tabulator) return;
+
+			if (!state.chartFilter) {
+				state.tabulator.clearFilter();
+				if (badge) badge.style.display = 'none';
+				return;
+			}
+
+			const { field, value } = state.chartFilter;
+			// Use a function-based filter to match normalizeGroupValue logic
+			state.tabulator.setFilter(function (rowData) {
+				const raw = rowData[field];
+				const normalized = (raw === undefined || raw === null || String(raw).trim() === '') ? 'Unknown' : String(raw);
+				return normalized === value;
+			});
+
+			if (badge) badge.style.display = '';
+			if (badgeText) {
+				badgeText.textContent = `${field} = "${value === 'Unknown' ? '(blank)' : value}"`;
+			}
 		}
 
 		function prepareSeries(rows, dimensionField, splitValue, metricField, aggregationType) {
@@ -913,6 +1272,7 @@
 						name: seriesLabel,
 						type: 'pie',
 						radius: '65%',
+						selectedMode: 'single',
 						data: pieData,
 						label: { formatter: '{b}: {c} ({d}%)' }
 					}]
@@ -946,6 +1306,7 @@
 				series: prepared.series.map(serie => ({
 					...serie,
 					type: 'bar',
+					selectedMode: 'single',
 					label: { show: true, position: isHorizontal ? 'right' : 'top' }
 				}))
 			};
@@ -987,22 +1348,26 @@
 		}
 
 		function renderMap() {
-			const mapConfig = state.settings?.map;
-			if (!mapConfig) {
-				updateProgress('Map configuration unavailable for this dataset.');
+			if (!state.mapConfig.saved) {
+				document.getElementById('chartArea').innerHTML =
+					'<div class="text-muted p-3">Configure and save map settings in the Map Configuration panel on the right.</div>';
 				return;
 			}
-			const latField = mapConfig.latitudeField;
-			const lonField = mapConfig.longitudeField;
-			const filteredRows = getMapFilteredRows(mapConfig);
-			const colorField = state.mapOptions.colorField && mapConfig.colorFieldOptions?.includes(state.mapOptions.colorField)
-				? state.mapOptions.colorField
-				: mapConfig.defaultColorField;
-			const colorValues = colorField ? getColorValues(filteredRows, colorField) : [];
-			const colorMap = new Map(colorValues.map(value => [value, stringToColor(value)]));
-			const chartArea = document.getElementById('chartArea');
-			const mapDiv = document.createElement('div');
-			mapDiv.style.height = '100%';
+			const latField   = state.mapConfig.latField;
+			const lonField   = state.mapConfig.lonField;
+			const colorField = state.mapConfig.colorField || null;
+			if (!latField || !lonField) {
+				document.getElementById('chartArea').innerHTML =
+					'<div class="text-muted p-3">Please select Latitude and Longitude fields in the Map Configuration panel.</div>';
+				return;
+			}
+			const filteredRows  = getMapFilteredRows();
+			const colorValues   = colorField ? getColorValues(filteredRows, colorField) : [];
+			const colorMap      = new Map(colorValues.map(v => [v, stringToColor(v)]));
+			const allCols       = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+			const chartArea     = document.getElementById('chartArea');
+			const mapDiv        = document.createElement('div');
+			mapDiv.style.height    = '100%';
 			mapDiv.style.minHeight = '360px';
 			chartArea.appendChild(mapDiv);
 			const map = L.map(mapDiv).setView([37.8, -85.7], 6);
@@ -1016,49 +1381,34 @@
 				const lat = parseFloat(row[latField]);
 				const lon = parseFloat(row[lonField]);
 				if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-				const colorKey = colorField ? (row[colorField] ?? 'Unknown') : 'Feature';
+				const colorKey           = colorField ? (row[colorField] ?? 'Unknown') : 'Feature';
 				const normalizedColorKey = colorKey === '' ? 'Unknown' : String(colorKey);
-				const strokeColor = colorMap.get(normalizedColorKey) || stringToColor(normalizedColorKey);
+				const strokeColor        = colorMap.get(normalizedColorKey) || stringToColor(normalizedColorKey);
 				const marker = L.circleMarker([lat, lon], {
-					radius: 5,
-					weight: 1,
-					color: strokeColor,
-					fillColor: strokeColor,
-					fillOpacity: 0.75
+					radius: 5, weight: 1,
+					color: strokeColor, fillColor: strokeColor, fillOpacity: 0.75
 				});
-				const popupLines = [
-					`${latField}: ${lat}`,
-					`${lonField}: ${lon}`
-				];
-				if (mapConfig.districtField && row[mapConfig.districtField]) {
-					popupLines.push(`${mapConfig.districtField}: ${row[mapConfig.districtField]}`);
-				}
-				if (mapConfig.countyField && row[mapConfig.countyField]) {
-					popupLines.push(`${mapConfig.countyField}: ${row[mapConfig.countyField]}`);
-				}
-				if (colorField && row[colorField]) {
-					popupLines.push(`${colorField}: ${row[colorField]}`);
-				}
-				marker.bindPopup(popupLines.join('<br>'));
-				if (state.mapOptions.cluster) {
-					layerGroup.addLayer(marker);
-				} else {
-					marker.addTo(layerGroup);
-				}
+				const popupLines = [];
+				allCols.forEach(col => {
+					if (state.mapOptions.popupHidden.has(col)) return;
+					const val = row[col];
+					if (val === undefined || val === null || String(val).trim() === '') return;
+					popupLines.push(`<b>${col}:</b> ${val}`);
+				});
+				if (popupLines.length) marker.bindPopup(popupLines.join('<br>'));
+				layerGroup.addLayer(marker);
 				markerCount += 1;
 			});
 			layerGroup.addTo(map);
 			if (markerCount) {
 				const bounds = layerGroup.getBounds();
-				if (bounds.isValid()) {
-					map.fitBounds(bounds, { padding: [24, 24] });
-				}
+				if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24] });
 				updateProgress(`${formatNumber(markerCount)} features on map.`);
 			} else {
 				updateProgress('No features match the current map filters.');
 			}
 			state.mapInstance = map;
-			state.mapLayer = layerGroup;
+			state.mapLayer    = layerGroup;
 		}
 
 		function renderTable() {
@@ -1070,16 +1420,24 @@
 			container.innerHTML = '';
 			if (!state.allRows.length) {
 				container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
+				populateColumnPicker();
 				return;
 			}
-			const columns = Object.keys(state.allRows[0]).map(key => ({
-				title: key,
-				field: key,
-				headerFilter: 'input',
-				headerFilterPlaceholder: 'Filter…',
-				headerSort: true,
-				minWidth: 160
-			}));
+			// Remove from hidden set any columns that are now locked (dimension/metric/split)
+			getLockedColumns().forEach(c => state.hiddenColumns.delete(c));
+			const allColKeys = Object.keys(state.allRows[0]);
+			// When map is active, also respect the map-specific tableHidden set
+			const mapTableHid = (state.chartType === 'map') ? state.mapOptions.tableHidden : null;
+			const columns = allColKeys
+				.filter(key => !state.hiddenColumns.has(key) && !(mapTableHid && mapTableHid.has(key)))
+				.map(key => ({
+					title: key,
+					field: key,
+					headerFilter: 'input',
+					headerFilterPlaceholder: 'Filter…',
+					headerSort: true,
+					minWidth: 160
+				}));
 			state.tabulator = new Tabulator(container, {
 				data: state.allRows,
 				layout: 'fitDataStretch',
@@ -1092,6 +1450,97 @@
 				resizableColumns: true,
 				autoColumns: false
 			});
+			// Re-apply any active chart filter after rebuilding the table
+			if (state.chartFilter) applyChartFilter();
+			// Re-apply map filter selections as row filters when map is active
+			if (state.chartType === 'map') applyMapTableFilters();
+			populateColumnPicker();
+		}
+
+		/** Returns the set of column names that must always stay visible. */
+		function getLockedColumns() {
+			const locked = new Set();
+			const dim    = document.getElementById('dimensionSelect')?.value;
+			const metric = document.getElementById('metricSelect')?.value;
+			const split  = document.getElementById('splitSelect')?.value;
+			if (dim)                               locked.add(dim);
+			if (metric && metric !== 'Dataset Records') locked.add(metric);
+			if (split  && split  !== 'None')        locked.add(split);
+			return locked;
+		}
+
+		/** Rebuild the column picker list, reflecting current hidden/locked state. */
+		function populateColumnPicker() {
+			const list  = document.getElementById('colPickerList');
+			const badge = document.getElementById('colPickerBadge');
+			if (!list) return;
+			if (!state.allRows.length) {
+				list.innerHTML = '<div class="col-picker-empty">No dataset loaded.</div>';
+				if (badge) badge.style.display = 'none';
+				return;
+			}
+			const allCols   = Object.keys(state.allRows[0]);
+			const locked    = getLockedColumns();
+			// Ensure locked columns are never left in the hidden set
+			locked.forEach(c => state.hiddenColumns.delete(c));
+
+			list.innerHTML = '';
+			allCols.forEach(col => {
+				const isLocked = locked.has(col);
+				const isHidden = state.hiddenColumns.has(col);
+
+				const item = document.createElement('div');
+				item.className = 'col-picker-item'
+					+ (isLocked ? ' col-picker-locked' : '')
+					+ (isHidden ? ' col-picker-hidden' : '');
+
+				const cb = document.createElement('input');
+				cb.type = 'checkbox';
+				cb.className = 'col-picker-cb form-check-input mt-0';
+				cb.checked  = !isHidden;
+				cb.disabled = isLocked;
+				cb.title = isLocked ? 'Required by current chart selection' : (isHidden ? 'Click to show' : 'Click to hide');
+
+				const lbl = document.createElement('label');
+				lbl.className = 'col-picker-name';
+				lbl.textContent = col;
+				lbl.title = col;
+
+				item.appendChild(cb);
+				item.appendChild(lbl);
+
+				if (isLocked) {
+					const lock = document.createElement('i');
+					lock.className = 'bi bi-lock-fill col-picker-lock';
+					lock.title = 'Required by current chart selection';
+					item.appendChild(lock);
+				}
+
+				if (!isLocked) {
+					cb.addEventListener('change', () => {
+						if (cb.checked) {
+							state.hiddenColumns.delete(col);
+						} else {
+							state.hiddenColumns.add(col);
+						}
+						renderTable();
+					});
+					// Also allow clicking the label to toggle
+					item.addEventListener('click', (e) => {
+						if (e.target === cb || e.target === lbl) return; // let native events fire
+						cb.checked = !cb.checked;
+						cb.dispatchEvent(new Event('change'));
+					});
+				}
+
+				list.appendChild(item);
+			});
+
+			const hiddenCount = state.hiddenColumns.size;
+			if (badge) {
+				badge.style.display = hiddenCount > 0 ? '' : 'none';
+				badge.textContent   = hiddenCount > 0 ? `${hiddenCount} hidden` : '';
+			}
 		}
 
 		function updateChartButtons() {
@@ -1099,9 +1548,9 @@
 				const chartType = button.getAttribute('data-chart');
 				button.classList.toggle('active', chartType === state.chartType);
 				if (chartType === 'map') {
-					const enabled = Boolean(state.settings?.map);
+					const enabled = state.allRows.length > 0;
 					button.disabled = !enabled;
-					button.setAttribute('title', enabled ? 'Show Leaflet map view' : 'Map not available for this dataset');
+					button.setAttribute('title', enabled ? 'Show Leaflet map view' : 'Map not available \u2014 load a dataset first');
 				}
 			});
 			updateControlVisibility();
@@ -1117,7 +1566,7 @@
 			const dataSummary     = document.getElementById('dataSummary');
 			const sqlWorkbench    = document.getElementById('sqlWorkbenchPanel');
 			const tableCard       = document.querySelector('.table-card');
-			const hasMap  = Boolean(state.settings?.map);
+			const hasMap    = state.allRows.length > 0;
 			const mapActive = state.chartType === 'map' && hasMap;
 			const sqlActive = state.chartType === 'sql';
 
@@ -1129,17 +1578,7 @@
 
 			// Map options panel
 			if (mapContainer) {
-				if (hasMap && !sqlActive) {
-					mapContainer.classList.toggle('d-none', !mapActive);
-					if (!mapActive) {
-						const clusterToggleElement = document.getElementById('mapClusterToggle');
-						if (clusterToggleElement) {
-							clusterToggleElement.checked = state.mapOptions.cluster;
-						}
-					}
-				} else {
-					mapContainer.classList.add('d-none');
-				}
+				mapContainer.classList.toggle('d-none', !mapActive || sqlActive);
 			}
 
 			// General chart controls
@@ -2196,6 +2635,29 @@
 		initResizer();
 		updateLineNums();
 	});
+
+	// ── Exposed for the main module's Refresh button ────────────────────────────
+	// Re-fetches a user-added source from its original URL, updates IDB, and
+	// refreshes window._edaUserDatasets so the calling code can reload the table.
+	window._edaRefreshUserSource = async function(alias) {
+		try {
+			if (!userIdb) userIdb = await openUserIDB();
+			const sources = await idbUserGetAll();
+			const record  = sources.find(s => s.alias === alias);
+			if (!record) return null;
+			// For Parquet sources DuckDB must be initialised (it's the fetcher).
+			// CSV/JSON are fetched directly so no DuckDB requirement.
+			if (guessFileType(record.url) === 'parquet' && !initialized) {
+				await initDuckDB();
+			}
+			const rows = await copySourceToEDA(record);
+			if (rows && rows.length) injectUserDatasetIntoEDA(record, rows);
+			return rows;
+		} catch (e) {
+			console.warn('_edaRefreshUserSource error:', e);
+			return null;
+		}
+	};
 
 	// ── Fired by the main EDA script when user clicks the SQL button ───────────
 	// DuckDB is initialised lazily so the WASM bundle is only downloaded on demand.
