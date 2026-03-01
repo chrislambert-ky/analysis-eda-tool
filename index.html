@@ -324,11 +324,15 @@
 								<!-- Filter value dropdowns (rebuilt dynamically) -->
 								<div id="mapOptFiltersSection" class="mb-2"></div>
 								<!-- Popup Fields -->
-								<div class="mb-1 text-uppercase text-secondary fw-medium" style="font-size:9px;letter-spacing:1.5px">Popup Fields</div>
+								<div class="d-flex align-items-center mb-1">
+									<span class="text-uppercase text-secondary fw-medium" style="font-size:9px;letter-spacing:1.5px">Popup Fields</span>
+									<div class="d-flex gap-2 ms-auto">
+										<button id="mapPopupClearAll" class="btn btn-link btn-sm p-0 text-danger" style="font-size:9px;text-decoration:none" title="Hide all popup fields">Clear All</button>
+										<button id="mapPopupShowAll" class="btn btn-link btn-sm p-0 text-secondary" style="font-size:9px;text-decoration:none" title="Show all popup fields">Show All</button>
+									</div>
+								</div>
 								<div class="border rounded overflow-auto mb-2" id="mapPopupFieldList" style="max-height:110px;min-height:28px"></div>
-								<!-- Table Fields -->
-								<div class="mb-1 text-uppercase text-secondary fw-medium" style="font-size:9px;letter-spacing:1.5px">Table Fields</div>
-								<div class="border rounded overflow-auto" id="mapTableFieldList" style="max-height:110px;min-height:28px"></div>
+
 							</div>
 						</div>
 						<div class="mt-auto controls-dataset-info">
@@ -383,6 +387,8 @@
 		const DATA_ROOT = 'data/report';
 		const DISTRICTS = ['01','02','03','04','05','06','07','08','09','10','11','12','Various'];
 		const MAP_ALL_OPTION = '__all__';
+		// ECharts 5 default palette — used for both charts and map markers so colors stay consistent
+		const CHART_PALETTE = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
 		const DATASETS = [
 			{ id: 'eda_assets_bridge_condition_owner_area', title: 'Bridge Condition & Owner Area' },
 			{ id: 'eda_construction_procurement', title: 'Construction Procurement' },
@@ -610,7 +616,21 @@
 				});
 			}
 
-			document.getElementById('mapSaveConfigBtn').addEventListener('click', saveMapConfig);
+document.getElementById('mapPopupShowAll').addEventListener('click', () => {
+					if (!state.allRows.length) return;
+					state.mapOptions.popupHidden.clear();
+					const cols = Object.keys(state.allRows[0]);
+					buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
+				});
+
+				document.getElementById('mapPopupClearAll').addEventListener('click', () => {
+					if (!state.allRows.length) return;
+					const cols = Object.keys(state.allRows[0]);
+					cols.forEach(col => state.mapOptions.popupHidden.add(col));
+					buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
+				});
+
+				document.getElementById('mapSaveConfigBtn').addEventListener('click', saveMapConfig);
 			document.getElementById('mapEditConfigBtn').addEventListener('click', editMapConfig);
 
 			// Delegate filter-value changes inside #mapOptFiltersSection
@@ -922,11 +942,6 @@
 			buildFieldChecklist(
 				document.getElementById('mapPopupFieldList'),
 				state.mapOptions.popupHidden, cols
-			);
-			buildFieldChecklist(
-				document.getElementById('mapTableFieldList'),
-				state.mapOptions.tableHidden, cols,
-				() => { if (state.chartType === 'map') renderTable(); }
 			);
 		}
 
@@ -1363,7 +1378,7 @@
 			}
 			const filteredRows  = getMapFilteredRows();
 			const colorValues   = colorField ? getColorValues(filteredRows, colorField) : [];
-			const colorMap      = new Map(colorValues.map(v => [v, stringToColor(v)]));
+			const colorMap      = new Map(colorValues.map((v, i) => [v, CHART_PALETTE[i % CHART_PALETTE.length]]));
 			const allCols       = state.allRows.length ? Object.keys(state.allRows[0]) : [];
 			const chartArea     = document.getElementById('chartArea');
 			const mapDiv        = document.createElement('div');
@@ -1383,7 +1398,7 @@
 				if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 				const colorKey           = colorField ? (row[colorField] ?? 'Unknown') : 'Feature';
 				const normalizedColorKey = colorKey === '' ? 'Unknown' : String(colorKey);
-				const strokeColor        = colorMap.get(normalizedColorKey) || stringToColor(normalizedColorKey);
+				const strokeColor        = colorMap.get(normalizedColorKey) || CHART_PALETTE[0];
 				const marker = L.circleMarker([lat, lon], {
 					radius: 5, weight: 1,
 					color: strokeColor, fillColor: strokeColor, fillOpacity: 0.75
