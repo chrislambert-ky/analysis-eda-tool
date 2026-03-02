@@ -610,12 +610,21 @@
 
 			document.getElementById('refreshButton').addEventListener('click', async () => {
 				if (!state.datasetId) return;
-				// User-added datasets: re-fetch from source URL via the SQL module helper
+				// User-added datasets
 				if (window._edaUserDatasets?.has(state.datasetId)) {
 					if (typeof window._edaRefreshUserSource !== 'function') {
 						// SQL module not yet initialised — reload from cached IDB rows
 						updateProgress('Reloading user dataset from cache…');
 						await selectDataset(state.datasetId);
+						return;
+					}
+					// Check if it's a local file source (no URL — can only reload from browser cache)
+					const srcRecord = (await window._edaGetUserRecord?.(state.datasetId));
+					if (srcRecord?.sourceType === 'file') {
+						updateProgress('Local file — reloading from browser cache…');
+						const rows = await window._edaRefreshUserSource(state.datasetId);
+						if (rows && rows.length) await selectDataset(state.datasetId);
+						else updateProgress('Could not reload — try removing and re-adding the file.');
 						return;
 					}
 					updateProgress('Re-fetching user dataset from source URL…');
@@ -2909,8 +2918,16 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const sources = await idbUserGetAll();
 			const record  = sources.find(s => s.alias === alias);
 			if (!record) return null;
+			// Local file sources have no URL — reload rows directly from IDB cache
+			if (record.sourceType === 'file') {
+				const cached = await idbUserDataGet(alias);
+				if (cached && cached.length) {
+					injectUserDatasetIntoEDA(record, cached);
+					return cached;
+				}
+				return null;
+			}
 			// For Parquet sources DuckDB must be initialised (it's the fetcher).
-			// CSV/JSON are fetched directly so no DuckDB requirement.
 			if (guessFileType(record.url) === 'parquet' && !initialized) {
 				await initDuckDB();
 			}
@@ -2921,6 +2938,12 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			console.warn('_edaRefreshUserSource error:', e);
 			return null;
 		}
+	};
+
+	window._edaGetUserRecord = async function(alias) {
+		if (!userIdb) userIdb = await openUserIDB();
+		const sources = await idbUserGetAll();
+		return sources.find(s => s.alias === alias) ?? null;
 	};
 
 	// ── Fired by the main EDA script when user clicks the SQL button ───────────
