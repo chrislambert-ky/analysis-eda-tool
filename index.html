@@ -120,13 +120,38 @@
 		.modal-overlay.open { display: flex; }
 		#sqlAddModal .card { width: 100%; max-width: 480px; border-radius: .5rem; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
 		#sqlAddModal .modal-title { font-size: .95rem; font-weight: 600; }
+		/* Add Source — source type tabs */
+		.add-src-tabs { display:flex; border-bottom:1px solid #dee2e6; margin-bottom:.75rem; }
+		.add-src-tab  { flex:1; text-align:center; padding:7px 4px; font-size:11px; font-family:'IBM Plex Mono',monospace; cursor:pointer; border:1px solid transparent; border-bottom:none; border-radius:.375rem .375rem 0 0; color:#666; background:#f8f9fa; transition:background .15s, color .15s; user-select:none; }
+		.add-src-tab.active { background:#fff; color:#0d6efd; border-color:#dee2e6; font-weight:600; }
+		.add-src-tab:hover:not(.active) { background:#e9ecef; }
+		.add-src-pane { display:none; }
+		.add-src-pane.active { display:block; }
+		.drop-zone { border:2px dashed #dee2e6; border-radius:.375rem; padding:20px 12px; text-align:center; cursor:pointer; transition:border-color .2s, background .2s; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#adb5bd; }
+		.drop-zone:hover, .drop-zone.drag-over { border-color:#0d6efd; background:#f0f4ff; color:#0d6efd; }
+		.drop-zone-icon { font-size:24px; display:block; margin-bottom:6px; }
+		.drop-zone.has-file { border-color:#198754; border-style:solid; background:#f0fff4; color:#198754; }
+		/* About modal */
+		#aboutModal .card { width:100%; max-width:640px; border-radius:.5rem; box-shadow:0 8px 32px rgba(0,0,0,.25); max-height:90vh; display:flex; flex-direction:column; }
+		#aboutModal .about-body { overflow-y:auto; padding:1.25rem 1.5rem; }
+		#aboutModal h6 { font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; color:#6c757d; margin-top:1.25rem; margin-bottom:.4rem; font-weight:700; }
+		#aboutModal h6:first-child { margin-top:0; }
+		#aboutModal p, #aboutModal li { font-size:.875rem; color:#343a40; }
+		#aboutModal code { background:#f1f3f5; padding:1px 5px; border-radius:3px; font-size:.82rem; }
+		#aboutModal .gh-link { display:inline-flex; align-items:center; gap:6px; font-size:.82rem; font-family:'IBM Plex Mono',monospace; color:#0d6efd; text-decoration:none; border:1px solid #c5d5fb; border-radius:5px; padding:5px 10px; background:#f0f4ff; transition:background .15s; }
+		#aboutModal .gh-link:hover { background:#dde8ff; }
 	</style>
 </head>
 <body>
 	<div class="container py-4">
-		<header class="mb-4">
-			<h1 class="mb-1">Exploratory Data Analysis Tool</h1>
-			<p class="text-muted mb-0">Incremental, in-browser analytics for district-partitioned datasets.</p>
+		<header class="mb-4 d-flex align-items-start justify-content-between">
+			<div>
+				<h1 class="mb-1">Exploratory Data Analysis Tool</h1>
+				<p class="text-muted mb-0">Incremental, in-browser analytics for district-partitioned datasets.</p>
+			</div>
+			<button class="btn btn-outline-secondary btn-sm mt-1" id="aboutBtn" title="About &amp; Help" style="white-space:nowrap;font-size:12px">
+				<i class="bi bi-info-circle"></i> About
+			</button>
 		</header>
 
 		<div class="row g-3 align-items-end mb-3">
@@ -345,28 +370,88 @@
 		</div>
 	</div>
 
+	<!-- About Modal -->
+	<div class="modal-overlay" id="aboutModal">
+		<div class="card">
+			<div class="card-header d-flex align-items-center justify-content-between">
+				<span class="fw-semibold" style="font-size:.95rem">About this Tool</span>
+				<button type="button" class="btn-close" id="aboutModalClose" aria-label="Close"></button>
+			</div>
+			<div class="about-body">
+				<h6>What is this?</h6>
+				<p>This is an in-browser <strong>Exploratory Data Analysis (EDA) tool</strong> built to let you quickly visualise and query tabular data without installing any software. Everything runs locally in your browser &mdash; no data is ever uploaded to a server.</p>
+
+				<h6>Preloaded Datasets</h6>
+				<p>Four example datasets are preloaded and ready to use from the <strong>Dataset</strong> dropdown at the top of the page. These are partitioned by district and cached in your browser so subsequent loads are instant:</p>
+				<ul>
+					<li><strong>Bridge Condition &amp; Owner Area</strong> &mdash; asset condition ratings by owner and area</li>
+					<li><strong>Construction Procurement</strong> &mdash; active and planned construction contracts</li>
+					<li><strong>Current Enacted Plan</strong> &mdash; current program-year enacted plan data</li>
+					<li><strong>Program Management Authorized</strong> &mdash; detailed authorized program management data</li>
+				</ul>
+				<p>Use the <strong>Refresh Cache</strong> button to pull the latest version of any dataset from the server.</p>
+
+				<h6>Adding Your Own Data</h6>
+				<p>You can load your own <code>.csv</code> or <code>.parquet</code> file and query it alongside the preloaded datasets. This feature is available exclusively on the <strong>SQL tab</strong>:</p>
+				<ol>
+					<li>Switch to the <strong>SQL</strong> view using the chart-type buttons at the top right.</li>
+					<li>Click the <strong>+ Add</strong> button in the Data Sources panel on the right.</li>
+					<li>Choose <em>From URL</em> to point to a publicly accessible file (CORS required), or <em>Local File</em> to upload directly from your computer.</li>
+					<li>Give the source a short table alias (letters, numbers, underscores) &mdash; this becomes the SQL table name.</li>
+					<li>Click <strong>Add &amp; Load</strong>. The file is parsed and stored in your browser&rsquo;s IndexedDB so it persists across page refreshes.</li>
+				</ol>
+				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. To remove a source, click the &times; next to it in the SQL sidebar.</p>
+
+				<h6>SQL Workbench</h6>
+				<p>The SQL tab runs queries in-browser using <strong>DuckDB-WASM</strong>. You can join your own data against the preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend.</p>
+
+				<h6>Source Code</h6>
+				<p>This project is open source. View the code, report issues, or contribute on GitHub:</p>
+				<a class="gh-link" href="https://github.com/drewpayment/analysis-eda-tool" target="_blank" rel="noopener">
+					<i class="bi bi-github"></i> github.com/drewpayment/analysis-eda-tool
+				</a>
+			</div>
+			<div class="card-footer text-end">
+				<button class="btn btn-primary btn-sm" id="aboutModalOk">Got it</button>
+			</div>
+		</div>
+	</div>
+
 	<!-- SQL Add Source Modal -->
 	<div class="modal-overlay" id="sqlAddModal">
-		<div class="card border shadow-lg" style="width:460px;max-width:94vw">
+		<div class="card border shadow-lg" style="width:480px;max-width:94vw">
 			<div class="card-header d-flex align-items-center justify-content-between">
 				<span class="fw-semibold" style="font-family:'IBM Plex Mono',monospace;font-size:13px">Add Data Source</span>
 				<button type="button" class="btn-close" id="sqlAddModalClose" aria-label="Close"></button>
 			</div>
-			<div class="card-body d-flex flex-column gap-3">
-				<div>
+			<div class="card-body d-flex flex-column gap-2">
+				<!-- Shared: Table Alias -->
+				<div class="mb-1">
 					<label class="form-label text-uppercase text-secondary fw-medium" style="font-size:10px;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace">Table Alias <span class="text-danger">*</span></label>
 					<input id="sqlNewAlias" class="form-control form-control-sm font-monospace" type="text" placeholder="my_table" autocomplete="off" spellcheck="false">
 					<div class="form-text">Used as the SQL table name &mdash; letters, numbers, underscores only.</div>
 				</div>
-				<div>
+				<!-- Source type tabs -->
+				<div class="add-src-tabs" id="addSrcTabs">
+					<div class="add-src-tab active" data-pane="paneUrl">&#x1F517; From URL</div>
+					<div class="add-src-tab" data-pane="paneFile">&#x1F4C1; Local File</div>
+				</div>
+				<!-- Pane: URL -->
+				<div class="add-src-pane active" id="paneUrl">
 					<label class="form-label text-uppercase text-secondary fw-medium" style="font-size:10px;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace">File URL <span class="text-danger">*</span></label>
 					<input id="sqlNewUrl" class="form-control form-control-sm font-monospace" type="url" placeholder="https://example.com/data.csv" autocomplete="off" spellcheck="false">
+					<div class="form-text mt-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px">Supports .csv and .parquet &mdash; must be publicly accessible (CORS required).</div>
 				</div>
-				<p class="text-secondary mb-0" style="font-size:11px;font-family:'IBM Plex Mono',monospace;line-height:1.6">
-					Supports <strong>.csv</strong>, <strong>.parquet</strong>, and <strong>.json&nbsp;/&nbsp;.jsonl</strong>.<br>
-					The file must be publicly accessible (CORS headers required).<br>
-					Sources are saved in your browser and restored on next visit.
-				</p>
+				<!-- Pane: Local File -->
+				<div class="add-src-pane" id="paneFile">
+					<div class="drop-zone" id="sqlDropZone">
+						<span class="drop-zone-icon">&#x1F4C2;</span>
+						<span id="sqlDropLabel">Click to browse or drag &amp; drop a file here</span>
+						<div class="mt-1" style="font-size:10px;color:#adb5bd">.csv &nbsp;&middot;&nbsp; .parquet</div>
+					</div>
+					<input type="file" id="sqlLocalFile" accept=".csv,.parquet" style="display:none">
+					<div class="form-text mt-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px">File contents are stored in your browser. To load a newer version, remove and re-add the source.</div>
+				</div>
 			</div>
 			<div class="card-footer d-flex justify-content-end gap-2">
 				<button class="btn btn-outline-secondary btn-sm" id="sqlAddModalCancel">Cancel</button>
@@ -2007,12 +2092,17 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	function guessFileType(url) {
 		const lower = url.toLowerCase().split('?')[0];
 		if (lower.endsWith('.parquet')) return 'parquet';
-		if (lower.endsWith('.json') || lower.endsWith('.jsonl') || lower.endsWith('.ndjson')) return 'json';
 		return 'csv';
 	}
 
 	// ── Register a source as a DuckDB view ─────────────────────────────────────
 	async function registerSource(src) {
+		// Local file sources are re-registered from cached IDB rows, not by URL
+		if (src.sourceType === 'file') {
+			const cached = await idbUserDataGet(src.alias);
+			if (cached && cached.length) await registerSourceFromRows(src.alias, cached);
+			return;
+		}
 		updateBadge(src.alias, 'loading');
 		try {
 			// Resolve to absolute URL — DuckDB Web Worker has no page-relative directory
@@ -2020,8 +2110,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const ft     = guessFileType(absUrl);
 			const expr   = ft === 'parquet'
 				? `read_parquet('${absUrl}')`
-				: ft === 'json'
-				? `read_json_auto('${absUrl}')`
 				: `read_csv_auto('${absUrl}', header=true)`;
 			await conn.query(`CREATE OR REPLACE VIEW "${src.alias}" AS SELECT * FROM ${expr};`);
 			updateBadge(src.alias, 'loaded');
@@ -2043,7 +2131,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		item.id = `sql-ti-${src.alias}`;
 
 		const ft   = guessFileType(src.url);
-		const icon = ft === 'parquet' ? '&#x25c8;' : ft === 'json' ? '{}' : '&#x229e;';
+		const icon = ft === 'parquet' ? '&#x25c8;' : '&#x229e;';
 
 		item.innerHTML = `
 			<button class="sql-expand-btn" id="sql-exp-${escHtml(src.alias)}" disabled title="Expand columns">&#x25BA;</button>
@@ -2128,12 +2216,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					});
 					return obj;
 				});
-			} else if (ft === 'json') {
-				const resp = await fetch(absUrl);
-				if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-				const json = await resp.json();
-				rows = Array.isArray(json) ? json
-					: (json.data || json.rows || json.features || []);
 			} else {
 				// CSV — prefer the IIFE's full parser if available
 				const resp = await fetch(absUrl);
@@ -2194,23 +2276,128 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	}
 
 	// ── Add / Remove user sources ─────────────────────────────────────────────
+
+	// Holds the File object selected by the user in the Local File pane
+	let _pendingLocalFile = null;
+
+	function switchAddSrcTab(paneId) {
+		document.querySelectorAll('.add-src-tab').forEach(t =>
+			t.classList.toggle('active', t.dataset.pane === paneId));
+		document.querySelectorAll('.add-src-pane').forEach(p =>
+			p.classList.toggle('active', p.id === paneId));
+	}
+
+	function clearLocalFilePicker() {
+		_pendingLocalFile = null;
+		const fi = $('sqlLocalFile');
+		if (fi) fi.value = '';
+		const dz  = $('sqlDropZone');
+		const lbl = $('sqlDropLabel');
+		if (dz)  dz.classList.remove('has-file');
+		if (lbl) lbl.innerHTML = 'Click to browse or drag &amp; drop a file here';
+	}
+
+	function setLocalFile(file) {
+		if (!file) return;
+		const ext = '.' + file.name.split('.').pop().toLowerCase();
+		const allowed = ['.csv', '.parquet'];
+		if (!allowed.includes(ext)) {
+			alert(`Unsupported file type: ${ext}\nPlease choose a .csv or .parquet file.`);
+			return;
+		}
+		_pendingLocalFile = file;
+		const dz  = $('sqlDropZone');
+		const lbl = $('sqlDropLabel');
+		if (dz)  dz.classList.add('has-file');
+		if (lbl) lbl.textContent = `\u2714 ${file.name}  (${(file.size / 1024).toFixed(1)} KB)`;
+		// Auto-fill alias from filename if blank
+		const aliasEl = $('sqlNewAlias');
+		if (aliasEl && !aliasEl.value.trim()) {
+			const base = file.name
+				.replace(/\.[^.]+$/, '')
+				.replace(/[^a-zA-Z0-9_]/g, '_')
+				.replace(/^_+|_+$/g, '');
+			aliasEl.value = base;
+		}
+	}
+
+	async function readLocalFileRows(file) {
+		const ext = file.name.split('.').pop().toLowerCase();
+		if (ext === 'parquet') {
+			const buffer  = await file.arrayBuffer();
+			const uint8   = new Uint8Array(buffer);
+			const tmpName = `__local_${Date.now()}.parquet`;
+			await duck_db.registerFileBuffer(tmpName, uint8);
+			const res  = await conn.query(`SELECT * FROM read_parquet('${tmpName}');`);
+			const cols = res.schema.fields.map(f => f.name);
+			const rows = res.toArray().map(r => {
+				const obj = {};
+				cols.forEach(c => {
+					const v = r[c];
+					obj[c] = (v === null || v === undefined) ? null
+						: typeof v === 'bigint' ? Number(v) : v;
+				});
+				return obj;
+			});
+			try { await duck_db.dropFile(tmpName); } catch (_) {}
+			return rows;
+		} else {
+			const text = await file.text();
+			return window._edaParseCsv ? window._edaParseCsv(text) : parseCsvSimple(text);
+		}
+	}
+
+	async function registerSourceFromRows(alias, rows) {
+		updateBadge(alias, 'loading');
+		if (!rows || !rows.length) { updateBadge(alias, 'error'); return; }
+		try {
+			// Serialize rows back to CSV and use read_csv_auto so DuckDB correctly
+			// expands columns (read_json_auto was producing a single "json" column)
+			const headers = Object.keys(rows[0]);
+			const escCsv  = v => {
+				const s = (v === null || v === undefined) ? '' : String(v);
+				return (s.includes(',') || s.includes('"') || s.includes('\n'))
+					? '"' + s.replace(/"/g, '""') + '"' : s;
+			};
+			const csvText = [
+				headers.map(escCsv).join(','),
+				...rows.map(r => headers.map(h => escCsv(r[h])).join(','))
+			].join('\n');
+			const buf     = new TextEncoder().encode(csvText);
+			const tmpName = `__mem_${alias}.csv`;
+			await duck_db.registerFileBuffer(tmpName, buf);
+			await conn.query(`CREATE OR REPLACE VIEW "${alias}" AS SELECT * FROM read_csv_auto('${tmpName}', header=true);`);
+			updateBadge(alias, 'loaded');
+			await fetchColumns(alias);
+		} catch (e) {
+			console.warn(`registerSourceFromRows failed for "${alias}":`, e.message);
+			updateBadge(alias, 'error');
+		}
+	}
+
 	function openAddModal() {
 		$('sqlNewAlias').value = '';
 		$('sqlNewUrl').value   = '';
+		switchAddSrcTab('paneUrl');
+		clearLocalFilePicker();
 		$('sqlAddModal').classList.add('open');
 		setTimeout(() => $('sqlNewAlias').focus(), 80);
 	}
 	function closeAddModal() {
 		$('sqlAddModal').classList.remove('open');
+		clearLocalFilePicker();
 	}
 
 	async function saveNewSource() {
-		const rawAlias = ($('sqlNewAlias').value || '').trim();
-		const url      = ($('sqlNewUrl').value   || '').trim();
-		const alias    = rawAlias.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || rawAlias;
+		const rawAlias   = ($('sqlNewAlias').value || '').trim();
+		const alias      = rawAlias.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || rawAlias;
+		const activePane = document.querySelector('.add-src-pane.active')?.id;
+		const isFile     = activePane === 'paneFile';
+		const url        = isFile ? '' : ($('sqlNewUrl').value || '').trim();
 
-		if (!alias) { alert('Please provide a table alias.'); return; }
-		if (!url)   { alert('Please provide a file URL.');    return; }
+		if (!alias)                          { alert('Please provide a table alias.'); return; }
+		if (!isFile && !url)                 { alert('Please provide a file URL.');    return; }
+		if (isFile && !_pendingLocalFile)    { alert('Please select a local file.');  return; }
 
 		const allAliases = [...SQL_DATASETS.map(s => s.alias), ...userSources.map(s => s.alias)];
 		if (allAliases.includes(alias)) {
@@ -2224,26 +2411,47 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		saveBtn.innerHTML = '<span class="sql-spinner"></span> Loading…';
 
 		try {
-			// Quick HEAD check to catch obvious CORS / 404 issues early
-			const record = { alias, title: alias, url, addedAt: Date.now() };
-			await idbUserPut(record);
-			userSources = await idbUserGetAll();
-			userSources.sort((a, b) => a.addedAt - b.addedAt);
+			if (isFile) {
+				saveBtn.innerHTML = '<span class="sql-spinner"></span> Reading file…';
+				const rows = await readLocalFileRows(_pendingLocalFile);
+				if (!rows.length) throw new Error('File appears to be empty or could not be parsed.');
 
-			closeAddModal();
-			renderSidebar();
-			// Restore badges for already-registered tables
-			[...SQL_DATASETS, ...userSources.filter(s => s.alias !== alias)]
-				.forEach(s => updateBadge(s.alias, tableColumns.has(s.alias) ? 'loaded' : 'error'));
-
-			// 1. Register in DuckDB so SQL workbench can query it immediately
-			await registerSource(record);
-
-			// 2. Copy rows into IndexedDB and inject into the EDA dataset selector + ECharts
-			saveBtn.innerHTML = '<span class="sql-spinner"></span> Copying to EDA…';
-			const rows = await copySourceToEDA(record);
-			if (rows && rows.length) {
+				const record = {
+					alias,
+					title:      alias,
+					url:        '',
+					fileName:   _pendingLocalFile.name,
+					sourceType: 'file',
+					addedAt:    Date.now()
+				};
+				await idbUserPut(record);
+				await idbUserDataPut(alias, rows);
+				await registerSourceFromRows(alias, rows);
 				injectUserDatasetIntoEDA(record, rows);
+
+				userSources = await idbUserGetAll();
+				userSources.sort((a, b) => a.addedAt - b.addedAt);
+				closeAddModal();
+				renderSidebar();
+				[...SQL_DATASETS, ...userSources.filter(s => s.alias !== alias)]
+					.forEach(s => updateBadge(s.alias, tableColumns.has(s.alias) ? 'loaded' : 'error'));
+				updateBadge(alias, 'loaded');
+			} else {
+				const record = { alias, title: alias, url, sourceType: 'url', addedAt: Date.now() };
+				await idbUserPut(record);
+				userSources = await idbUserGetAll();
+				userSources.sort((a, b) => a.addedAt - b.addedAt);
+
+				closeAddModal();
+				renderSidebar();
+				[...SQL_DATASETS, ...userSources.filter(s => s.alias !== alias)]
+					.forEach(s => updateBadge(s.alias, tableColumns.has(s.alias) ? 'loaded' : 'error'));
+
+				await registerSource(record);
+
+				saveBtn.innerHTML = '<span class="sql-spinner"></span> Copying to EDA…';
+				const rows = await copySourceToEDA(record);
+				if (rows && rows.length) injectUserDatasetIntoEDA(record, rows);
 			}
 		} catch (e) {
 			alert(`Could not add source:\n${e.message}`);
@@ -2622,8 +2830,49 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		$('sqlAddModalCancel')?.addEventListener('click', closeAddModal);
 		$('sqlAddModalSave')?.addEventListener('click',   saveNewSource);
 		$('sqlAddModal')?.addEventListener('click', e => { if (e.target === $('sqlAddModal')) closeAddModal(); });
+
+		// About modal
+		const openAbout  = () => $('aboutModal')?.classList.add('open');
+		const closeAbout = () => $('aboutModal')?.classList.remove('open');
+		$('aboutBtn')?.addEventListener('click', openAbout);
+		$('aboutModalClose')?.addEventListener('click', closeAbout);
+		$('aboutModalOk')?.addEventListener('click',    closeAbout);
+		$('aboutModal')?.addEventListener('click', e => { if (e.target === $('aboutModal')) closeAbout(); });
 		$('sqlNewUrl')?.addEventListener('keydown',   e => { if (e.key === 'Enter') saveNewSource(); });
-		$('sqlNewAlias')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('sqlNewUrl').focus(); });
+		$('sqlNewAlias')?.addEventListener('keydown', e => {
+			if (e.key === 'Enter') {
+				const activePane = document.querySelector('.add-src-pane.active')?.id;
+				if (activePane === 'paneUrl') $('sqlNewUrl')?.focus();
+				else saveNewSource();
+			}
+		});
+		// Add Source modal — tab switching
+		$('addSrcTabs')?.addEventListener('click', e => {
+			const tab = e.target.closest('.add-src-tab');
+			if (tab) switchAddSrcTab(tab.dataset.pane);
+		});
+		// Drop zone — click to open file browser
+		$('sqlDropZone')?.addEventListener('click', () => $('sqlLocalFile')?.click());
+		// File input change
+		$('sqlLocalFile')?.addEventListener('change', e => {
+			const file = e.target.files?.[0];
+			if (file) setLocalFile(file);
+		});
+		// Drag and drop onto the drop zone
+		$('sqlDropZone')?.addEventListener('dragover', e => {
+			e.preventDefault();
+			$('sqlDropZone').classList.add('drag-over');
+		});
+		$('sqlDropZone')?.addEventListener('dragleave', e => {
+			if (!$('sqlDropZone').contains(e.relatedTarget))
+				$('sqlDropZone').classList.remove('drag-over');
+		});
+		$('sqlDropZone')?.addEventListener('drop', e => {
+			e.preventDefault();
+			$('sqlDropZone').classList.remove('drag-over');
+			const file = e.dataTransfer?.files?.[0];
+			if (file) setLocalFile(file);
+		});
 
 		const ta = $('sqlEditorTA');
 		if (ta) {
