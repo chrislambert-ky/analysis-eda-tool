@@ -6,18 +6,10 @@
     "COUNTY"
   ],
   "metrics": [
-    "Dataset Records",
-    "RSY_FUND",
-    "NUMBER_OF_LETTINGS",
-    "BMP",
-    "EMP"
+    "Dataset Records"
   ],
   "aggregationTypes": [
-    "Count",
-    "Sum",
-    "Average",
-    "Min",
-    "Max"
+    "Count"
   ],
   "orderBy": [
     "Dimension",

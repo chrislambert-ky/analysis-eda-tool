@@ -6,16 +6,10 @@
     "COUNTY"
   ],
   "metrics": [
-    "Dataset Records",
-    "AWARD_AMOUNT",
-    "CALCULATED_AWARDED_AMOUNT"
+    "Dataset Records"
   ],
   "aggregationTypes": [
-    "Count",
-    "Sum",
-    "Average",
-    "Min",
-    "Max"
+    "Count"
   ],
   "orderBy": [
     "Dimension",
