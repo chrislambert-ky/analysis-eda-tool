@@ -2,7 +2,7 @@
 
 A single-page, fully in-browser exploratory data analysis tool built with vanilla HTML/CSS/JS and CDN libraries. Datasets are pre-partitioned by district so the UI loads data incrementally and caches it in IndexedDB. No server, no build step, no data ever leaves your browser.
 
-**Live app:** hosted via GitHub Pages from the repository root.  
+**Live app:** https://chrislambert-ky.github.io/analysis-eda-tool/  
 **Repository:** https://github.com/chrislambert-ky/analysis-eda-tool
 
 ---
