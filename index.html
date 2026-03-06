@@ -793,12 +793,32 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				await loadPartitionsIntoState();
 				// After rows load, merge any field not already in dimensions so numeric
 				// columns (e.g. DISTRICT stored as 1–12) are selectable as grouping keys.
+				// Also expand metrics to include all numeric columns so users can freely
+				// change the metric — same behaviour as user-loaded datasets.
 				if (state.allRows.length) {
 					const allCols  = Object.keys(state.allRows[0]);
-					const existing = new Set(state.settings.dimensions);
-					const extra    = allCols.filter(c => !existing.has(c));
-					if (extra.length) {
-						state.settings.dimensions = [...state.settings.dimensions, ...extra];
+
+					// Expand dimensions
+					const existingDims = new Set(state.settings.dimensions);
+					const extraDims    = allCols.filter(c => !existingDims.has(c));
+					if (extraDims.length) {
+						state.settings.dimensions = [...state.settings.dimensions, ...extraDims];
+					}
+
+					// Expand metrics with all numeric columns not already listed
+					const existingMetrics = new Set(state.settings.metrics);
+					const numCols = allCols.filter(c => !existingMetrics.has(c) &&
+						state.allRows.slice(0, 50).some(r => {
+							const v = parseFloat(r[c]);
+							return Number.isFinite(v) && String(r[c]).trim() !== '';
+						}));
+					if (numCols.length) {
+						state.settings.metrics = [...state.settings.metrics, ...numCols];
+					}
+
+					if (extraDims.length || numCols.length) {
+						// Re-populate selects; dimension defaults to first entry (DISTRICT),
+						// metric defaults to the first bi-settings metric (preserved as first item).
 						populateControls(); // refresh selects with the complete field list
 					}
 				}
