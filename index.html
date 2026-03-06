@@ -2395,11 +2395,46 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			return entry;
 		}
 
+		/**
+		 * Fetch the first ~16 KB of a raw CSV file and return a parsed sample
+		 * (truncated last row dropped).  Works with or without server Range support.
+		 */
+		async function fetchRawCsvSample(datasetId) {
+			const url = `data/raw/${datasetId}.csv`;
+			const resp = await fetch(url, {
+				headers: { Range: 'bytes=0-16383' },
+				cache: 'no-cache'
+			}).catch(() => null);
+			if (!resp || (!resp.ok && resp.status !== 206)) return null;
+
+			// Stream-read at most 16 KB even if the server ignored the Range header
+			// and is sending the full (potentially multi-MB) file.
+			const reader  = resp.body.getReader();
+			const decoder = new TextDecoder();
+			let text = '', bytesRead = 0;
+			const MAX = 16384;
+			while (bytesRead < MAX) {
+				const { value, done } = await reader.read();
+				if (done) break;
+				bytesRead += value.length;
+				text += decoder.decode(value, { stream: true });
+			}
+			reader.cancel().catch(() => {});
+
+			const rows = parseCSV(text);
+			// Drop the last row — it may be truncated mid-field
+			return rows.length > 1 ? rows.slice(0, -1) : rows;
+		}
+
 		async function loadAndRenderCatalogSchema(ds, schemaEl) {
-			if (catalogSchemaCache.has(ds.id)) {
+			// Only serve from cache when the schema is complete (not partial)
+			if (catalogSchemaCache.has(ds.id) && !catalogSchemaCache.get(ds.id).partial) {
 				renderCatalogSchemaView(schemaEl, catalogSchemaCache.get(ds.id));
 				return;
 			}
+			// Clear any stale partial entry so we always try to get the full schema
+			catalogSchemaCache.delete(ds.id);
+
 			schemaEl.innerHTML = `<div style="color:#adb5bd;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">Loading schema&hellip;</div>`;
 
 			if (ds.sourceType === 'user') {
@@ -2420,50 +2455,73 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				const settings  = settingsResp?.ok ? await settingsResp.json() : null;
 				const indexData = indexResp?.ok    ? await indexResp.json()    : null;
 
-				let columns  = [];
-				let fromIdb  = false;
+				/** Classify a column name using BI settings */
+				const classify = name =>
+					(settings?.dimensions || []).includes(name) ? 'dimension'
+					: (settings?.metrics  || []).includes(name) ? 'metric'
+					: 'column';
 
-				// Priority 1: active dataset in state — use live rows
+				let columns = [];
+				let partial = false;
+
+				// Priority 1: active loaded dataset — already in memory, free
 				if (state.datasetId === ds.id && state.allRows.length) {
 					const sample = state.allRows.slice(0, 200);
 					columns = Object.keys(state.allRows[0]).map(name => ({
-						name,
-						kind: (settings?.dimensions || []).includes(name) ? 'dimension'
-						    : (settings?.metrics    || []).includes(name) ? 'metric'
-							: 'column',
-						type: inferColumnType(name, sample)
+						name, kind: classify(name), type: inferColumnType(name, sample)
 					}));
-				} else {
-					// Priority 2: IDB partition cache (works for any cached dataset)
+
+				// Priority 2: IDB partition cache
+				} else if ((await readCachedSample(ds.id))?.length) {
 					const cachedSample = await readCachedSample(ds.id);
-					if (cachedSample && cachedSample.length) {
-						fromIdb = true;
-						columns = Object.keys(cachedSample[0]).map(name => ({
-							name,
-							kind: (settings?.dimensions || []).includes(name) ? 'dimension'
-							    : (settings?.metrics    || []).includes(name) ? 'metric'
-								: 'column',
-							type: inferColumnType(name, cachedSample)
+					columns = Object.keys(cachedSample[0]).map(name => ({
+						name, kind: classify(name), type: inferColumnType(name, cachedSample)
+					}));
+
+				// Priority 3: DuckDB DESCRIBE — same source & same types as the SQL panel.
+				// Triggers lazy DuckDB init if the SQL tab hasn't been visited yet.
+				} else if (typeof window._edaDescribeTable === 'function') {
+					const duckCols = await window._edaDescribeTable(ds.id).catch(() => null);
+					if (duckCols && duckCols.length) {
+						columns = duckCols.map(c => ({
+							name: c.name, kind: classify(c.name), type: c.type
 						}));
-					} else if (settings) {
-						// Priority 3: BI-configured fields only (not yet downloaded)
-						const seen = new Set();
-						(settings.dimensions || []).forEach(name => {
-							if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'dimension' }); }
-						});
-						(settings.metrics || []).forEach(name => {
-							if (name === 'Dataset Records') return;
-							if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'metric' }); }
-						});
+					} else {
+						// Priority 4: raw CSV header parse (no DuckDB, offline fallback)
+						const sample = await fetchRawCsvSample(ds.id);
+						if (sample && sample.length) {
+							columns = Object.keys(sample[0]).map(name => ({
+								name, kind: classify(name), type: inferColumnType(name, sample)
+							}));
+						}
 					}
+				} else {
+					// Priority 3b: SQL module not yet evaluated — raw CSV parse
+					const sample = await fetchRawCsvSample(ds.id);
+					if (sample && sample.length) {
+						columns = Object.keys(sample[0]).map(name => ({
+							name, kind: classify(name), type: inferColumnType(name, sample)
+						}));
+					}
+				}
+				if (!columns.length && settings) {
+					// Last resort: BI-configured fields only (raw CSV unreachable)
+					partial = true;
+					const seen = new Set();
+					(settings.dimensions || []).forEach(name => {
+						if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'dimension' }); }
+					});
+					(settings.metrics || []).forEach(name => {
+						if (name === 'Dataset Records') return;
+						if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'metric' }); }
+					});
 				}
 
 				const recordCount = indexData?.totalRecords ?? null;
 				const rcEl = document.getElementById(`catalog-rc-${ds.id}`);
 				if (rcEl && recordCount !== null) rcEl.textContent = `${formatNumber(recordCount)}\u00a0records`;
 
-				const fullSchema = (state.datasetId === ds.id && state.allRows.length > 0) || fromIdb;
-				const schema = { columns, recordCount, partial: !fullSchema };
+				const schema = { columns, recordCount, partial };
 				catalogSchemaCache.set(ds.id, schema);
 				renderCatalogSchemaView(schemaEl, schema);
 			} catch (e) {
@@ -2587,7 +2645,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	let conn          = null;
 	let initialized   = false;
 	let initializing  = false;
-	let tableColumns  = new Map();   // alias → [{name, type}]
+	let tableColumns     = new Map();   // alias → [{name, type}]
+	window._edaTableColumns = tableColumns; // expose to catalog schema resolver
+	let sqlSettingsCache = new Map();   // alias → BI settings object (or null)
 	let lastResult    = null;        // { cols, rows } for CSV export
 	let sqlTabulator  = null;        // current Tabulator instance in the results pane
 	let userSources   = [];          // persisted user-added sources [{alias, title, url, addedAt}]
@@ -3056,7 +3116,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		}
 	}
 
-	function toggleExpand(alias) {
+	async function toggleExpand(alias) {
 		const fieldList = $(`sql-tf-${alias}`);
 		const expBtn    = $(`sql-exp-${alias}`);
 		if (!fieldList) return;
@@ -3065,24 +3125,47 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			fieldList.style.display = 'none';
 			expBtn?.classList.remove('expanded');
 		} else {
-			if (!fieldList.children.length) renderFields(alias, fieldList);
+			if (!fieldList.children.length) await renderFields(alias, fieldList);
 			fieldList.style.display = 'block';
 			expBtn?.classList.add('expanded');
 		}
 	}
 
-	function renderFields(alias, container) {
+	async function renderFields(alias, container) {
 		const cols = tableColumns.get(alias);
 		if (!cols || !cols.length) {
 			container.innerHTML = '<div class="sql-field-item" style="cursor:default;font-style:italic;color:#aaa">no columns</div>';
 			return;
 		}
+
+		// Fetch BI settings for managed datasets to classify columns as dimension/metric
+		const isManaged = SQL_DATASETS.some(s => s.alias === alias);
+		if (isManaged && !sqlSettingsCache.has(alias)) {
+			try {
+				const resp = await fetch(`data/report/${alias}/${alias}-bi-settings.json`, { cache: 'no-cache' }).catch(() => null);
+				sqlSettingsCache.set(alias, resp?.ok ? await resp.json() : null);
+			} catch (_) {
+				sqlSettingsCache.set(alias, null);
+			}
+		}
+		const settings = isManaged ? sqlSettingsCache.get(alias) : null;
+
+		const kindIcon  = k => k === 'dimension' ? '&#9783;' : (k === 'metric' ? '#' : '&ndash;');
+		const kindLabel = k => k === 'dimension' ? 'dim' : (k === 'metric' ? 'num' : '');
+
 		container.innerHTML = '';
 		cols.forEach(c => {
+			const kind = (settings?.dimensions || []).includes(c.name) ? 'dimension'
+			           : (settings?.metrics    || []).includes(c.name) ? 'metric'
+			           : 'column';
 			const row = document.createElement('div');
-			row.className = 'sql-field-item';
+			row.className = 'catalog-field-row';
+			row.style.cssText = 'cursor:pointer';
 			row.title = `Insert "${alias}"."${c.name}"`;
-			row.innerHTML = `<span class="sql-field-name">${escHtml(c.name)}</span><span class="sql-field-type">${escHtml(c.type.split('(')[0])}</span>`;
+			row.innerHTML = `<span class="catalog-field-icon">${kindIcon(kind)}</span>`
+				+ `<span class="catalog-field-name" title="${escHtml(c.name)}">${escHtml(c.name)}</span>`
+				+ `<span class="catalog-field-type">${escHtml(c.type.split('(')[0])}</span>`
+				+ (kindLabel(kind) ? `<span class="catalog-field-kind">${kindLabel(kind)}</span>` : '');
 			row.addEventListener('click', e => { e.stopPropagation(); insertFieldRef(alias, c.name); });
 			container.appendChild(row);
 		});
@@ -3504,6 +3587,24 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		if (!userIdb) userIdb = await openUserIDB();
 		const sources = await idbUserGetAll();
 		return sources.find(s => s.alias === alias) ?? null;
+	};
+
+	/**
+	 * Describe a table/view via DuckDB DESCRIBE — used by the Catalog schema panel.
+	 * Initialises DuckDB lazily so the WASM bundle is only downloaded on first call.
+	 * Returns [{name, type}] on success, or null if the source is unknown.
+	 */
+	window._edaDescribeTable = async function(alias) {
+		if (!initialized) await initDuckDB();
+		// Already described during SQL init
+		if (tableColumns.has(alias)) return tableColumns.get(alias);
+		// Source may not be registered yet (e.g. catalog opened before SQL tab)
+		const src = SQL_DATASETS.find(s => s.alias === alias);
+		if (src) {
+			await registerSource(src);
+			if (tableColumns.has(alias)) return tableColumns.get(alias);
+		}
+		return null;
 	};
 
 	// ── Fired by the main EDA script when user clicks the SQL button ───────────

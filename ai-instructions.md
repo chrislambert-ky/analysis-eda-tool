@@ -2,7 +2,35 @@
 
 This document is the source of truth for maintainers (human or AI). It captures the current architecture, data flow, conventions, and exact steps required to recreate the application from scratch.
 
-## 1. Architecture Snapshot
+---
+
+## TARGET ARCHITECTURE (DuckDB-first)
+
+The app is being migrated to a three-pillar architecture:
+
+```
+Data Sources                  DuckDB-WASM (shared)       UI Layer
+──────────────────            ────────────────────       ─────────────────
+Remote CSV / Parquet ─────→   Views / Physical Tables →  Apache ECharts
+Local file upload ────────→   SQL aggregation engine  →  Leaflet map
+IDB / OPFS cache ─────────→   Single query interface  →  Tabulator (paged)
+```
+
+**Core principles:**
+- **DuckDB-WASM is the single query engine** for charts, catalog, SQL panel, schema, and table pagination. It is initialized eagerly at page load, not lazily on SQL tab click.
+- **Apache ECharts** receives only pre-aggregated query results (a few rows), never the full dataset.
+- **IndexedDB / OPFS** is used for persistent storage of imported datasets and cached remote data. The goal is DuckDB's OPFS VFS as a persistent browser database.
+- **No JS-side aggregation** — `prepareSeries()` and the `state.allRows` full-materialization pattern are replaced by SQL queries built from chart control state.
+- **Parquet is the preferred format** for large datasets — DuckDB uses HTTP range requests against remote Parquet files for efficient big-data querying.
+
+**Migration phases:**
+1. **Phase 1 (in progress):** Shared DuckDB instance, SQL-driven chart aggregation, eager init.
+2. **Phase 2:** OPFS persistence replaces IDB partition cache. Datasets imported as Arrow/Parquet.
+3. **Phase 3:** DuckDB-paged Tabulator, File System Access API for huge local files, cross-dataset JOINs.
+
+---
+
+## 1. Current Architecture Snapshot (transitional)
 
 **Front-end**
 - Single `index.html` at repository root; contains the entire UI (Bootstrap layout, inline scripts) and references CDN-hosted assets:
@@ -10,18 +38,22 @@ This document is the source of truth for maintainers (human or AI). It captures 
   - Apache ECharts 5.5
   - Tabulator 5.5
   - Leaflet 1.9 + Leaflet MarkerCluster 1.5
-- IndexedDB (`analysis_eda_tool_db` store `partitions`) caches dataset partitions keyed by `dataset|district`.
-- UI supports charts (horizontal/vertical bar, pie), map mode, and a Tabulator grid with filterable columns and CSV export.
+  - DuckDB-WASM 1.29.0 (CDN, lazy-loaded in SQL `<script type="module">`)
+- IndexedDB (`analysis_eda_tool_db` store `partitions`) caches dataset partitions keyed by `dataset|district`. **Will be replaced by OPFS in Phase 2.**
+- A second IDB (`eda_sql_user_sources`) stores user-added source metadata and row data. **Will be merged into OPFS in Phase 2.**
+- UI supports charts (horizontal/vertical bar, pie), map mode, Tabulator grid, SQL workbench, and Data Catalog.
 
-**Data layer**
+**Current data layer (transitional — see target above)**
 - Partitioned data and configuration live in `data/report/<dataset>/` as:
   - Partition CSVs: `<dataset>-District-XX.csv`
   - Index file: `<dataset>.index.json` (record counts per partition)
   - BI settings: `<dataset>-bi-settings.json` (dimensions, metrics, aggregation options, map metadata)
-- Raw source CSV downloads stored in `data/raw/` and overwritten each ETL run.
+- Raw source CSV downloads stored in `data/raw/` — these are the authoritative source for DuckDB views.
+- The partition CSV infrastructure exists only because the legacy JS aggregation engine needed pre-filtered data. Once Phase 1 is complete and charts are SQL-driven, the partition files become redundant.
 
-**ETL**
+**ETL (transitional)**
 - `etl.js` (Node 20-compatible) downloads remote CSVs, filters rows to valid districts (`District ##` or `Various`), and writes partitioned outputs + settings using `csv-parse` and `csv-stringify`.
+- Long-term: ETL will write Parquet files and updated BI settings only. Partition CSVs will be dropped.
 - Map configuration for the bridge dataset includes clustering defaults and color-field options.
 
 **Automation**
