@@ -305,6 +305,9 @@
 							<div id="mapConfigSection">
 								<!-- FORM (edit mode, shown by default) -->
 								<div id="mapConfigForm">
+									<div class="rounded px-2 py-2 mb-2" style="background:#fff8e1;border:1px solid #ffe082;font-size:11px;color:#6d4c00;line-height:1.4;">
+										&#9432;&nbsp;First, choose a dataset from the dropdown, then select from the map configuration options below and click <strong>Save Config</strong> before data can be mapped.
+									</div>
 									<div class="text-uppercase text-secondary fw-medium mb-2" style="font-size:9px;letter-spacing:1.5px">Map Configuration</div>
 									<div class="mb-2">
 										<label class="form-label">Latitude</label>
@@ -342,9 +345,12 @@
 							<div id="mapOptionsSection" style="display:none">
 								<hr class="my-2">
 								<div class="text-uppercase text-secondary fw-medium mb-2" style="font-size:9px;letter-spacing:1.5px">Map Options</div>
-								<div class="form-check form-switch mb-2">
+								<div class="form-check form-switch mb-1">
 									<input class="form-check-input" type="checkbox" id="mapClusterToggle" checked>
 									<label class="form-check-label" for="mapClusterToggle">Clustering</label>
+								</div>
+								<div class="rounded px-2 py-1 mb-2" style="background:#fff8e1;border:1px solid #ffe082;font-size:10px;color:#6d4c00;line-height:1.4;">
+									&#9432;&nbsp;Toggling clustering will also refresh the map popups.
 								</div>
 								<!-- Filter value dropdowns (rebuilt dynamically) -->
 								<div id="mapOptFiltersSection" class="mb-2"></div>
@@ -945,6 +951,20 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				popupHidden:  new Set(),
 				tableHidden:  new Set()
 			};
+
+			// Pre-fill defaults for Bridge Condition & Owner Area so new users
+			// can see how configuration works on that dataset.
+			if (state.datasetId === 'eda_assets_bridge_condition_owner_area') {
+				const bd = { lat: 'LATITUDE', lon: 'LONGITUDE', f1: 'DISTRICT', f2: 'COUNTY', color: 'GFP' };
+				if (cols.includes(bd.lat))   state.mapConfig.latField        = bd.lat;
+				if (cols.includes(bd.lon))   state.mapConfig.lonField        = bd.lon;
+				if (cols.includes(bd.f1))    state.mapConfig.filterFields[0] = bd.f1;
+				if (cols.includes(bd.f2))    state.mapConfig.filterFields[1] = bd.f2;
+				if (cols.includes(bd.color)) state.mapConfig.colorField      = bd.color;
+				// Default popup fields to show only the 5 mapped columns
+				const keepInPopup = new Set([bd.lat, bd.lon, bd.f1, bd.f2, bd.color, 'BRIDGE_ID']);
+				cols.forEach(col => { if (!keepInPopup.has(col)) state.mapOptions.popupHidden.add(col); });
+			}
 
 			const clusterToggle = document.getElementById('mapClusterToggle');
 			if (clusterToggle) clusterToggle.checked = state.mapOptions.cluster;
