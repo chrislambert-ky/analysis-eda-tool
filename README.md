@@ -3,30 +3,39 @@
 A single-page, fully in-browser exploratory data analysis tool built with vanilla HTML/CSS/JS and CDN libraries. Datasets are pre-partitioned by district so the UI loads data incrementally and caches it in IndexedDB. No server, no build step, no data ever leaves your browser.
 
 **Live app:** https://chrislambert-ky.github.io/analysis-eda-tool/  
-**Repository:** https://github.com/chrislambert-ky/analysis-eda-tool
+**Repository:** https://github.com/chrislambert-ky/analysis-eda-tool  
+**Data source:** https://trak.kytc.ky.gov/
 
 ---
 
 ## Features
 
 ### Visualisation & Table
-- **Chart types:** Horizontal Bar, Vertical Bar, Pie, and interactive Map (Leaflet + MarkerCluster).
+- **Chart types:** Horizontal Bar, Vertical Bar, Pie, interactive Map (Leaflet + MarkerCluster), SQL Workbench, and **Dataset Catalog**.
 - **Controls:** Dimension, Metric, Aggregation, Split By, Order By, and Order Direction selectors update the chart instantly.
 - **Data Table:** Tabulator-powered table with per-column header filters, horizontal scroll, and consistent column widths.
 - **Download:** Export the full dataset or the currently filtered rows to CSV.
 - **Chart filter:** Clicking a chart series/segment filters the table to matching rows; a badge shows the active filter with a one-click clear.
 - **Map options:** Clustering (on by default), district/county filter, and color-by-field controls appear automatically when a dataset has map configuration. Selecting a specific district or county temporarily disables clustering.
 
+### Dataset Catalog
+The **Catalog** view (accessible via the Catalog button in the chart-type toolbar) provides a browsable directory of all available datasets:
+
+- Each entry shows the dataset title, description with clickable source links, source type badge (preloaded / imported), record count, and last-cached date.
+- **Schema browser:** Expand any entry to view its full field list with inferred SQL-style column types (`VARCHAR`, `INTEGER`, `DOUBLE`, `DATE`) and dimension/metric classifications. Schema is resolved from live state if the dataset is active, from the IndexedDB partition cache if it has been previously loaded, or from the BI-settings configuration as a fallback.
+- User-imported datasets (added via the SQL tab) appear alongside preloaded datasets.
+- The sidebar shows a count of preloaded and user-imported datasets.
+
 ### SQL Workbench
 - **In-browser SQL** powered by [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview.html) — no backend required.
 - Write and run arbitrary SQL against any combination of managed and user-added datasets.
 - Editor with line numbers, resizable panes, and `Ctrl+Enter` to run.
 - Results render in a scrollable table with row count and execution time.
-- Export query results to CSV with the **downarrow CSV** button.
+- Export query results to CSV with the **↓ CSV** button.
 - DuckDB is initialised lazily — the WASM bundle is only downloaded when the SQL tab is first opened.
 
-### Adding Your Own Data (SQL tab only)
-The **+ Add** button in the SQL Data Sources panel (visible only on the SQL tab) lets you bring in your own data:
+### Adding Your Own Data
+The **+ Add Source** button — available in both the **Catalog** sidebar and the **SQL** sidebar — lets you bring in your own data:
 
 | Option | How it works |
 |---|---|
@@ -36,19 +45,18 @@ The **+ Add** button in the SQL Data Sources panel (visible only on the SQL tab)
 - Give the source a short **table alias** (letters, numbers, underscores) — this becomes the SQL table name.
 - The file is parsed in-browser and stored in **IndexedDB**, so it persists across page refreshes.
 - Local file sources are reloaded from the browser cache on refresh; URL sources are re-fetched from the network.
-- Remove a source by clicking the **x** next to it in the SQL sidebar.
+- Remove a source by clicking the **×** next to it in the SQL sidebar.
+- User-added datasets appear immediately in the Catalog view, the main Dataset dropdown, and the SQL table list.
 
 ### Preloaded Datasets
-Four managed datasets are partitioned by district and cached in IndexedDB:
+Four managed datasets are sourced from the [Kentucky Transportation Cabinet TRAK system](https://trak.kytc.ky.gov/), partitioned by district, and cached in IndexedDB:
 
 | Dataset | Description |
 |---|---|
-| Bridge Condition & Owner Area | Asset condition ratings by owner and area |
-| Construction Procurement | Active and planned construction contracts |
-| Current Enacted Plan | Current program-year enacted plan data |
-| Program Management Authorized | Detailed authorized program management data |
-
-Use the **Refresh Cache** button to pull the latest version of any managed dataset from the server.
+| Bridge Condition & Owner Area | Bridge inventory and condition ratings by owner and geographic area |
+| Construction Procurement | Awarded construction contracts by district |
+| Current Enacted Plan | Current enacted highway plan including funding allocations |
+| Program Management Authorized (Detailed) | Detailed authorized dollars including project phases, costs, and schedule |
 
 ---
 
@@ -63,10 +71,11 @@ analysis-eda-tool/
 │   └── report/
 │       └── <dataset>/
 │           ├── <dataset>-bi-settings.json   # Chart/map configuration for the dataset
-│           ├── <dataset>.index.json         # District index consumed by the UI
+│           ├── <dataset>.index.json         # District index (includes generatedAt timestamp)
 │           └── <dataset>-District-XX.csv    # Per-district partitioned data
 ├── .github/workflows/nightly-etl.yml  # Nightly automation: runs ETL and commits results
 ├── ai-instructions.md                 # Architecture notes for contributors and AI assistants
+├── querylake-manifest.json            # Source URLs for external ETL tooling
 ├── README.md                          # You are here
 ├── package.json                       # ETL dependencies only (not used by the browser app)
 └── node_modules/                      # Local install (ignored when deploying static site)
@@ -85,7 +94,7 @@ node etl.js          # Download source CSVs, partition by district, write data/r
 The ETL:
 1. Downloads fresh source CSVs into `data/raw/`.
 2. Filters and partitions rows into `data/report/<dataset>/`.
-3. Writes `<dataset>.index.json` and `<dataset>-bi-settings.json` (including map metadata where applicable).
+3. Writes `<dataset>.index.json` (with a `generatedAt` timestamp) and `<dataset>-bi-settings.json` (including map metadata where applicable).
 
 ### Serving the App
 Open `index.html` directly in a browser, or serve the repo root with any static server:
@@ -102,7 +111,7 @@ No build step is required. The browser app has no Node.js dependencies — all l
 
 ## Adding / Removing Managed Datasets
 
-1. Add a new entry to the `DATASETS` array in `index.html`, matching the folder name under `data/report/`.
+1. Add a new entry to the `DATASETS` array in `index.html` (id, title, description), matching the folder name under `data/report/`.
 2. Add the corresponding ETL configuration in `etl.js`.
 3. Run `node etl.js` to generate the partitioned data files.
 
@@ -131,15 +140,16 @@ Drop the repository root onto any static file host (Netlify, S3, Azure Static We
 
 ## CDN Libraries Used
 
-| Library | Purpose |
-|---|---|
-| Bootstrap 5.3 | Layout and UI components |
-| Bootstrap Icons 1.11 | Icon font |
-| Apache ECharts 5 | Bar and Pie charts |
-| Tabulator 5.5 | Data table with filters and sorting |
-| Leaflet 1.9 + MarkerCluster 1.5 | Interactive map and clustering |
-| DuckDB-WASM 1.29 | In-browser SQL engine |
-| IBM Plex Mono | Monospace font for code/SQL areas |
+| Library | Version | Purpose |
+|---|---|---|
+| Bootstrap | 5.3.3 | Layout and UI components |
+| Bootstrap Icons | 1.11 | Icon font |
+| Apache ECharts | 5.5.0 | Bar and pie charts |
+| Tabulator | 5.5.2 | Data table with filters and sorting |
+| Leaflet | 1.9.4 | Interactive map |
+| Leaflet.MarkerCluster | 1.5.3 | Map marker clustering |
+| DuckDB-WASM | 1.29.0 | In-browser SQL engine |
+| IBM Plex Mono | — | Monospace font for code/SQL areas |
 
 ---
 

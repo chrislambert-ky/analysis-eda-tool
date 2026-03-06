@@ -115,6 +115,42 @@
 		/* delete button on user sources */
 		.sql-del-btn { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 11px; padding: 0 2px; line-height: 1; flex-shrink: 0; opacity: .6; transition: opacity .15s; }
 		.sql-del-btn:hover { opacity: 1; }
+		/* ── Data Catalog ────────────────────────────────────────────────────── */
+		.controls-card.catalog-active #generalControls  { display: none !important; }
+		.controls-card.catalog-active #mapOptions       { display: none !important; }
+		.controls-card.catalog-active .controls-dataset-info { display: none !important; }
+		.controls-card.catalog-active #colPickerPanel   { display: none !important; }
+		.catalog-wrap { display: flex; flex-direction: column; gap: 12px; padding: 4px 2px; }
+		.catalog-entry { background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 14px 16px; transition: box-shadow .15s; }
+		.catalog-entry:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+		.catalog-entry-header { display: flex; align-items: flex-start; gap: 12px; }
+		.catalog-entry-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+		.catalog-entry-meta { flex: 1; min-width: 0; }
+		.catalog-entry-title { font-weight: 600; font-size: 14px; color: #212529; margin-bottom: 3px; }
+		.catalog-entry-desc  { font-size: 12px; color: #6c757d; margin-bottom: 5px; line-height: 1.4; }
+		.catalog-entry-stats { font-size: 11px; font-family:'IBM Plex Mono',monospace; color: #6c757d; margin-top: 4px; }
+		.catalog-entry-tags  { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+		.catalog-entry-id    { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#adb5bd; }
+		.catalog-tag { font-size: 10px; font-family:'IBM Plex Mono',monospace; padding: 2px 7px; border-radius: 10px; background: #f1f3f5; color: #495057; border: 1px solid #dee2e6; white-space: nowrap; }
+		.catalog-tag.preloaded { background:#e7f5ff; color:#1971c2; border-color:#a5d8ff; }
+		.catalog-tag.user-src  { background:#fff0f6; color:#c2255c; border-color:#faa2c1; }
+		.catalog-tag.records   { background:#f8f9fa; color:#868e96; border-color:#dee2e6; }
+		.catalog-schema-toggle { background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:11px; color:#6c757d; padding:3px 8px; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:4px; transition:background .15s,color .15s,border-color .15s; font-family:inherit; flex-shrink:0; }
+		.catalog-schema-toggle:hover { background:#e8f4ff; color:#0d6efd; border-color:#aac4fb; }
+		.catalog-schema-toggle.open  { background:#0d6efd; color:#fff; border-color:#0d6efd; }
+		.cat-chev { display:inline-block; transition:transform .2s; font-style:normal; font-size:9px; }
+		.catalog-schema-toggle.open .cat-chev { transform:rotate(90deg); }
+		.catalog-schema-body { padding: 10px 0 2px; border-top: 1px solid #f0f0f0; margin-top: 10px; }
+		.catalog-schema-subtitle { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#adb5bd; margin-bottom:6px; }
+		.catalog-field-row { display:flex; align-items:center; gap:7px; padding:3px 4px; border-radius:4px; transition:background .1s; }
+		.catalog-field-row:hover { background:#f8f9fa; }
+		.catalog-field-icon { width:14px; text-align:center; font-size:11px; color:#adb5bd; flex-shrink:0; }
+		.catalog-field-name { font-family:'IBM Plex Mono',monospace; font-size:12px; color:#212529; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+		.catalog-field-kind { font-size:9px; font-family:'IBM Plex Mono',monospace; padding:1px 5px; border-radius:8px; background:#f1f3f5; color:#868e96; border:1px solid #e9ecef; flex-shrink:0; }
+		.catalog-field-type { font-size:9px; font-family:'IBM Plex Mono',monospace; color:#adb5bd; flex-shrink:0; text-transform:uppercase; letter-spacing:.3px; margin-left:auto; padding-left:8px; }
+		.catalog-sidebar-info { font-size:12px; color:#6c757d; margin-bottom:8px; line-height:1.4; }
+		.catalog-sidebar-info p { margin-bottom:0.5rem; }
+		.catalog-sidebar-stat { font-family:'IBM Plex Mono',monospace; font-size:11px; color:#495057; display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid #f0f0f0; }
 		/* Add Source modal overlay */
 		.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1055; align-items: center; justify-content: center; }
 		.modal-overlay.open { display: flex; }
@@ -169,6 +205,7 @@
 					<button class="btn btn-outline-primary btn-chart" data-chart="pie" id="btnPie">Pie</button>
 					<button class="btn btn-outline-primary btn-chart" data-chart="map" id="btnMap">Map</button>
 				<button class="btn btn-outline-primary btn-chart" data-chart="sql" id="btnSQL">SQL</button>
+				<button class="btn btn-outline-primary btn-chart" data-chart="catalog" id="btnCatalog">Catalog</button>
 				</div>
 			</div>
 		</div>
@@ -179,6 +216,8 @@
 					<div class="card shadow-sm chart-card">
 						<div class="card-body d-flex flex-column">
 							<div id="chartArea" class="chart-surface flex-grow-1"></div>
+							<!-- Catalog Panel (shown when chart type = catalog) -->
+							<div id="catalogPanel" class="flex-grow-1" style="display:none;overflow-y:auto"></div>
 							<div id="progressMessage" class="progress-message text-muted small mt-3"></div>
 							<div id="dataSummary" class="text-secondary small mt-3"></div>
 							<!-- SQL Workbench Panel (shown when chart type = sql) -->
@@ -290,7 +329,15 @@
 								<div class="col-picker-empty">No dataset loaded.</div>
 							</div>
 						</div>
-						<!-- SQL Sidebar Panel (shown when chart type = sql) -->
+						<!-- Catalog Sidebar Panel (shown when chart type = catalog) -->
+					<div id="catalogSidebarPanel" style="display:none" class="flex-column mb-2">
+						<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Dataset Catalog</div>
+						<div id="catalogSidebarStats"></div>
+						<button class="btn btn-outline-info btn-sm w-100 mt-2" id="catalogAddSourceBtn" style="font-size:11px" disabled>
+							&#xff0b; Add Source
+						</button>
+					</div>
+					<!-- SQL Sidebar Panel (shown when chart type = sql) -->
 						<div id="sqlSidebarPanel" style="display:none" class="flex-column flex-grow-1 mb-2">
 							<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Data Sources</div>
 							<div class="flex-grow-1 overflow-auto border rounded" id="sqlTableList" style="min-height:0">
@@ -388,28 +435,28 @@
 				<p>This is an in-browser <strong>Exploratory Data Analysis (EDA) tool</strong> built to let you quickly visualise and query tabular data without installing any software. Everything runs locally in your browser &mdash; no data is ever uploaded to a server.</p>
 
 				<h6>Preloaded Datasets</h6>
-				<p>Four example datasets are preloaded and ready to use from the <strong>Dataset</strong> dropdown at the top of the page. These are partitioned by district and cached in your browser so subsequent loads are instant:</p>
+				<p>Four datasets are preloaded and ready to use from the <strong>Dataset</strong> dropdown. They are sourced from the <a href="https://trak.kytc.ky.gov/" target="_blank" rel="noopener noreferrer">Kentucky Transportation Cabinet TRAK system</a>, partitioned by district, and cached in your browser so subsequent loads are instant:</p>
 				<ul>
-					<li><strong>Bridge Condition &amp; Owner Area</strong> &mdash; asset condition ratings by owner and area</li>
-					<li><strong>Construction Procurement</strong> &mdash; active and planned construction contracts</li>
-					<li><strong>Current Enacted Plan</strong> &mdash; current program-year enacted plan data</li>
-					<li><strong>Program Management Authorized</strong> &mdash; detailed authorized program management data</li>
+					<li><strong>Bridge Condition &amp; Owner Area</strong> &mdash; bridge inventory and condition ratings by owner and geographic area</li>
+					<li><strong>Construction Procurement</strong> &mdash; awarded construction contracts by district</li>
+					<li><strong>Current Enacted Plan</strong> &mdash; current enacted highway plan including funding allocations</li>
+					<li><strong>Program Management Authorized (Detailed)</strong> &mdash; authorized dollars by project phase, cost, and schedule</li>
 				</ul>
-				<p>Use the <strong>Refresh Cache</strong> button to pull the latest version of any dataset from the server.</p>
+				<h6>Dataset Catalog</h6>
+				<p>Click the <strong>Catalog</strong> button in the chart-type toolbar to browse all available datasets. Each entry shows a description, record count, last-cached date, and an expandable <strong>Schema</strong> panel listing every field with its inferred data type (<code>VARCHAR</code>, <code>INTEGER</code>, <code>DOUBLE</code>, <code>DATE</code>) and dimension/metric classification. User-imported datasets also appear here.</p>
 
 				<h6>Adding Your Own Data</h6>
-				<p>You can load your own <code>.csv</code> or <code>.parquet</code> file and query it alongside the preloaded datasets. This feature is available exclusively on the <strong>SQL tab</strong>:</p>
+				<p>You can load your own <code>.csv</code> or <code>.parquet</code> file and query it alongside the preloaded datasets. The <strong>+ Add Source</strong> button is available in both the <strong>Catalog</strong> sidebar and the <strong>SQL</strong> sidebar:</p>
 				<ol>
-					<li>Switch to the <strong>SQL</strong> view using the chart-type buttons at the top right.</li>
-					<li>Click the <strong>+ Add</strong> button in the Data Sources panel on the right.</li>
+					<li>Click <strong>+ Add Source</strong> from either the Catalog or SQL view.</li>
 					<li>Choose <em>From URL</em> to point to a publicly accessible file (CORS required), or <em>Local File</em> to upload directly from your computer.</li>
 					<li>Give the source a short table alias (letters, numbers, underscores) &mdash; this becomes the SQL table name.</li>
 					<li>Click <strong>Add &amp; Load</strong>. The file is parsed and stored in your browser&rsquo;s IndexedDB so it persists across page refreshes.</li>
 				</ol>
-				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. To remove a source, click the &times; next to it in the SQL sidebar.</p>
+				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. They appear immediately in the Catalog view, the main Dataset dropdown, and the SQL table list. To remove a source, click the &times; next to it in the SQL sidebar.</p>
 
 				<h6>SQL Workbench</h6>
-				<p>The SQL tab runs queries in-browser using <strong>DuckDB-WASM</strong>. You can join your own data against the preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend.</p>
+				<p>The SQL tab runs queries in-browser using <strong>DuckDB-WASM</strong>. You can join your own data against the preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend. Use <kbd>Ctrl+Enter</kbd> to run a query.</p>
 
 				<h6>Source Code</h6>
 				<p>This project is open source. View the code, report issues, or contribute on GitHub:</p>
@@ -481,10 +528,10 @@
 		// ECharts 5 default palette — used for both charts and map markers so colors stay consistent
 		const CHART_PALETTE = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
 		const DATASETS = [
-			{ id: 'eda_assets_bridge_condition_owner_area', title: 'Bridge Condition & Owner Area' },
-			{ id: 'eda_construction_procurement', title: 'Construction Procurement' },
-			{ id: 'eda_current_enact_plan_data_set', title: 'Current Enacted Plan' },
-			{ id: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)' }
+			{ id: 'eda_assets_bridge_condition_owner_area',    title: 'Bridge Condition & Owner Area',              description: 'Bridge inventory and condition ratings. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
+			{ id: 'eda_construction_procurement',              title: 'Construction Procurement',                   description: 'Awarded construction contracts. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
+			{ id: 'eda_current_enact_plan_data_set',           title: 'Current Enacted Plan',                       description: 'Current enacted highway plan, including funding allocations. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
+			{ id: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',   description: 'Details of authorized dollars including project phases, costs, and schedule data. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' }
 		];
 		const DB_NAME = 'analysis_eda_tool_db';
 		const STORE_NAME = 'partitions';
@@ -1199,6 +1246,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		function renderVisual() {
 			// SQL mode has its own rendering — DuckDB queries CSV files directly
 			if (state.chartType === 'sql') return;
+			// Catalog mode renders its own panel
+			if (state.chartType === 'catalog') { renderCatalog(); return; }
 			// Clear any active chart-click filter when the chart is refreshed
 			if (state.chartFilter !== null) {
 				state.chartFilter = null;
@@ -1710,48 +1759,53 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const mapContainer    = document.getElementById('mapOptions');
 			const generalControls = document.getElementById('generalControls');
 			const sqlSidebar      = document.getElementById('sqlSidebarPanel');
+			const catalogSidebar  = document.getElementById('catalogSidebarPanel');
 			const chartArea       = document.getElementById('chartArea');
 			const progressMsg     = document.getElementById('progressMessage');
 			const dataSummary     = document.getElementById('dataSummary');
 			const sqlWorkbench    = document.getElementById('sqlWorkbenchPanel');
+			const catalogPanel    = document.getElementById('catalogPanel');
 			const tableCard       = document.querySelector('.table-card');
-			const hasMap    = state.allRows.length > 0;
-			const mapActive = state.chartType === 'map' && hasMap;
-			const sqlActive = state.chartType === 'sql';
+			const hasMap       = state.allRows.length > 0;
+			const mapActive    = state.chartType === 'map' && hasMap;
+			const sqlActive    = state.chartType === 'sql';
+			const catalogMode  = state.chartType === 'catalog';
 
 			// Controls card CSS classes drive CSS-based hiding of sub-panels
 			if (controlsCard) {
-				controlsCard.classList.toggle('map-active', mapActive && !sqlActive);
-				controlsCard.classList.toggle('sql-active', sqlActive);
+				controlsCard.classList.toggle('map-active',     mapActive && !sqlActive && !catalogMode);
+				controlsCard.classList.toggle('sql-active',     sqlActive);
+				controlsCard.classList.toggle('catalog-active', catalogMode);
 			}
 
 			// Map options panel
 			if (mapContainer) {
-				mapContainer.classList.toggle('d-none', !mapActive || sqlActive);
+				mapContainer.classList.toggle('d-none', !mapActive || sqlActive || catalogMode);
 			}
 
 			// General chart controls
 			if (generalControls) {
-				if (mapActive || sqlActive) {
+				if (mapActive || sqlActive || catalogMode) {
 					generalControls.setAttribute('aria-hidden', 'true');
 				} else {
 					generalControls.removeAttribute('aria-hidden');
 				}
 			}
 
-			// SQL sidebar panel (visibility toggled via inline style to work alongside d-flex)
-			if (sqlSidebar) {
-				sqlSidebar.style.display = sqlActive ? 'flex' : 'none';
-			}
+			// SQL sidebar
+			if (sqlSidebar) sqlSidebar.style.display = sqlActive ? 'flex' : 'none';
+			// Catalog sidebar
+			if (catalogSidebar) catalogSidebar.style.display = catalogMode ? 'flex' : 'none';
 
-			// Chart area vs SQL workbench panel toggle
-			if (chartArea)    chartArea.style.display    = sqlActive ? 'none' : '';
-			if (progressMsg)  progressMsg.style.display  = sqlActive ? 'none' : '';
-			if (dataSummary)  dataSummary.style.display  = sqlActive ? 'none' : '';
-			if (sqlWorkbench) sqlWorkbench.style.display = sqlActive ? 'flex' : 'none';
+			// Chart area vs SQL workbench vs Catalog panel
+			if (chartArea)    chartArea.style.display    = (sqlActive || catalogMode) ? 'none' : '';
+			if (progressMsg)  progressMsg.style.display  = (sqlActive || catalogMode) ? 'none' : '';
+			if (dataSummary)  dataSummary.style.display  = (sqlActive || catalogMode) ? 'none' : '';
+			if (sqlWorkbench) sqlWorkbench.style.display = sqlActive    ? 'flex' : 'none';
+			if (catalogPanel) catalogPanel.style.display = catalogMode  ? ''     : 'none';
 
-			// Hide the data table card when SQL is active (SQL workbench shows its own results)
-			if (tableCard) tableCard.style.display = sqlActive ? 'none' : '';
+			// Hide the data table card when SQL or Catalog is active
+			if (tableCard) tableCard.style.display = (sqlActive || catalogMode) ? 'none' : '';
 		}
 
 		function updateProgress(message) {
@@ -1952,12 +2006,136 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					datasetId,
 					district,
 					recordCount: data.length,
+					cachedAt: Date.now(),
 					data
 				};
 				store.put(payload);
 				tx.oncomplete = () => resolve();
 				tx.onerror = () => resolve();
 			});
+		}
+
+		/** Read the cachedAt timestamp of any stored partition for a dataset. Returns null if not cached. */
+		async function readDatasetCachedAt(datasetId) {
+			const db = await getDatabase();
+			return new Promise((resolve) => {
+				const tx = db.transaction(STORE_NAME, 'readonly');
+				const store = tx.objectStore(STORE_NAME);
+				const request = store.openCursor();
+				request.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor) {
+						if (cursor.value.datasetId === datasetId && cursor.value.cachedAt) {
+							resolve(cursor.value.cachedAt);
+						} else {
+							cursor.continue();
+						}
+					} else {
+						resolve(null);
+					}
+				};
+				request.onerror = () => resolve(null);
+			});
+		}
+
+		/** Read column names from any cached partition for a dataset. Returns null if not cached. */
+		async function readCachedColumns(datasetId) {
+			const db = await getDatabase();
+			return new Promise((resolve) => {
+				const tx = db.transaction(STORE_NAME, 'readonly');
+				const store = tx.objectStore(STORE_NAME);
+				const request = store.openCursor();
+				request.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor) {
+						const val = cursor.value;
+						if (val.datasetId === datasetId && Array.isArray(val.data) && val.data.length > 0) {
+							resolve(Object.keys(val.data[0]));
+						} else {
+							cursor.continue();
+						}
+					} else {
+						resolve(null);
+					}
+				};
+				request.onerror = () => resolve(null);
+			});
+		}
+
+		/** Read up to `limit` rows from any cached partition for a dataset. Returns null if not cached. */
+		async function readCachedSample(datasetId, limit = 200) {
+			const db = await getDatabase();
+			return new Promise((resolve) => {
+				const tx = db.transaction(STORE_NAME, 'readonly');
+				const store = tx.objectStore(STORE_NAME);
+				const request = store.openCursor();
+				request.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor) {
+						const val = cursor.value;
+						if (val.datasetId === datasetId && Array.isArray(val.data) && val.data.length > 0) {
+							resolve(val.data.slice(0, limit));
+						} else {
+							cursor.continue();
+						}
+					} else {
+						resolve(null);
+					}
+				};
+				request.onerror = () => resolve(null);
+			});
+		}
+
+		/** Sum recordCount across all cached partitions for a dataset. Returns null if nothing cached. */
+		async function readCachedRecordCount(datasetId) {
+			const db = await getDatabase();
+			return new Promise((resolve) => {
+				const tx = db.transaction(STORE_NAME, 'readonly');
+				const store = tx.objectStore(STORE_NAME);
+				let total = 0, found = false;
+				const request = store.openCursor();
+				request.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor) {
+						if (cursor.value.datasetId === datasetId) {
+							total += cursor.value.recordCount || 0;
+							found = true;
+						}
+						cursor.continue();
+					} else {
+						resolve(found ? total : null);
+					}
+				};
+				request.onerror = () => resolve(null);
+			});
+		}
+
+		/** Infer a SQL-like column type from sampled row values. */
+		function inferColumnType(name, rows) {
+			const samples = [];
+			for (let i = 0; i < rows.length && samples.length < 200; i++) {
+				const v = rows[i][name];
+				if (v !== null && v !== undefined && String(v).trim() !== '') samples.push(String(v).trim());
+			}
+			if (!samples.length) return 'VARCHAR';
+			if (samples.every(v => /^-?\d+$/.test(v))) return 'INTEGER';
+			if (samples.every(v => !Number.isNaN(Number(v)))) return 'DOUBLE';
+			if (samples.every(v => /^\d{4}-\d{2}-\d{2}(T[\d:.Z+-]*)?$/.test(v))) return 'DATE';
+			return 'VARCHAR';
+		}
+
+		/** Re-download all partitions for a dataset into IDB without touching app state. */
+		async function refreshPartitionCache(datasetId, onProgress) {
+			const indexPath = `${DATA_ROOT}/${datasetId}/${datasetId}.index.json`;
+			await fetchJSON(indexPath); // validates URL; result not needed here
+			for (let i = 0; i < DISTRICTS.length; i++) {
+				const district = DISTRICTS[i];
+				const partitionPath = `${DATA_ROOT}/${datasetId}/${datasetId}-District-${district}.csv`;
+				const csvText = await fetchText(partitionPath);
+				const rows = parseCSV(csvText);
+				await writePartitionToCache(datasetId, district, rows);
+				if (onProgress) onProgress(i + 1, DISTRICTS.length);
+			}
 		}
 
 		async function deleteDatasetFromCache(datasetId) {
@@ -1982,6 +2160,339 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		}
 		// Expose CSV parser for the SQL module to use when copying sources into EDA
 		window._edaParseCsv = parseCSV;
+
+		// ── Data Catalog ────────────────────────────────────────────────────────
+		const catalogSchemaCache = new Map();
+
+		function formatCatalogDate(value) {
+			if (!value) return null;
+			try {
+				const d = new Date(value);
+				if (isNaN(d.getTime())) return null;
+				return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+			} catch (_) { return null; }
+		}
+
+		function linkifyDesc(text) {
+			return escHtml(text).replace(
+				/https?:\/\/[^\s&]+/g,
+				url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+			);
+		}
+
+		function escHtml(str) {
+			return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+		}
+
+		function buildCatalogItems() {
+			const items = DATASETS.map(ds => ({
+				id:          ds.id,
+				title:       ds.title,
+				description: ds.description || '',
+				sourceType:  'preloaded',
+				settingsUrl: `${DATA_ROOT}/${ds.id}/${ds.id}-bi-settings.json`,
+				indexUrl:    `${DATA_ROOT}/${ds.id}/${ds.id}.index.json`
+			}));
+			if (window._edaUserDatasets) {
+				window._edaUserDatasets.forEach((ds, alias) => {
+					items.push({
+						id:          alias,
+						title:       ds.title || alias,
+						description: '',
+						sourceType:  'user',
+						rows:        ds.rows,
+						addedAt:     ds.addedAt  || null,
+						fileName:    ds.fileName || null,
+						url:         ds.url      || null
+					});
+				});
+			}
+			return items;
+		}
+
+		function renderCatalog() {
+			const panel = document.getElementById('catalogPanel');
+			if (!panel) return;
+			updateControlVisibility();
+
+			const items = buildCatalogItems();
+
+			const statsEl = document.getElementById('catalogSidebarStats');
+			if (statsEl) {
+				const preloadedCount = items.filter(i => i.sourceType === 'preloaded').length;
+				const userCount      = items.filter(i => i.sourceType === 'user').length;
+				// Build base stats immediately; storage is filled async below
+				const row = (label, value, id = '') =>
+					`<div class="catalog-sidebar-stat"${id ? ` id="${id}"` : ''}><span>${label}</span><strong>${value}</strong></div>`;
+				statsEl.innerHTML =
+					row('Preloaded datasets', preloadedCount) +
+					(userCount ? row('User imported', userCount) : '') +
+					row('Total datasets', items.length) +
+					`<div class="catalog-sidebar-stat"><span>Cached records</span><strong id="cat-stat-records">&hellip;</strong></div>` +
+					`<div class="catalog-sidebar-stat" style="border:none"><span>Est. storage used</span><strong id="cat-stat-storage">&hellip;</strong></div>`;
+				// Fill storage + record count async from IDB
+				fillCatalogSidebarStorage();
+			}
+
+			panel.innerHTML = '';
+			const wrap = document.createElement('div');
+			wrap.className = 'catalog-wrap';
+			items.forEach(item => wrap.appendChild(buildCatalogEntry(item)));
+			panel.appendChild(wrap);
+
+			// Populate per-entry stats asynchronously
+			const preloaded = items.filter(i => i.sourceType === 'preloaded');
+			fetchCatalogDates(preloaded);
+		}
+
+		/**
+		 * Compute totals that exactly mirror the "Records loaded" values shown on each catalog card:
+		 *   - Preloaded datasets: sum readCachedRecordCount() per dataset (reads from IDB partitions)
+		 *   - User-imported datasets: sum ds.rows.length from window._edaUserDatasets
+		 * Storage estimate uses the raw IDB cursor scan (preloaded data only, separate IDB from user data).
+		 */
+		async function fillCatalogSidebarStorage() {
+			try {
+				// --- Record count: match exactly what each catalog card "Records loaded" shows ---
+				const preloadedCounts = await Promise.all(DATASETS.map(d => readCachedRecordCount(d.id)));
+				let totalRecords = preloadedCounts.reduce((sum, n) => sum + (n || 0), 0);
+				if (window._edaUserDatasets) {
+					window._edaUserDatasets.forEach(ds => { totalRecords += ds.rows?.length || 0; });
+				}
+
+				// --- Storage estimate: cursor scan of IDB partitions (preloaded data resides here) ---
+				const db = await getDatabase();
+				const totalBytes = await new Promise((resolve) => {
+					const tx = db.transaction(STORE_NAME, 'readonly');
+					const store = tx.objectStore(STORE_NAME);
+					let bytes = 0;
+					const req = store.openCursor();
+					req.onsuccess = e => {
+						const cursor = e.target.result;
+						if (cursor) {
+							if (Array.isArray(cursor.value.data) && cursor.value.data.length) {
+								const sampleBytes = JSON.stringify(cursor.value.data[0]).length;
+								bytes += sampleBytes * (cursor.value.recordCount || cursor.value.data.length);
+							}
+							cursor.continue();
+						} else {
+							resolve(bytes);
+						}
+					};
+					req.onerror = () => resolve(0);
+				});
+
+				const recEl  = document.getElementById('cat-stat-records');
+				const sizeEl = document.getElementById('cat-stat-storage');
+				if (recEl)  recEl.textContent  = totalRecords > 0 ? formatNumber(totalRecords) : 'none';
+				if (sizeEl) sizeEl.textContent = totalBytes  > 0 ? formatBytes(totalBytes)    : 'none';
+			} catch (_) { /* non-fatal */ }
+		}
+
+		function formatBytes(bytes) {
+			if (bytes < 1024)        return `${bytes} B`;
+			if (bytes < 1024 ** 2)   return `${(bytes / 1024).toFixed(1)} KB`;
+			if (bytes < 1024 ** 3)   return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+			return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+		}
+
+		/**
+		 * Populate the per-entry stats line with Records loaded · Index total · Last refreshed.
+		 */
+		function fetchCatalogDates(preloadedItems) {
+			preloadedItems.forEach(async ds => {
+				try {
+					const [loadedCount, cachedAt, resp] = await Promise.all([
+						readCachedRecordCount(ds.id),
+						readDatasetCachedAt(ds.id),
+						fetch(ds.indexUrl, { cache: 'no-cache' }).catch(() => null)
+					]);
+					const data       = resp?.ok ? await resp.json() : null;
+					const indexTotal = data?.totalRecords ?? null;
+					const statsEl    = document.getElementById(`catalog-stats-${ds.id}`);
+					if (!statsEl) return;
+					const parts = [];
+					if (loadedCount !== null) parts.push(`Records loaded: ${formatNumber(loadedCount)}`);
+					if (indexTotal  !== null) parts.push(`Index total: ${formatNumber(indexTotal)}`);
+					if (cachedAt) {
+						parts.push(`Last refreshed: ${formatTimestamp(new Date(cachedAt))}`);
+					} else if (data?.generatedAt) {
+						parts.push(`Updated: ${formatCatalogDate(data.generatedAt)}`);
+					}
+					if (parts.length) statsEl.textContent = parts.join(' \u00b7 ');
+				} catch (_) { /* non-fatal */ }
+			});
+		}
+
+		function buildCatalogEntry(ds) {
+			const entry = document.createElement('div');
+			entry.className = 'catalog-entry';
+			entry.id = `catalog-entry-${ds.id}`;
+
+			const isUser       = ds.sourceType === 'user';
+			const tagClass     = isUser ? 'user-src' : 'preloaded';
+			const tagLabel     = isUser ? 'imported' : 'preloaded';
+			const icon         = isUser ? '&#128194;' : '&#128202;';
+			const descHtml = ds.description
+				? `<div class="catalog-entry-desc">${linkifyDesc(ds.description)}</div>` : '';
+
+			// Stats line: for user datasets build it immediately; for preloaded it is filled by fetchCatalogDates
+			let statsHtml;
+			if (isUser) {
+				const parts = [`Records loaded: ${formatNumber(ds.rows.length)}`];
+				if (ds.addedAt) parts.push(`Imported: ${formatTimestamp(new Date(ds.addedAt))}`);
+				statsHtml = `<div class="catalog-entry-stats">${escHtml(parts.join(' \u00b7 '))}</div>`;
+			} else {
+				statsHtml = `<div class="catalog-entry-stats" id="catalog-stats-${escHtml(ds.id)}"></div>`;
+			}
+
+			entry.innerHTML = `
+				<div class="catalog-entry-header">
+					<span class="catalog-entry-icon">${icon}</span>
+					<div class="catalog-entry-meta">
+						<div class="catalog-entry-title">${escHtml(ds.title)}</div>
+						${descHtml}
+						<div class="catalog-entry-tags">
+							<span class="catalog-tag ${tagClass}">${tagLabel}</span>
+							<span class="catalog-entry-id">${escHtml(ds.id)}</span>
+						</div>
+						${statsHtml}
+					</div>
+					<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-self:flex-start">
+						<button class="catalog-schema-toggle" aria-expanded="false" aria-controls="catalog-schema-${escHtml(ds.id)}">
+							<i class="cat-chev">&#x25BA;</i>&nbsp;Schema
+						</button>
+					</div>
+				</div>
+				<div class="catalog-schema-body" id="catalog-schema-${escHtml(ds.id)}" style="display:none"></div>
+			`;
+
+			const toggleBtn = entry.querySelector('.catalog-schema-toggle');
+			const schemaEl  = entry.querySelector(`#catalog-schema-${ds.id}`);
+
+			function openSchema() {
+				schemaEl.style.display = '';
+				toggleBtn.classList.add('open');
+				toggleBtn.setAttribute('aria-expanded', 'true');
+				loadAndRenderCatalogSchema(ds, schemaEl);
+			}
+
+			toggleBtn.addEventListener('click', () => {
+				const isOpen = schemaEl.style.display !== 'none';
+				if (isOpen) {
+					schemaEl.style.display = 'none';
+					toggleBtn.classList.remove('open');
+					toggleBtn.setAttribute('aria-expanded', 'false');
+				} else {
+					openSchema();
+				}
+			});
+
+			return entry;
+		}
+
+		async function loadAndRenderCatalogSchema(ds, schemaEl) {
+			if (catalogSchemaCache.has(ds.id)) {
+				renderCatalogSchemaView(schemaEl, catalogSchemaCache.get(ds.id));
+				return;
+			}
+			schemaEl.innerHTML = `<div style="color:#adb5bd;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">Loading schema&hellip;</div>`;
+
+			if (ds.sourceType === 'user') {
+				const sample = ds.rows.slice(0, 200);
+				const cols   = sample.length ? Object.keys(sample[0]) : [];
+				const columns = cols.map(name => ({ name, kind: 'column', type: inferColumnType(name, sample) }));
+				const schema = { columns, recordCount: ds.rows.length, partial: false };
+				catalogSchemaCache.set(ds.id, schema);
+				renderCatalogSchemaView(schemaEl, schema);
+				return;
+			}
+
+			try {
+				const [settingsResp, indexResp] = await Promise.all([
+					fetch(ds.settingsUrl, { cache: 'no-cache' }).catch(() => null),
+					fetch(ds.indexUrl,    { cache: 'no-cache' }).catch(() => null)
+				]);
+				const settings  = settingsResp?.ok ? await settingsResp.json() : null;
+				const indexData = indexResp?.ok    ? await indexResp.json()    : null;
+
+				let columns  = [];
+				let fromIdb  = false;
+
+				// Priority 1: active dataset in state — use live rows
+				if (state.datasetId === ds.id && state.allRows.length) {
+					const sample = state.allRows.slice(0, 200);
+					columns = Object.keys(state.allRows[0]).map(name => ({
+						name,
+						kind: (settings?.dimensions || []).includes(name) ? 'dimension'
+						    : (settings?.metrics    || []).includes(name) ? 'metric'
+							: 'column',
+						type: inferColumnType(name, sample)
+					}));
+				} else {
+					// Priority 2: IDB partition cache (works for any cached dataset)
+					const cachedSample = await readCachedSample(ds.id);
+					if (cachedSample && cachedSample.length) {
+						fromIdb = true;
+						columns = Object.keys(cachedSample[0]).map(name => ({
+							name,
+							kind: (settings?.dimensions || []).includes(name) ? 'dimension'
+							    : (settings?.metrics    || []).includes(name) ? 'metric'
+								: 'column',
+							type: inferColumnType(name, cachedSample)
+						}));
+					} else if (settings) {
+						// Priority 3: BI-configured fields only (not yet downloaded)
+						const seen = new Set();
+						(settings.dimensions || []).forEach(name => {
+							if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'dimension' }); }
+						});
+						(settings.metrics || []).forEach(name => {
+							if (name === 'Dataset Records') return;
+							if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'metric' }); }
+						});
+					}
+				}
+
+				const recordCount = indexData?.totalRecords ?? null;
+				const rcEl = document.getElementById(`catalog-rc-${ds.id}`);
+				if (rcEl && recordCount !== null) rcEl.textContent = `${formatNumber(recordCount)}\u00a0records`;
+
+				const fullSchema = (state.datasetId === ds.id && state.allRows.length > 0) || fromIdb;
+				const schema = { columns, recordCount, partial: !fullSchema };
+				catalogSchemaCache.set(ds.id, schema);
+				renderCatalogSchemaView(schemaEl, schema);
+			} catch (e) {
+				schemaEl.innerHTML = `<div style="color:#dc3545;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">Failed to load schema.</div>`;
+			}
+		}
+
+		function renderCatalogSchemaView(schemaEl, schema) {
+			const { columns, recordCount, partial } = schema;
+			if (!columns || !columns.length) {
+				schemaEl.innerHTML = `<div style="color:#adb5bd;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">No field information available.</div>`;
+				return;
+			}
+			const kindIcon  = k => k === 'dimension' ? '&#9783;' : (k === 'metric' ? '#' : '&ndash;');
+			const kindLabel = k => k === 'dimension' ? 'dim' : (k === 'metric' ? 'num' : '');
+			let subtitle = `${columns.length} field${columns.length !== 1 ? 's' : ''}`;
+			if (recordCount != null) subtitle = `${formatNumber(recordCount)}\u00a0records &middot; ${subtitle}`;
+			if (partial) subtitle += ' <span style="color:#f0a500;font-size:9px">(BI-configured fields only &mdash; load dataset for full schema)</span>';
+			const rows = columns.map(col => {
+				const name  = typeof col === 'string' ? col : col.name;
+				const kind  = typeof col === 'object' ? (col.kind || 'column') : 'column';
+				const type  = typeof col === 'object' ? (col.type || '') : '';
+				return `<div class="catalog-field-row">`
+					+ `<span class="catalog-field-icon">${kindIcon(kind)}</span>`
+					+ `<span class="catalog-field-name" title="${escHtml(name)}">${escHtml(name)}</span>`
+					+ (type ? `<span class="catalog-field-type">${escHtml(type)}</span>` : '')
+					+ (kindLabel(kind) ? `<span class="catalog-field-kind">${kindLabel(kind)}</span>` : '')
+					+ `</div>`;
+			}).join('');
+			schemaEl.innerHTML =
+				`<div class="catalog-schema-body"><div class="catalog-schema-subtitle">${subtitle}</div>${rows}</div>`;
+		}
+
 	})();
 	</script>
 
@@ -2130,6 +2641,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			if (runBtn) runBtn.disabled = false;
 			const addBtn = $('sqlAddSourceBtn');
 			if (addBtn) addBtn.disabled = false;
+			const catalogAddBtn = $('catalogAddSourceBtn');
+			if (catalogAddBtn) catalogAddBtn.disabled = false;
 		} catch (e) {
 			initializing = false;
 			setStatus('error', 'init failed');
@@ -2502,6 +3015,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				const rows = await copySourceToEDA(record);
 				if (rows && rows.length) injectUserDatasetIntoEDA(record, rows);
 			}
+			// If the user triggered this from the Catalog page, refresh it so the new entry appears immediately
+			if (state.chartType === 'catalog') renderCatalog();
 		} catch (e) {
 			alert(`Could not add source:\n${e.message}`);
 		} finally {
@@ -2875,6 +3390,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		$('sqlExportBtn')?.addEventListener('click', exportCSV);
 
 		$('sqlAddSourceBtn')?.addEventListener('click', openAddModal);
+		$('catalogAddSourceBtn')?.addEventListener('click', openAddModal);
 		$('sqlAddModalClose')?.addEventListener('click',  closeAddModal);
 		$('sqlAddModalCancel')?.addEventListener('click', closeAddModal);
 		$('sqlAddModalSave')?.addEventListener('click',   saveNewSource);
