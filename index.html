@@ -2160,6 +2160,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		}
 		// Expose CSV parser for the SQL module to use when copying sources into EDA
 		window._edaParseCsv = parseCSV;
+		// Expose catalog renderer so the SQL module can refresh it after adding a source
+		window._edaRenderCatalog = () => renderCatalog();
+		// Expose chart-type accessor so the SQL module can check the active view
+		window._edaGetChartType = () => state.chartType;
 
 		// ── Data Catalog ────────────────────────────────────────────────────────
 		const catalogSchemaCache = new Map();
@@ -3016,7 +3020,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				if (rows && rows.length) injectUserDatasetIntoEDA(record, rows);
 			}
 			// If the user triggered this from the Catalog page, refresh it so the new entry appears immediately
-			if (state.chartType === 'catalog') renderCatalog();
+			if (window._edaGetChartType?.() === 'catalog') window._edaRenderCatalog?.();
 		} catch (e) {
 			alert(`Could not add source:\n${e.message}`);
 		} finally {
