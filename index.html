@@ -185,9 +185,15 @@
 				<h1 class="mb-1">Exploratory Data Analysis Tool</h1>
 				<p class="text-muted mb-0">Self-serve, in-browser analytics &mdash; explore, query, and visualise your data without leaving the browser.</p>
 			</div>
-			<button class="btn btn-outline-secondary btn-sm mt-1" id="aboutBtn" title="About &amp; Help" style="white-space:nowrap;font-size:12px">
-				<i class="bi bi-info-circle"></i> About
-			</button>
+			<div class="d-flex align-items-center gap-2 mt-1">
+				<span id="duckdbStatus" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#888;display:flex;align-items:center;gap:4px" title="DuckDB WASM status">
+					<span class="sql-status-dot loading" id="duckdbStatusDot"></span>
+					<span id="duckdbStatusText">DuckDB</span>
+				</span>
+				<button class="btn btn-outline-secondary btn-sm" id="aboutBtn" title="About &amp; Help" style="white-space:nowrap;font-size:12px">
+					<i class="bi bi-info-circle"></i> About
+				</button>
+			</div>
 		</header>
 
 		<div class="row g-3 align-items-end mb-3">
@@ -429,6 +435,7 @@
 		<div class="card">
 			<div class="card-header d-flex align-items-center justify-content-between">
 				<span class="fw-semibold" style="font-size:.95rem">About this Tool</span>
+				<span id="appVersion" class="badge bg-secondary ms-2 me-auto" style="font-size:10px;vertical-align:middle"></span>
 				<button type="button" class="btn-close" id="aboutModalClose" aria-label="Close"></button>
 			</div>
 			<div class="about-body">
@@ -536,6 +543,7 @@
 		];
 		const DB_NAME = 'analysis_eda_tool_db';
 		const STORE_NAME = 'partitions';
+		const APP_VERSION = '1.2.0';
 
 		const state = {
 			datasetId: null,
@@ -571,6 +579,8 @@
 		document.addEventListener('DOMContentLoaded', init);
 
 		async function init() {
+			const verEl = document.getElementById('appVersion');
+			if (verEl) verEl.textContent = `v${APP_VERSION}`;
 			populateDatasetOptions();
 			bindUIEvents();
 			// Restore any user-added datasets from IndexedDB before the first
@@ -797,6 +807,15 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				if (state.chartType === 'map') {
 					renderVisual();
 					applyMapTableFilters();
+				}
+			});
+
+			// When DuckDB finishes initialising, re-render the active chart via SQL
+			// so that any chart displayed during the brief loading window is upgraded
+			// from JS aggregation to the DuckDB aggregation path.
+			document.addEventListener('eda:duckdb-ready', () => {
+				if (state.datasetId && !['sql', 'catalog', 'map'].includes(state.chartType ?? '')) {
+					renderVisual();
 				}
 			});
 		}
@@ -1405,9 +1424,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const orderBy         = document.getElementById('orderBySelect').value;
 
 			let prepared;
-			// Use DuckDB for managed datasets when the connection is available.
-			// Falls back to in-memory JS aggregation when DuckDB is still loading
-			// or if this is a user-added source with rows already in memory.
+			// Use DuckDB for chart aggregation when the connection is available.
+			// On first load DuckDB may still be initialising — in that case the JS
+			// fallback runs and the chart is re-rendered automatically via the
+			// 'eda:duckdb-ready' event once DuckDB is ready (see bindUIEvents).
 			const canUseDuckDB = typeof window._edaQuery === 'function' && state.datasetId;
 			if (canUseDuckDB) {
 				try {
@@ -1619,9 +1639,12 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			}
 			const isHorizontal = state.chartType === 'bar-horizontal';
 			const legendItems  = Array.isArray(prepared.legend) ? prepared.legend : [];
+			const legendVisible = legendItems.length > 0 && legendItems.length <= 13;
 			let legendConfig;
 			if (legendItems.length > 0) {
-				legendConfig = legendItems.length > 13 ? { show: false } : { data: legendItems };
+				legendConfig = legendItems.length > 13
+					? { show: false }
+					: { data: legendItems, top: 28 };
 			}
 			const tooltipConfig = splitField
 				? {
@@ -1637,10 +1660,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				  }
 				: { trigger: 'axis' };
 			const option = {
-				title: { text: `${seriesLabel} by ${dimensionVal}`, left: 'center' },
+				title: { text: `${seriesLabel} by ${dimensionVal}`, left: 'center', top: 0 },
 				tooltip: tooltipConfig,
 				legend: legendConfig,
-				grid: { left: '3%', right: '4%', bottom: '5%', top: '40px', containLabel: true },
+				grid: { left: '3%', right: '4%', bottom: '5%', top: legendVisible ? '70px' : '40px', containLabel: true },
 				xAxis: isHorizontal ? { type: 'value' } : { type: 'category', data: prepared.categories },
 				yAxis: isHorizontal ? { type: 'category', data: prepared.categories, inverse: true } : { type: 'value' },
 				series: prepared.series.map(serie => ({
@@ -2804,6 +2827,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const text = $('sqlStatusText');
 		if (dot)  dot.className  = 'sql-status-dot ' + st;
 		if (text) text.textContent = msg;
+		// Mirror state to the page-level header indicator
+		const hdot = $('duckdbStatusDot');
+		if (hdot) hdot.className = 'sql-status-dot ' + st;
 	}
 
 	// ── DuckDB initialization (lazy — called on first SQL mode activation) ─────
@@ -2845,6 +2871,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			// Expose query interface so the IIFE can use DuckDB for chart aggregation
 			window._edaQuery       = (sql) => conn.query(sql);
 			window._edaDuckDBReady = () => initialized;
+			// Notify the IIFE so any chart rendered during loading upgrades to SQL
+			document.dispatchEvent(new CustomEvent('eda:duckdb-ready'));
 			const runBtn = $('sqlRunBtn');
 			if (runBtn) runBtn.disabled = false;
 			const addBtn = $('sqlAddSourceBtn');
@@ -2991,7 +3019,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				const resp = await fetch(absUrl);
 				if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 				const text = await resp.text();
-				rows = window._edaParseCsv ? window._edaParseCsv(text) : parseCsvSimple(text);
+				rows = parseCSV(text);
 			}
 
 			if (!rows.length) return null;
@@ -3224,7 +3252,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				if (rows && rows.length) injectUserDatasetIntoEDA(record, rows);
 			}
 			// If the user triggered this from the Catalog page, refresh it so the new entry appears immediately
-			if (window._edaGetChartType?.() === 'catalog') window._edaRenderCatalog?.();
+			if (state.chartType === 'catalog') renderCatalog();
 		} catch (e) {
 			alert(`Could not add source:\n${e.message}`);
 		} finally {
@@ -3696,7 +3724,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		updateLineNums();
 	});
 
-	// ── Exposed for the main module's Refresh button ────────────────────────────
+	// ── Exposed for the main module's Refresh button ──────────────────────────────────────
 	// Re-fetches a user-added source from its original URL, updates IDB, and
 	// refreshes window._edaUserDatasets so the calling code can reload the table.
 	window._edaRefreshUserSource = async function(alias) {
@@ -3751,7 +3779,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		return null;
 	};
 
-	// ── Fired by the main EDA script when user clicks the SQL button ───────────
+	// ── Fired by the main EDA script when user clicks the SQL button ─────────────────
 	// DuckDB is initialised lazily so the WASM bundle is only downloaded on demand.
 	document.addEventListener('eda:sql-activate', async () => {
 		if (!initialized && !initializing) {
