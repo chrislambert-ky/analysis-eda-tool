@@ -4,14 +4,16 @@ This document maps out the full evolution of the app from its current state thro
 
 ---
 
-## Current State (Baseline)
+## Current State (as of v1.2.0)
 
-- Single `index.html`, no build step, deployed to GitHub Pages
-- **Two separate engines** in one file:
-  - IIFE script: fetches partition CSVs → JS parse → materializes all rows into `state.allRows` → JS aggregation (`prepareSeries`) → ECharts
-  - ES module: DuckDB-WASM, only active when the SQL tab is clicked
+- Single `index.html` (~3,800 lines), no build step, deployed to GitHub Pages
+- **Two-script architecture** (IIFE + ES module — see note in 1.1):
+  - IIFE script: fetches partition CSVs → JS parse → materializes rows into `state.allRows`; chart aggregation now routes through DuckDB when ready, falls back to `prepareSeries()` otherwise
+  - ES module: DuckDB-WASM — **now eager-initialised on `DOMContentLoaded`** (not on SQL tab click); exposes `window._edaQuery` and dispatches `eda:duckdb-ready` when ready
+- Charts upgraded from JS aggregation to DuckDB SQL automatically via `eda:duckdb-ready` event after WASM loads
+- Header shows a live DuckDB status dot (loading → ready / error)
 - IndexedDB: two separate stores (`analysis_eda_tool_db` partitions + `eda_sql_user_sources`)
-- Charts, map, and table all depend on `state.allRows` being fully loaded in memory
+- Table and map still depend on `state.allRows` being fully loaded in memory
 - No offline support, no installability, no desktop packaging
 
 ---
@@ -20,27 +22,19 @@ This document maps out the full evolution of the app from its current state thro
 
 **Goal:** Replace JS-side aggregation with SQL. ECharts receives query results only, never raw rows.
 
-### 1.1 Eager DuckDB initialization
-- Move DuckDB init from "on SQL tab click" to `DOMContentLoaded`
-- Show a lightweight global status indicator (e.g. top-of-page spinner) while WASM loads
-- Register all managed datasets as views immediately on startup
-- Remove the `window._eda*` global bridge — both the IIFE and the module share one DuckDB `conn` instance (consolidate into a single `<script type="module">`)
+### 1.1 Eager DuckDB initialization ✅
+- ✅ DuckDB init moved from "on SQL tab click" to `DOMContentLoaded`
+- ✅ Live status dot in page header (pulsing blue while loading, green when ready, red on error)
+- ✅ All managed datasets registered as views on startup
+- ⚠️ `window._eda*` bridge consolidation attempted and rolled back — execution-order timing issues caused data not to load. Two-script architecture retained. Revisit in Phase 1.7 (file refactor) when the module boundary is cleaner.
 
-### 1.2 SQL-driven chart aggregation
-Replace `prepareSeries()` + `sortSeries()` with a query builder:
-
-```sql
--- Example of what a chart control selection becomes:
-SELECT DISTRICT, COUNT(*) AS value
-FROM eda_construction_procurement
-GROUP BY DISTRICT
-ORDER BY value DESC
-LIMIT 50;
-```
-
-- Chart control state (dimension, metric, aggregation type, split-by, order) maps 1:1 to SQL clauses
-- DuckDB returns ≤50 rows; ECharts renders them — no full dataset in memory for charts
-- Split-by becomes a `PIVOT`-style query or a grouped result reshaped in JS from a narrow result set
+### 1.2 SQL-driven chart aggregation ✅
+- ✅ `buildChartFromSQL()` query builder implemented — dimension, metric, aggregation type, split-by, and order all map to SQL clauses
+- ✅ `buildSqlAggExpr()` handles `COUNT(*)`, `COUNT(DISTINCT col)`, `SUM`, `AVG`, `MIN`, `MAX`
+- ✅ Split-by uses a grouped narrow result reshaped in JS (no full PIVOT needed)
+- ✅ Charts rendered from JS aggregation on first load are automatically re-rendered via DuckDB once the `eda:duckdb-ready` event fires
+- ✅ `prepareSeries()` / `sortSeries()` retained as a genuine error fallback only
+- ✅ App versioned at `v1.2.0` displayed in the About modal
 
 ### 1.3 SQL-driven Tabulator (paged)
 - Replace full `state.allRows` table load with `SELECT * FROM t LIMIT 500 OFFSET 0`
@@ -67,16 +61,15 @@ LIMIT 50;
 
 ---
 
-## Phase 1.6b — Chart & UX Polish (Active)
+## Phase 1.6b — Chart & UX Polish ✅
 
 ### Completed
-- Aggregation defaults: default dimension = DISTRICT, default metric = DISTRICT, default aggregation = COUNT
-- String-vs-string detection: when both dimension and metric are string fields, aggregation list collapses to COUNT / DISTINCT COUNT only
-- Distinct Count added as an aggregation type
-
-### Pending
-- **Chart titles for bar charts** — Pie chart shows "Count by District"-style heading; horizontal and vertical bar charts should use the same `{seriesLabel} by {dimensionVal}` heading ✅
-- Aggregation label in chart: when axis name is shown for bar charts, long labels get clipped — remove axis name, rely on title only
+- ✅ Aggregation defaults: default dimension = DISTRICT, default metric = DISTRICT, default aggregation = COUNT
+- ✅ String-vs-string detection: when both dimension and metric are string fields, aggregation list collapses to COUNT / DISTINCT COUNT only
+- ✅ Distinct Count added as an aggregation type (SQL: `COUNT(DISTINCT col)`, JS fallback: Set-based)
+- ✅ Chart titles on all bar chart types (`{seriesLabel} by {dimensionVal}` heading)
+- ✅ Axis name removed from bar charts — title alone carries the label, no clipping
+- ✅ Split By legend no longer overlaps chart title — legend pinned below title, `grid.top` adjusted dynamically
 
 ---
 
