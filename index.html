@@ -407,6 +407,7 @@
 									<div class="d-flex gap-2 ms-auto">
 										<button id="mapPopupClearAll" class="btn btn-link btn-sm p-0 text-danger" style="font-size:9px;text-decoration:none" title="Hide all popup fields">Clear All</button>
 										<button id="mapPopupShowAll" class="btn btn-link btn-sm p-0 text-secondary" style="font-size:9px;text-decoration:none" title="Show all popup fields">Show All</button>
+										<button id="mapPopupRefresh" class="btn btn-link btn-sm p-0 text-primary" style="font-size:9px;text-decoration:none" title="Refresh map popups">Refresh</button>
 									</div>
 								</div>
 								<div class="border rounded overflow-auto mb-2" id="mapPopupFieldList" style="max-height:110px;min-height:28px"></div>
@@ -776,6 +777,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					const cols = Object.keys(state.allRows[0]);
 					cols.forEach(col => state.mapOptions.popupHidden.add(col));
 					buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
+				});
+
+				document.getElementById('mapPopupRefresh').addEventListener('click', () => {
+					if (state.chartType === 'map') renderVisual();
 				});
 
 				document.getElementById('mapSaveConfigBtn').addEventListener('click', saveMapConfig);
