@@ -6,7 +6,7 @@
     "COUNTY"
   ],
   "metrics": [
-    "Dataset Records"
+    "Record Count"
   ],
   "aggregationTypes": [
     "Count"

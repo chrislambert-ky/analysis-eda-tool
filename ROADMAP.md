@@ -67,6 +67,55 @@ LIMIT 50;
 
 ---
 
+## Phase 1.7 — File Structure Refactor (Recommended alongside Phase 1)
+
+**Goal:** Split `index.html` into focused, single-purpose files without introducing a build step. No bundler, no npm scripts — just plain `<script type="module" src="...">` references.
+
+**Why this matters:**
+- A single file growing past ~4,000 lines degrades AI-assisted editing reliability. The AI may only see part of the file in context at once and produce changes that are locally correct but break something elsewhere.
+- Named, focused files give AI editors (and humans) unambiguous targets: *"fix the chart aggregation"* → `js/charts.js`, *"update the table pager"* → `js/table.js`.
+- Browser caching becomes granular: a CSS tweak no longer forces a full HTML re-download.
+
+### Proposed structure
+
+```
+analysis-eda-tool/
+├── index.html              (~150 lines — HTML skeleton, <script> wiring only)
+├── etl.js                  (unchanged — Node.js ETL, not loaded by browser)
+├── css/
+│   └── app.css             (all styles, currently inline or in <style> blocks)
+├── js/
+│   ├── engine.js           (DuckDB init, query runner, IDB/OPFS cache layer)
+│   ├── charts.js           (ECharts rendering, chart control state, query builder)
+│   ├── table.js            (Tabulator setup, paging, column filters, CSV export)
+│   ├── map.js              (Leaflet init, point layer, future choropleth layer)
+│   ├── catalog.js          (dataset listing, schema display, user source import)
+│   └── sql-editor.js       (CodeMirror setup, SQL tab, result grid)
+├── data/
+│   └── ...
+└── ...
+```
+
+### Migration approach (no big-bang rewrite)
+1. Create each `js/*.js` file as an ES module (`export`/`import`)
+2. Move one logical section at a time from `index.html` into its module — test after each move
+3. Replace the moved `<script>` block in `index.html` with `<script type="module" src="js/engine.js">` (the top-level entry point that imports the others)
+4. No code logic changes required during the move — only file boundaries change
+
+### File responsibility rules (prevents "lost track" problem)
+| File | Owns | Never touches |
+|---|---|---|
+| `engine.js` | DuckDB conn, query execution, cache | DOM, ECharts, Leaflet |
+| `charts.js` | ECharts instances, chart controls | DuckDB directly (calls engine) |
+| `table.js` | Tabulator instance, paging | ECharts, Leaflet |
+| `map.js` | Leaflet map, layers | ECharts, Tabulator |
+| `catalog.js` | Dataset management UI | Chart/map rendering |
+| `sql-editor.js` | SQL tab UI, CodeMirror | Chart/map state |
+
+**Milestone:** `index.html` is under 200 lines of HTML. All JS logic lives in named modules. No build tooling required.
+
+---
+
 ## Phase 2 — OPFS Persistence (True Browser Database)
 
 **Goal:** Datasets are stored locally in a real embedded database, not as disconnected IDB blobs.
@@ -114,6 +163,58 @@ LIMIT 50;
 - ECharts `scatter` / `heatmap` / `candlestick` chart types added to the chart type buttons
 - Time-series chart type: DuckDB `DATE_TRUNC` used for X-axis bucketing
 - Geographic aggregation: districts or counties aggregated in SQL, result rendered in Leaflet as choropleth
+
+### 3.5 Census TIGERweb choropleth maps
+Integrate the [Census Bureau TIGERweb REST API](https://tigerweb.geo.census.gov) to render county and state polygon boundaries as choropleth layers in Leaflet — no GeoJSON file needs to be bundled in the repo.
+
+**How it works:**
+- Fetch county polygons on demand from the TIGERweb MapServer (returns GeoJSON directly)
+- Join the `GEOID` (5-digit FIPS code) from the API response to a DuckDB aggregation query keyed on a matching FIPS column in the dataset
+- Color each county polygon by the aggregated metric value (e.g. total award amount, bridge count, average condition rating)
+- Leaflet renders the `L.geoJSON` layer; tooltips show the county name + metric value
+
+**Key API parameters:**
+```
+where=STATE='21'          -- filter to Kentucky (FIPS 21); avoids fetching all 3,143 US counties
+outFields=NAME,GEOID,STATE
+outSR=4326                -- WGS84 (standard GPS coordinates)
+f=geojson
+geometryPrecision=4       -- reduces payload size for BI performance
+```
+
+**Reference implementation:**
+```javascript
+const TIGERWEB_COUNTY_URL = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query';
+
+async function fetchCountyPolygons(stateFips = '21') {
+  const params = new URLSearchParams({
+    where:             `STATE='${stateFips}'`,
+    outFields:         'NAME,GEOID,STATE',
+    outSR:             '4326',
+    f:                 'geojson',
+    geometryPrecision: 4
+  });
+  const resp = await fetch(`${TIGERWEB_COUNTY_URL}?${params}`);
+  if (!resp.ok) throw new Error(`TIGERweb HTTP ${resp.status}`);
+  return resp.json(); // GeoJSON FeatureCollection
+}
+```
+
+**Performance notes:**
+- All 3,000+ US counties with full geometry = ~5–10 MB; always filter by `STATE` unless a national view is required
+- Cache the fetched GeoJSON in IDB (keyed by state FIPS + a date stamp) so subsequent loads skip the network call
+- The Cartographic Boundary Service (`census.gov/geo/maps-data/data/tiger-cart-boundary.html`) offers pre-simplified geometries as a static alternative if API latency is a concern
+
+**DuckDB join pattern:**
+```sql
+-- After fetching GeoJSON, extract FIPs codes and join to aggregated dataset:
+SELECT county_fips, SUM(AWARD_AMOUNT) AS total_awards
+FROM eda_construction_procurement
+GROUP BY county_fips
+-- GEOID from TIGERweb is matched client-side when coloring the Leaflet layer
+```
+
+**Dependencies:** None beyond Leaflet (already loaded). The TIGERweb API is public, CORS-enabled, and requires no API key.
 
 ### 3.4 Saved queries / dashboards
 - SQL query snippets saved to OPFS alongside the database

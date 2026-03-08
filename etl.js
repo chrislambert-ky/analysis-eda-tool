@@ -125,7 +125,7 @@ async function main() {
       datasetName: ds.name,
       indexFile: `${ds.name}.index.json`,
       dimensions: Object.keys(sample).filter(k => k.toUpperCase() === 'DISTRICT' || k.toUpperCase() === 'COUNTY'),
-      metrics: ['Dataset Records'],
+      metrics: ['Record Count'],
       aggregationTypes: ['Count'],
       orderBy: ['Dimension', 'Metric Agg Result'],
       order: ['Ascending', 'Descending'],

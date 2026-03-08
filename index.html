@@ -548,6 +548,7 @@
 			tabulator: null,
 			lastLoadedAt: null,
 			chartFilter: null,   // { field, value, seriesIndex, dataIndex } | null
+			_renderSeq: 0,       // incremented on each renderVisual() call; guards async chart renders
 			hiddenColumns: new Set(),   // columns toggled off in the table view
 			mapConfig: {
 				saved: false,
@@ -808,7 +809,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				// All columns are available as dimensions — numeric fields (e.g. district IDs) are valid grouping keys too
 				state.settings = enrichSettings({
 					dimensions:       cols,
-					metrics:          ['Dataset Records', ...numCols],
+					metrics:          ['Record Count', ...numCols],
 					aggregationTypes: ['Count', 'Sum', 'Average', 'Min', 'Max']
 				});
 				state.index = { totalRecords: userDs.rows.length };
@@ -893,7 +894,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				clone.dimensions = ['DISTRICT'];
 			}
 			if (!Array.isArray(clone.metrics) || !clone.metrics.length) {
-				clone.metrics = ['Dataset Records'];
+				clone.metrics = ['Record Count'];
 			}
 			// Always offer the full set of aggregations — Count-only is useless once
 			// numeric metrics are available, and Count still works for all metrics.
@@ -1254,6 +1255,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				applyChartFilter();
 			}
 			destroyVisuals();
+			// Increment sequence so a pending async renderChart() knows it is stale
+			state._renderSeq += 1;
+			const seq = state._renderSeq;
 			if (!state.allRows.length) {
 				document.getElementById('chartArea').innerHTML = '<div class="text-muted">No data available for the current selection.</div>';
 				return;
@@ -1261,7 +1265,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			if (state.chartType === 'map') {
 				renderMap();
 			} else {
-				renderChart();
+				renderChart(seq);
 			}
 			// Refresh lock indicators whenever BI selects change
 			populateColumnPicker();
@@ -1281,15 +1285,143 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			state.mapLayer = null;
 		}
 
-		function renderChart() {
+		// ── DuckDB SQL chart helpers ────────────────────────────────────────────
+
+		/** Convert an Apache Arrow result set to plain JS objects (handles BigInt). */
+		function arrowToPlainRows(result) {
+			const cols = result.schema.fields.map(f => f.name);
+			return result.toArray().map(r => {
+				const obj = {};
+				cols.forEach(c => {
+					const v = r[c];
+					obj[c] = (v === null || v === undefined) ? null
+						: typeof v === 'bigint' ? Number(v) : v;
+				});
+				return obj;
+			});
+		}
+
+		/** Return the SQL aggregation expression for a metric + aggregation type. */
+		function buildSqlAggExpr(metric, agg) {
+			const isCountRecords = !metric || metric === 'Record Count';
+			if (isCountRecords) return 'COUNT(*)';
+			const col = `"${String(metric).replace(/"/g, '""')}"`;
+			switch ((agg || 'Count').toLowerCase()) {
+				case 'sum':     return `SUM(TRY_CAST(${col} AS DOUBLE))`;
+				case 'average': return `ROUND(AVG(TRY_CAST(${col} AS DOUBLE)), 2)`;
+				case 'min':     return `MIN(TRY_CAST(${col} AS DOUBLE))`;
+				case 'max':     return `MAX(TRY_CAST(${col} AS DOUBLE))`;
+				default:        return `COUNT(${col})`; // count of non-null values
+			}
+		}
+
+		/**
+		 * Build and run a DuckDB aggregation query for the chart, returning the same
+		 * prepared-series structure that buildChartOption() expects.
+		 * Never materialises allRows — all aggregation happens inside DuckDB.
+		 */
+		async function buildChartFromSQL(datasetId, dim, split, metric, agg, orderBy, orderDir) {
+			const useSplit       = split && split !== 'None';
+			const isCountRecords = !metric || metric === 'Record Count';
+			const aggExpr        = buildSqlAggExpr(metric, agg);
+			const seriesLabel    = isCountRecords ? 'Count' : `${agg} of ${metric}`;
+			const safeDs         = String(datasetId).replace(/"/g, '""');
+			const safeDim        = String(dim).replace(/"/g, '""');
+			const dimExpr        = `COALESCE(CAST("${safeDim}" AS VARCHAR), 'Unknown')`;
+			const sqlDir         = orderDir === 'asc' ? 'ASC' : 'DESC';
+
+			if (useSplit) {
+				const safeSplit = String(split).replace(/"/g, '""');
+				const splitExpr = `COALESCE(CAST("${safeSplit}" AS VARCHAR), 'Unknown')`;
+				const sql = `SELECT ${dimExpr} AS dim_val, ${splitExpr} AS split_val, ${aggExpr} AS metric_val `
+					+ `FROM "${safeDs}" GROUP BY dim_val, split_val ORDER BY dim_val, metric_val DESC LIMIT 5000`;
+				const rows = arrowToPlainRows(await window._edaQuery(sql));
+				// Collect ordered dim and split values
+				const dimOrder = [], dimSet = new Set(), splitSet = new Set();
+				rows.forEach(r => {
+					if (!dimSet.has(r.dim_val)) { dimSet.add(r.dim_val); dimOrder.push(r.dim_val); }
+					splitSet.add(r.split_val);
+				});
+				const splitKeys = Array.from(splitSet);
+				// Build dim → split → value lookup
+				const lookup = new Map();
+				rows.forEach(r => {
+					if (!lookup.has(r.dim_val)) lookup.set(r.dim_val, new Map());
+					lookup.get(r.dim_val).set(r.split_val, r.metric_val ?? 0);
+				});
+				const series = splitKeys.map(sk => ({
+					name: sk, type: 'bar', stack: 'total',
+					data: dimOrder.map(dk => {
+						const v = lookup.get(dk)?.get(sk) ?? 0;
+						return typeof v === 'bigint' ? Number(v) : (v ?? 0);
+					})
+				}));
+				// Apply user-requested sort
+				const totals  = dimOrder.map((_, i) => series.reduce((s, sr) => s + (sr.data[i] || 0), 0));
+				const indices = dimOrder.map((_, i) => i);
+				const mult    = orderDir === 'asc' ? 1 : -1;
+				indices.sort((a, b) => orderBy === 'dimension'
+					? String(dimOrder[a]).localeCompare(String(dimOrder[b]), undefined, { numeric: true }) * mult
+					: (totals[a] - totals[b]) * mult);
+				const cats = indices.map(i => dimOrder[i]);
+				series.forEach(s => { s.data = indices.map(i => s.data[i]); });
+				return { categories: cats, seriesLabel, dimensionField: dim, splitField: split, legend: splitKeys, series };
+			} else {
+				const orderCol = orderBy === 'dimension' ? 'dim_val' : 'metric_val';
+				const sql = `SELECT ${dimExpr} AS dim_val, ${aggExpr} AS metric_val `
+					+ `FROM "${safeDs}" GROUP BY dim_val ORDER BY ${orderCol} ${sqlDir} LIMIT 200`;
+				const rows = arrowToPlainRows(await window._edaQuery(sql));
+				const type = state.chartType === 'pie' ? 'pie' : 'bar';
+				return {
+					categories: rows.map(r => r.dim_val ?? 'Unknown'),
+					seriesLabel,
+					dimensionField: dim,
+					splitField: null,
+					legend: [],
+					series: [{
+						name: seriesLabel,
+						type,
+						data: rows.map(r => {
+							const v = r.metric_val;
+							return typeof v === 'bigint' ? Number(v) : (v ?? 0);
+						})
+					}]
+				};
+			}
+		}
+
+		async function renderChart(seq) {
 			const dimensionField  = document.getElementById('dimensionSelect').value;
 			const metricField     = document.getElementById('metricSelect').value;
 			const aggregationType = document.getElementById('aggregationSelect').value;
 			const splitValue      = document.getElementById('splitSelect').value;
 			const orderMode       = document.getElementById('orderDirectionSelect').value;
 			const orderBy         = document.getElementById('orderBySelect').value;
-			const prepared = prepareSeries(state.allRows, dimensionField, splitValue, metricField, aggregationType);
-			sortSeries(prepared, orderBy, orderMode);
+
+			let prepared;
+			// Use DuckDB for managed datasets when the connection is available.
+			// Falls back to in-memory JS aggregation when DuckDB is still loading
+			// or if this is a user-added source with rows already in memory.
+			const canUseDuckDB = typeof window._edaQuery === 'function' && state.datasetId;
+			if (canUseDuckDB) {
+				try {
+					prepared = await buildChartFromSQL(
+						state.datasetId, dimensionField, splitValue,
+						metricField, aggregationType, orderBy, orderMode
+					);
+				} catch (e) {
+					console.warn('DuckDB chart query failed, falling back to JS aggregation:', e);
+					prepared = prepareSeries(state.allRows, dimensionField, splitValue, metricField, aggregationType);
+					sortSeries(prepared, orderBy, orderMode);
+				}
+			} else {
+				prepared = prepareSeries(state.allRows, dimensionField, splitValue, metricField, aggregationType);
+				sortSeries(prepared, orderBy, orderMode);
+			}
+
+			// Bail out if another renderVisual() was called while we awaited DuckDB
+			if (state._renderSeq !== seq) return;
+
 			const chartArea = document.getElementById('chartArea');
 			const chartInstance = echarts.init(chartArea);
 			const option = buildChartOption(prepared);
@@ -1352,7 +1484,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		function prepareSeries(rows, dimensionField, splitValue, metricField, aggregationType) {
 			const useSplit        = splitValue && splitValue !== 'None';
 			const splitField      = useSplit ? splitValue : null;
-			const isCountRecords  = !metricField || metricField === 'Dataset Records';
+			const isCountRecords  = !metricField || metricField === 'Record Count';
 			const agg             = (aggregationType || 'Count').toLowerCase();
 			const EMPTY_ACC       = () => ({ count: 0, sum: 0, min: Infinity, max: -Infinity });
 
@@ -1662,7 +1794,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const metric = document.getElementById('metricSelect')?.value;
 			const split  = document.getElementById('splitSelect')?.value;
 			if (dim)                               locked.add(dim);
-			if (metric && metric !== 'Dataset Records') locked.add(metric);
+			if (metric && metric !== 'Record Count') locked.add(metric);
 			if (split  && split  !== 'None')        locked.add(split);
 			return locked;
 		}
@@ -2512,7 +2644,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 						if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'dimension' }); }
 					});
 					(settings.metrics || []).forEach(name => {
-						if (name === 'Dataset Records') return;
+						if (name === 'Record Count') return;
 						if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'metric' }); }
 					});
 				}
@@ -2701,6 +2833,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			initialized  = true;
 			initializing = false;
 			setStatus('ready', 'ready');
+			// Expose query interface so the IIFE can use DuckDB for chart aggregation
+			window._edaQuery       = (sql) => conn.query(sql);
+			window._edaDuckDBReady = () => initialized;
 			const runBtn = $('sqlRunBtn');
 			if (runBtn) runBtn.disabled = false;
 			const addBtn = $('sqlAddSourceBtn');
@@ -3614,6 +3749,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			await initDuckDB();
 		}
 	});
+	// Eager init — DuckDB starts loading immediately at page load instead of
+	// waiting for the first SQL tab click. Charts and the Data Catalog schema
+	// use SQL-driven aggregation as soon as the WASM bundle is available.
+	document.addEventListener('DOMContentLoaded', () => { initDuckDB(); });
 	</script>
 </body>
 </html>
