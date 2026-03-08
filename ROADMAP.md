@@ -61,6 +61,37 @@ This document maps out the full evolution of the app from its current state thro
 
 ---
 
+## Phase 1.6c — Extended File Format Support
+
+**Goal:** Support every tabular file format that DuckDB-WASM can read natively in the "Add Source" flow. Currently only CSV and Parquet are handled.
+
+DuckDB-WASM supports the following formats out of the box — all are candidates:
+
+| Format | DuckDB reader | Notes |
+|---|---|---|
+| CSV / TSV | `read_csv_auto()` | ✅ Already supported |
+| Parquet | `read_parquet()` | ✅ Already supported |
+| JSON (newline-delimited) | `read_json_auto()` | NDJSON / JSON Lines — one object per line |
+| JSON (array) | `read_json_auto()` | Standard `[{...}, {...}]` array files |
+| Arrow IPC (`*.arrow`) | `read_ipc_stream()` | Columnar, zero-copy — fastest for large datasets |
+| Excel (`*.xlsx`, `*.xls`) | `read_xlsx()` via `spatial` extension | Requires loading the `spatial` extension at runtime |
+
+### Implementation tasks
+- Extend `guessFileType(url)` to detect `.json`, `.ndjson`, `.jsonl`, `.arrow`, `.xlsx`, `.xls` by extension
+- Map each type to its DuckDB reader expression in `registerSource()` and `registerSourceFromRows()`
+- Update the Add Source UI: file picker `accept` attribute to include the new extensions; URL input hint text updated
+- For JSON: `read_json_auto()` works for both array and NDJSON — no branch needed
+- For Excel: load the `spatial` extension on demand (`await conn.query("LOAD spatial;")`) before the first `.xlsx` registration; cache a flag so it only loads once
+- For Arrow: register as a local file via `registerSourceFromRows` path using Arrow IPC deserialization
+- Update the About modal "Adding Your Own Data" section to list all supported formats
+
+### Out of scope for this phase
+- Fixed-width / positional text files (no DuckDB reader)
+- XML (no native DuckDB reader without extension)
+- Database dump files (`.sql`, `.db`)
+
+---
+
 ## Phase 1.6b — Chart & UX Polish ✅
 
 ### Completed

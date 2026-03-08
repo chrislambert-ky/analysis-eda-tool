@@ -183,7 +183,7 @@
 		<header class="mb-4 d-flex align-items-start justify-content-between">
 			<div>
 				<h1 class="mb-1">Exploratory Data Analysis Tool</h1>
-				<p class="text-muted mb-0">Self-serve, in-browser analytics &mdash; explore, query, and visualise your data without leaving the browser.</p>
+				<p class="text-muted mb-0">Self-serve, in-browser analytics &mdash; explore, query, and visualize your data without leaving the browser.</p>
 			</div>
 			<div class="d-flex align-items-center gap-2 mt-1">
 				<span id="duckdbStatus" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#888;display:flex;align-items:center;gap:4px" title="DuckDB WASM status">
@@ -440,31 +440,35 @@
 			</div>
 			<div class="about-body">
 				<h6>What is this?</h6>
-				<p>This is an in-browser <strong>Exploratory Data Analysis (EDA) tool</strong> built to let you quickly visualise and query tabular data without installing any software. Everything runs locally in your browser &mdash; no data is ever uploaded to a server.</p>
+				<p>This is an in-browser <strong>Exploratory Data Analysis (EDA) tool</strong> built to let you quickly visualize and query tabular data without installing any software. Everything runs locally in your browser &mdash; no data is ever uploaded to a server.</p>
+				<p>Charts, aggregations, and SQL queries are all powered by <strong>DuckDB-WASM</strong>, a full analytical database engine running entirely inside the browser tab. DuckDB initializes automatically in the background when you open the page &mdash; the status indicator next to the <em>About</em> button shows when it is ready.</p>
 
 				<h6>Preloaded Datasets</h6>
-				<p>Four datasets are preloaded and ready to use from the <strong>Dataset</strong> dropdown. They are sourced from the <a href="https://trak.kytc.ky.gov/" target="_blank" rel="noopener noreferrer">Kentucky Transportation Cabinet TRAK system</a>, partitioned by district, and cached in your browser so subsequent loads are instant:</p>
+				<p>Four datasets are preloaded and ready to use from the <strong>Dataset</strong> dropdown. They are sourced from the <a href="https://trak.kytc.ky.gov/" target="_blank" rel="noopener noreferrer">Kentucky Transportation Cabinet TRAK system</a>, cached in your browser so subsequent loads are instant:</p>
 				<ul>
 					<li><strong>Bridge Condition &amp; Owner Area</strong> &mdash; bridge inventory and condition ratings by owner and geographic area</li>
 					<li><strong>Construction Procurement</strong> &mdash; awarded construction contracts by district</li>
 					<li><strong>Current Enacted Plan</strong> &mdash; current enacted highway plan including funding allocations</li>
 					<li><strong>Program Management Authorized (Detailed)</strong> &mdash; authorized dollars by project phase, cost, and schedule</li>
 				</ul>
+
+				<h6>Charts</h6>
+				<p>Use the <strong>Dimension</strong>, <strong>Metric</strong>, <strong>Aggregation</strong>, <strong>Split By</strong>, and <strong>Order</strong> controls to configure the chart. Supported aggregations are <em>Count</em>, <em>Distinct Count</em>, <em>Sum</em>, <em>Average</em>, <em>Min</em>, and <em>Max</em>. Chart types include Horizontal Bar, Vertical Bar, and Pie. Click a bar or slice to filter the data table below to matching rows.</p>
+
 				<h6>Dataset Catalog</h6>
-				<p>Click the <strong>Catalog</strong> button in the chart-type toolbar to browse all available datasets. Each entry shows a description, record count, last-cached date, and an expandable <strong>Schema</strong> panel listing every field with its inferred data type (<code>VARCHAR</code>, <code>INTEGER</code>, <code>DOUBLE</code>, <code>DATE</code>) and dimension/metric classification. User-imported datasets also appear here.</p>
+				<p>Click the <strong>Catalog</strong> button to browse all available datasets. Each entry shows a description, record count, last-cached date, and an expandable <strong>Schema</strong> panel listing every field with its inferred data type (<code>VARCHAR</code>, <code>INTEGER</code>, <code>DOUBLE</code>, <code>DATE</code>) and dimension/metric classification. User-imported datasets also appear here.</p>
 
 				<h6>Adding Your Own Data</h6>
-				<p>You can load your own <code>.csv</code> or <code>.parquet</code> file and query it alongside the preloaded datasets. The <strong>+ Add Source</strong> button is available in both the <strong>Catalog</strong> sidebar and the <strong>SQL</strong> sidebar:</p>
+				<p>Load your own <code>.csv</code> or <code>.parquet</code> file and query it alongside the preloaded datasets. Click <strong>+ Add Source</strong> in either the <strong>Catalog</strong> or <strong>SQL</strong> sidebar:</p>
 				<ol>
-					<li>Click <strong>+ Add Source</strong> from either the Catalog or SQL view.</li>
 					<li>Choose <em>From URL</em> to point to a publicly accessible file (CORS required), or <em>Local File</em> to upload directly from your computer.</li>
-					<li>Give the source a short table alias (letters, numbers, underscores) &mdash; this becomes the SQL table name.</li>
-					<li>Click <strong>Add &amp; Load</strong>. The file is parsed and stored in your browser&rsquo;s IndexedDB so it persists across page refreshes.</li>
+					<li>Give the source a short table alias &mdash; this becomes its SQL table name.</li>
+					<li>Click <strong>Add &amp; Load</strong>. The file is registered in DuckDB and stored in your browser&rsquo;s IndexedDB so it persists across page refreshes.</li>
 				</ol>
-				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. They appear immediately in the Catalog view, the main Dataset dropdown, and the SQL table list. To remove a source, click the &times; next to it in the SQL sidebar.</p>
+				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. They appear in the Catalog, the Dataset dropdown, and the SQL table list. To remove a source, click the &times; next to it in the SQL sidebar.</p>
 
 				<h6>SQL Workbench</h6>
-				<p>The SQL tab runs queries in-browser using <strong>DuckDB-WASM</strong>. You can join your own data against the preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend. Use <kbd>Ctrl+Enter</kbd> to run a query.</p>
+				<p>The <strong>SQL</strong> tab gives direct access to the DuckDB-WASM engine. Join your own data against preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend. Use <kbd>Ctrl+Enter</kbd> to run a query.</p>
 
 				<h6>Source Code</h6>
 				<p>This project is open source. View the code, report issues, or contribute on GitHub:</p>
@@ -678,7 +682,7 @@
 				// User-added datasets
 				if (window._edaUserDatasets?.has(state.datasetId)) {
 					if (typeof window._edaRefreshUserSource !== 'function') {
-						// SQL module not yet initialised — reload from cached IDB rows
+						// SQL module not yet initialized — reload from cached IDB rows
 						updateProgress('Reloading user dataset from cache…');
 						await selectDataset(state.datasetId);
 						return;
@@ -810,14 +814,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				}
 			});
 
-			// When DuckDB finishes initialising, re-render the active chart via SQL
-			// so that any chart displayed during the brief loading window is upgraded
-			// from JS aggregation to the DuckDB aggregation path.
-			document.addEventListener('eda:duckdb-ready', () => {
-				if (state.datasetId && !['sql', 'catalog', 'map'].includes(state.chartType ?? '')) {
-					renderVisual();
-				}
-			});
 		}
 
 		async function selectDataset(datasetId) {
@@ -1425,9 +1421,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 			let prepared;
 			// Use DuckDB for chart aggregation when the connection is available.
-			// On first load DuckDB may still be initialising — in that case the JS
-			// fallback runs and the chart is re-rendered automatically via the
-			// 'eda:duckdb-ready' event once DuckDB is ready (see bindUIEvents).
+			// On first load DuckDB may still be initialising — the JS fallback produces
+			// the same results and DuckDB is used for all subsequent renders.
 			const canUseDuckDB = typeof window._edaQuery === 'function' && state.datasetId;
 			if (canUseDuckDB) {
 				try {
@@ -3742,7 +3737,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				}
 				return null;
 			}
-			// For Parquet sources DuckDB must be initialised (it's the fetcher).
+			// For Parquet sources DuckDB must be initialized (it's the fetcher).
 			if (guessFileType(record.url) === 'parquet' && !initialized) {
 				await initDuckDB();
 			}
@@ -3763,7 +3758,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 	/**
 	 * Describe a table/view via DuckDB DESCRIBE — used by the Catalog schema panel.
-	 * Initialises DuckDB lazily so the WASM bundle is only downloaded on first call.
+	 * Initializes DuckDB lazily so the WASM bundle is only downloaded on first call.
 	 * Returns [{name, type}] on success, or null if the source is unknown.
 	 */
 	window._edaDescribeTable = async function(alias) {
@@ -3780,7 +3775,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	};
 
 	// ── Fired by the main EDA script when user clicks the SQL button ─────────────────
-	// DuckDB is initialised lazily so the WASM bundle is only downloaded on demand.
+	// DuckDB is initialized lazily so the WASM bundle is only downloaded on demand.
 	document.addEventListener('eda:sql-activate', async () => {
 		if (!initialized && !initializing) {
 			await initDuckDB();
