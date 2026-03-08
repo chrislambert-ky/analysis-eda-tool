@@ -815,7 +815,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				state.settings = enrichSettings({
 					dimensions:       cols,
 					metrics:          ['Record Count', ...numCols],
-					aggregationTypes: ['Count', 'Sum', 'Average', 'Min', 'Max']
+					aggregationTypes: ['Count', 'Distinct Count', 'Sum', 'Average', 'Min', 'Max']
 				});
 				state.index = { totalRecords: userDs.rows.length };
 				state.hiddenColumns = new Set();
@@ -903,7 +903,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			}
 			// Always offer the full set of aggregations — Count-only is useless once
 			// numeric metrics are available, and Count still works for all metrics.
-			const ALL_AGGS = ['Count', 'Sum', 'Average', 'Min', 'Max'];
+			const ALL_AGGS = ['Count', 'Distinct Count', 'Sum', 'Average', 'Min', 'Max'];
 			if (!Array.isArray(clone.aggregationTypes) || !clone.aggregationTypes.length) {
 				clone.aggregationTypes = ALL_AGGS;
 			} else {
@@ -1312,6 +1312,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			if (isCountRecords) return 'COUNT(*)';
 			const col = `"${String(metric).replace(/"/g, '""')}"`;
 			switch ((agg || 'Count').toLowerCase()) {
+				case 'distinct count': return `COUNT(DISTINCT ${col})`;
 				case 'sum':     return `SUM(TRY_CAST(${col} AS DOUBLE))`;
 				case 'average': return `ROUND(AVG(TRY_CAST(${col} AS DOUBLE)), 2)`;
 				case 'min':     return `MIN(TRY_CAST(${col} AS DOUBLE))`;
@@ -1491,7 +1492,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const splitField      = useSplit ? splitValue : null;
 			const isCountRecords  = !metricField || metricField === 'Record Count';
 			const agg             = (aggregationType || 'Count').toLowerCase();
-			const EMPTY_ACC       = () => ({ count: 0, sum: 0, min: Infinity, max: -Infinity });
+			const EMPTY_ACC       = () => ({ count: 0, sum: 0, min: Infinity, max: -Infinity, distinctVals: agg === 'distinct count' ? new Set() : null });
 
 			// Accumulate per (dimension, splitKey) bucket
 			const grouped = new Map(); // dimensionKey → Map<bucketKey, acc>
@@ -1506,6 +1507,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 				if (isCountRecords) {
 					acc.count += 1;
+				} else if (agg === 'distinct count') {
+					acc.distinctVals.add(String(row[metricField]));
 				} else {
 					const num = parseFloat(row[metricField]);
 					if (Number.isFinite(num)) {
@@ -1521,6 +1524,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			function resolve(acc) {
 				if (isCountRecords) return acc.count;
 				switch (agg) {
+					case 'distinct count': return acc.distinctVals ? acc.distinctVals.size : 0;
 					case 'sum':     return acc.sum;
 					case 'average': return acc.count ? Math.round((acc.sum / acc.count) * 100) / 100 : 0;
 					case 'min':     return acc.min === Infinity  ? 0 : acc.min;
@@ -1633,9 +1637,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				  }
 				: { trigger: 'axis' };
 			const option = {
+				title: { text: `${seriesLabel} by ${dimensionVal}`, left: 'center' },
 				tooltip: tooltipConfig,
 				legend: legendConfig,
-				grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
+				grid: { left: '3%', right: '4%', bottom: '5%', top: '40px', containLabel: true },
 				xAxis: isHorizontal ? { type: 'value' } : { type: 'category', data: prepared.categories },
 				yAxis: isHorizontal ? { type: 'category', data: prepared.categories, inverse: true } : { type: 'value' },
 				series: prepared.series.map(serie => ({
@@ -1646,7 +1651,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				}))
 			};
 			if (isHorizontal) {
-				option.xAxis.name = seriesLabel;
 				// Show top 12 rows by default; add scroll when there are more
 				const CAT_VISIBLE = 12;
 				const catCount = prepared.categories.length;
@@ -1677,7 +1681,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					option.grid.right = '40px';
 				}
 			} else {
-				option.yAxis.name = seriesLabel;
+				// (yAxis.name removed — title already shows the series label)
 			}
 			return option;
 		}

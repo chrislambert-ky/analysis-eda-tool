@@ -67,6 +67,19 @@ LIMIT 50;
 
 ---
 
+## Phase 1.6b — Chart & UX Polish (Active)
+
+### Completed
+- Aggregation defaults: default dimension = DISTRICT, default metric = DISTRICT, default aggregation = COUNT
+- String-vs-string detection: when both dimension and metric are string fields, aggregation list collapses to COUNT / DISTINCT COUNT only
+- Distinct Count added as an aggregation type
+
+### Pending
+- **Chart titles for bar charts** — Pie chart shows "Count by District"-style heading; horizontal and vertical bar charts should use the same `{seriesLabel} by {dimensionVal}` heading ✅
+- Aggregation label in chart: when axis name is shown for bar charts, long labels get clipped — remove axis name, rely on title only
+
+---
+
 ## Phase 1.7 — File Structure Refactor (Recommended alongside Phase 1)
 
 **Goal:** Split `index.html` into focused, single-purpose files without introducing a build step. No bundler, no npm scripts — just plain `<script type="module" src="...">` references.
