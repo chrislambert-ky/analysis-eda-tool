@@ -337,21 +337,21 @@
 						</div>
 						<!-- Catalog Sidebar Panel (shown when chart type = catalog) -->
 					<div id="catalogSidebarPanel" style="display:none" class="flex-column mb-2">
-						<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Dataset Catalog</div>
-						<div id="catalogSidebarStats"></div>
-						<button class="btn btn-outline-info btn-sm w-100 mt-2" id="catalogAddSourceBtn" style="font-size:11px" disabled>
+						<button class="btn btn-outline-info btn-sm w-100 mb-2" id="catalogAddSourceBtn" style="font-size:11px" disabled>
 							&#xff0b; Add Source
 						</button>
+						<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Dataset Catalog</div>
+						<div id="catalogSidebarStats"></div>
 					</div>
 					<!-- SQL Sidebar Panel (shown when chart type = sql) -->
 						<div id="sqlSidebarPanel" style="display:none" class="flex-column flex-grow-1 mb-2">
+							<button class="btn btn-outline-info btn-sm w-100 mb-2" id="sqlAddSourceBtn" style="font-size:11px" disabled>
+								&#xff0b; Add Source
+							</button>
 							<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Data Sources</div>
 							<div class="flex-grow-1 overflow-auto border rounded" id="sqlTableList" style="min-height:0">
 								<div class="sql-state-msg">Loading&hellip;</div>
 							</div>
-							<button class="btn btn-outline-info btn-sm w-100 mt-2" id="sqlAddSourceBtn" style="font-size:11px" disabled>
-								&#xff0b; Add Source
-							</button>
 						</div>
 						<div id="mapOptions" class="mt-3 pt-3 border-top d-none">
 							<!-- ── Section 1: Map Configuration ──────────────── -->
@@ -456,16 +456,17 @@
 				<p>Use the <strong>Dimension</strong>, <strong>Metric</strong>, <strong>Aggregation</strong>, <strong>Split By</strong>, and <strong>Order</strong> controls to configure the chart. Supported aggregations are <em>Count</em>, <em>Distinct Count</em>, <em>Sum</em>, <em>Average</em>, <em>Min</em>, and <em>Max</em>. Chart types include Horizontal Bar, Vertical Bar, and Pie. Click a bar or slice to filter the data table below to matching rows.</p>
 
 				<h6>Dataset Catalog</h6>
-				<p>Click the <strong>Catalog</strong> button to browse all available datasets. Each entry shows a description, record count, last-cached date, and an expandable <strong>Schema</strong> panel listing every field with its inferred data type (<code>VARCHAR</code>, <code>INTEGER</code>, <code>DOUBLE</code>, <code>DATE</code>) and dimension/metric classification. User-imported datasets also appear here.</p>
+				<p>Click the <strong>Catalog</strong> button to browse all available datasets. Each entry shows a description, record count, last-cached date, and an expandable <strong>Schema</strong> panel listing every field with its DuckDB-native data type (<code>VARCHAR</code>, <code>BIGINT</code>, <code>DOUBLE</code>, <code>DATE</code>, etc.) and dimension/metric classification. User-imported datasets also appear here.</p>
 
 				<h6>Adding Your Own Data</h6>
-				<p>Load your own <code>.csv</code> or <code>.parquet</code> file and query it alongside the preloaded datasets. Click <strong>+ Add Source</strong> in either the <strong>Catalog</strong> or <strong>SQL</strong> sidebar:</p>
-				<ol>
-					<li>Choose <em>From URL</em> to point to a publicly accessible file (CORS required), or <em>Local File</em> to upload directly from your computer.</li>
-					<li>Give the source a short table alias &mdash; this becomes its SQL table name.</li>
-					<li>Click <strong>Add &amp; Load</strong>. The file is registered in DuckDB and stored in your browser&rsquo;s IndexedDB so it persists across page refreshes.</li>
-				</ol>
-				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. They appear in the Catalog, the Dataset dropdown, and the SQL table list. To remove a source, click the &times; next to it in the SQL sidebar.</p>
+				<p>Load your own data file and query it alongside the preloaded datasets. Click <strong>+ Add Source</strong> at the top of the <strong>Catalog</strong> or <strong>SQL</strong> sidebar panel. Three formats are supported:</p>
+				<ul>
+					<li><code>.csv</code> &mdash; comma-separated values; headers auto-detected</li>
+					<li><code>.parquet</code> &mdash; columnar binary format; registered directly in DuckDB for full type fidelity</li>
+					<li><code>.geojson</code> / <code>.json</code> &mdash; GeoJSON FeatureCollections; feature <code>properties</code> become table columns; Point geometry coordinates are extracted as <code>_lat</code> and <code>_lon</code> for use in the Map tab</li>
+				</ul>
+				<p>Choose <em>From URL</em> to point to a publicly accessible file (CORS required), or <em>Local File</em> to upload directly from your computer. Give the source a short table alias &mdash; this becomes its SQL table name &mdash; then click <strong>Add &amp; Load</strong>. The source is registered in DuckDB and persisted in your browser&rsquo;s IndexedDB so it survives page refreshes.</p>
+				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. They appear in the Catalog, the Dataset dropdown, and the SQL sidebar. To remove a source, click the &times; next to it in the SQL sidebar.</p>
 
 				<h6>SQL Workbench</h6>
 				<p>The <strong>SQL</strong> tab gives direct access to the DuckDB-WASM engine. Join your own data against preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend. Use <kbd>Ctrl+Enter</kbd> to run a query.</p>
@@ -505,16 +506,16 @@
 				<div class="add-src-pane active" id="paneUrl">
 					<label class="form-label text-uppercase text-secondary fw-medium" style="font-size:10px;letter-spacing:1.2px;font-family:'IBM Plex Mono',monospace">File URL <span class="text-danger">*</span></label>
 					<input id="sqlNewUrl" class="form-control form-control-sm font-monospace" type="url" placeholder="https://example.com/data.csv" autocomplete="off" spellcheck="false">
-					<div class="form-text mt-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px">Supports .csv and .parquet &mdash; must be publicly accessible (CORS required).</div>
+					<div class="form-text mt-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px">Supports .csv, .parquet, and .geojson &mdash; must be publicly accessible (CORS required).</div>
 				</div>
 				<!-- Pane: Local File -->
 				<div class="add-src-pane" id="paneFile">
 					<div class="drop-zone" id="sqlDropZone">
 						<span class="drop-zone-icon">&#x1F4C2;</span>
 						<span id="sqlDropLabel">Click to browse or drag &amp; drop a file here</span>
-						<div class="mt-1" style="font-size:10px;color:#adb5bd">.csv &nbsp;&middot;&nbsp; .parquet</div>
+						<div class="mt-1" style="font-size:10px;color:#adb5bd">.csv &nbsp;&middot;&nbsp; .parquet &nbsp;&middot;&nbsp; .geojson</div>
 					</div>
-					<input type="file" id="sqlLocalFile" accept=".csv,.parquet" style="display:none">
+					<input type="file" id="sqlLocalFile" accept=".csv,.parquet,.geojson,.json" style="display:none">
 					<div class="form-text mt-1" style="font-family:'IBM Plex Mono',monospace;font-size:10px">File contents are stored in your browser. To load a newer version, remove and re-add the source.</div>
 				</div>
 			</div>
@@ -547,7 +548,7 @@
 		];
 		const DB_NAME = 'analysis_eda_tool_db';
 		const STORE_NAME = 'partitions';
-		const APP_VERSION = '1.2.0';
+		const APP_VERSION = '1.3.0';
 
 		const state = {
 			datasetId: null,
@@ -2734,9 +2735,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 	// ── IndexedDB for user-added sources ────────────────────────────────────────
 	const USER_IDB_NAME    = 'eda_sql_user_sources';
-	const USER_IDB_VERSION = 2;   // bumped: added user_source_data store
+	const USER_IDB_VERSION = 3;   // v3: added user_source_bytes store for parquet
 	const USER_STORE       = 'sources';
 	const USER_DATA_STORE  = 'user_source_data';
+	const USER_BYTES_STORE = 'user_source_bytes';
 	let   userIdb          = null;
 
 	function openUserIDB() {
@@ -2748,6 +2750,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					db.createObjectStore(USER_STORE, { keyPath: 'alias' });
 				if (!db.objectStoreNames.contains(USER_DATA_STORE))
 					db.createObjectStore(USER_DATA_STORE, { keyPath: 'alias' });
+				if (!db.objectStoreNames.contains(USER_BYTES_STORE))
+					db.createObjectStore(USER_BYTES_STORE, { keyPath: 'alias' });
 			};
 			req.onsuccess = e => resolve(e.target.result);
 			req.onerror   = e => reject(e.target.error);
@@ -2794,6 +2798,30 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		return new Promise((resolve, reject) => {
 			const req = userIdb.transaction(USER_DATA_STORE, 'readwrite')
 				.objectStore(USER_DATA_STORE).delete(alias);
+			req.onsuccess = () => resolve();
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbBytesPut(alias, bytes) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_BYTES_STORE, 'readwrite')
+				.objectStore(USER_BYTES_STORE).put({ alias, bytes, savedAt: Date.now() });
+			req.onsuccess = () => resolve();
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbBytesGet(alias) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_BYTES_STORE, 'readonly')
+				.objectStore(USER_BYTES_STORE).get(alias);
+			req.onsuccess = e => resolve(e.target.result?.bytes || null);
+			req.onerror   = e => reject(e.target.error);
+		});
+	}
+	function idbBytesDelete(alias) {
+		return new Promise((resolve, reject) => {
+			const req = userIdb.transaction(USER_BYTES_STORE, 'readwrite')
+				.objectStore(USER_BYTES_STORE).delete(alias);
 			req.onsuccess = () => resolve();
 			req.onerror   = e => reject(e.target.error);
 		});
@@ -2885,6 +2913,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	function guessFileType(url) {
 		const lower = url.toLowerCase().split('?')[0];
 		if (lower.endsWith('.parquet')) return 'parquet';
+		if (lower.endsWith('.geojson')) return 'geojson';
 		return 'csv';
 	}
 
@@ -2892,8 +2921,13 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	async function registerSource(src) {
 		// Local file sources are re-registered from cached IDB rows, not by URL
 		if (src.sourceType === 'file') {
-			const cached = await idbUserDataGet(src.alias);
-			if (cached && cached.length) await registerSourceFromRows(src.alias, cached);
+			const parquetBytes = await idbBytesGet(src.alias);
+			if (parquetBytes) {
+				await registerSourceFromParquet(src.alias, parquetBytes);
+			} else {
+				const cached = await idbUserDataGet(src.alias);
+				if (cached && cached.length) await registerSourceFromRows(src.alias, cached);
+			}
 			return;
 		}
 		updateBadge(src.alias, 'loading');
@@ -2903,6 +2937,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const ft     = guessFileType(absUrl);
 			const expr   = ft === 'parquet'
 				? `read_parquet('${absUrl}')`
+				: ft === 'geojson'
+				? `read_json_auto('${absUrl}')`
 				: `read_csv_auto('${absUrl}', header=true)`;
 			await conn.query(`CREATE OR REPLACE VIEW "${src.alias}" AS SELECT * FROM ${expr};`);
 			updateBadge(src.alias, 'loaded');
@@ -3093,9 +3129,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	function setLocalFile(file) {
 		if (!file) return;
 		const ext = '.' + file.name.split('.').pop().toLowerCase();
-		const allowed = ['.csv', '.parquet'];
+		const allowed = ['.csv', '.parquet', '.geojson', '.json'];
 		if (!allowed.includes(ext)) {
-			alert(`Unsupported file type: ${ext}\nPlease choose a .csv or .parquet file.`);
+			alert(`Unsupported file type: ${ext}\nPlease choose a .csv, .parquet, or .geojson file.`);
 			return;
 		}
 		_pendingLocalFile = file;
@@ -3115,29 +3151,38 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	}
 
 	async function readLocalFileRows(file) {
-		const ext = file.name.split('.').pop().toLowerCase();
-		if (ext === 'parquet') {
-			const buffer  = await file.arrayBuffer();
-			const uint8   = new Uint8Array(buffer);
-			const tmpName = `__local_${Date.now()}.parquet`;
-			await duck_db.registerFileBuffer(tmpName, uint8);
-			const res  = await conn.query(`SELECT * FROM read_parquet('${tmpName}');`);
-			const cols = res.schema.fields.map(f => f.name);
-			const rows = res.toArray().map(r => {
-				const obj = {};
-				cols.forEach(c => {
-					const v = r[c];
-					obj[c] = (v === null || v === undefined) ? null
-						: typeof v === 'bigint' ? Number(v) : v;
-				});
-				return obj;
+		const text = await file.text();
+		return window._edaParseCsv ? window._edaParseCsv(text) : parseCsvSimple(text);
+	}
+
+	// ── GeoJSON helpers ───────────────────────────────────────────────────────
+	// Peek at a .json file to see if it looks like GeoJSON (type: FeatureCollection)
+	async function _peekIsGeoJson(file) {
+		try {
+			const slice = await file.slice(0, 512).text();
+			return /"type"\s*:\s*"FeatureCollection"/.test(slice);
+		} catch (_) { return false; }
+	}
+
+	// Flatten GeoJSON FeatureCollection.features[].properties into plain row objects.
+	// Also injects _lat / _lon columns when point geometry is present.
+	async function readGeoJsonRows(file) {
+		const text = await file.text();
+		const gj   = JSON.parse(text);
+		const features = (gj.type === 'FeatureCollection' ? gj.features : null)
+			|| (Array.isArray(gj) ? gj : null);
+		if (!features) return [];
+		return features
+			.filter(f => f && f.properties)
+			.map(f => {
+				const row = Object.assign({}, f.properties);
+				// Inject centroid coords for point features so map tab can use them
+				if (f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
+					row._lon = f.geometry.coordinates[0] ?? null;
+					row._lat = f.geometry.coordinates[1] ?? null;
+				}
+				return row;
 			});
-			try { await duck_db.dropFile(tmpName); } catch (_) {}
-			return rows;
-		} else {
-			const text = await file.text();
-			return window._edaParseCsv ? window._edaParseCsv(text) : parseCsvSimple(text);
-		}
 	}
 
 	async function registerSourceFromRows(alias, rows) {
@@ -3165,6 +3210,43 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		} catch (e) {
 			console.warn(`registerSourceFromRows failed for "${alias}":`, e.message);
 			updateBadge(alias, 'error');
+		}
+	}
+
+	// ── Parquet: register file buffer directly as a DuckDB view ──────────────
+	async function registerSourceFromParquet(alias, bytes) {
+		updateBadge(alias, 'loading');
+		const tmpName = `__pq_${alias}.parquet`;
+		try {
+			await duck_db.registerFileBuffer(tmpName, bytes);
+			await conn.query(`CREATE OR REPLACE VIEW "${alias}" AS SELECT * FROM read_parquet('${tmpName}');`);
+			updateBadge(alias, 'loaded');
+			await fetchColumns(alias);
+		} catch (e) {
+			console.warn(`registerSourceFromParquet failed for "${alias}":`, e.message);
+			updateBadge(alias, 'error');
+			throw e;
+		}
+	}
+
+	// ── Query up to 50 000 rows from a registered DuckDB view ────────────────
+	async function queryViewRows(alias) {
+		try {
+			const res  = await conn.query(`SELECT * FROM "${alias}" LIMIT 50000`);
+			const cols = res.schema.fields.map(f => f.name);
+			return res.toArray().map(r => {
+				const obj = {};
+				cols.forEach(c => {
+					const v = r[c];
+					obj[c] = (v === null || v === undefined) ? null
+						: typeof v === 'bigint' ? Number(v)
+						: ArrayBuffer.isView(v) || Array.isArray(v) ? JSON.stringify(v)
+						: v;
+				});
+				return obj;
+			});
+		} catch (_) {
+			return [];
 		}
 	}
 
@@ -3206,8 +3288,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		try {
 			if (isFile) {
 				saveBtn.innerHTML = '<span class="sql-spinner"></span> Reading file…';
-				const rows = await readLocalFileRows(_pendingLocalFile);
-				if (!rows.length) throw new Error('File appears to be empty or could not be parsed.');
+				const ext = _pendingLocalFile.name.split('.').pop().toLowerCase();
 
 				const record = {
 					alias,
@@ -3217,10 +3298,34 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					sourceType: 'file',
 					addedAt:    Date.now()
 				};
-				await idbUserPut(record);
-				await idbUserDataPut(alias, rows);
-				await registerSourceFromRows(alias, rows);
-				injectUserDatasetIntoEDA(record, rows);
+
+				if (ext === 'parquet') {
+					saveBtn.innerHTML = '<span class="sql-spinner"></span> Registering parquet…';
+					const buffer = await _pendingLocalFile.arrayBuffer();
+					const bytes  = new Uint8Array(buffer);
+					await idbUserPut(record);
+					await idbBytesPut(alias, bytes);
+					await registerSourceFromParquet(alias, bytes);
+					// Cache a row sample for JS-side chart fallback; best-effort
+					const edaRows = await queryViewRows(alias);
+					if (edaRows.length) await idbUserDataPut(alias, edaRows);
+					injectUserDatasetIntoEDA(record, edaRows);
+				} else if (ext === 'geojson' || (ext === 'json' && await _peekIsGeoJson(_pendingLocalFile))) {
+					saveBtn.innerHTML = '<span class="sql-spinner"></span> Parsing GeoJSON…';
+					const rows = await readGeoJsonRows(_pendingLocalFile);
+					if (!rows.length) throw new Error('GeoJSON file has no features with properties, or could not be parsed.');
+					await idbUserPut(record);
+					await idbUserDataPut(alias, rows);
+					await registerSourceFromRows(alias, rows);
+					injectUserDatasetIntoEDA(record, rows);
+				} else {
+					const rows = await readLocalFileRows(_pendingLocalFile);
+					if (!rows.length) throw new Error('File appears to be empty or could not be parsed.');
+					await idbUserPut(record);
+					await idbUserDataPut(alias, rows);
+					await registerSourceFromRows(alias, rows);
+					injectUserDatasetIntoEDA(record, rows);
+				}
 
 				userSources = await idbUserGetAll();
 				userSources.sort((a, b) => a.addedAt - b.addedAt);
@@ -3247,7 +3352,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				if (rows && rows.length) injectUserDatasetIntoEDA(record, rows);
 			}
 			// If the user triggered this from the Catalog page, refresh it so the new entry appears immediately
-			if (state.chartType === 'catalog') renderCatalog();
+			if (typeof window._edaGetChartType === 'function' && window._edaGetChartType() === 'catalog') renderCatalog();
 		} catch (e) {
 			alert(`Could not add source:\n${e.message}`);
 		} finally {
@@ -3260,6 +3365,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		if (!confirm(`Remove "${alias}" from your sources?\nThis only affects your browser.`)) return;
 		await idbUserDelete(alias);
 		await idbUserDataDelete(alias);
+		await idbBytesDelete(alias);
 		try { await conn.query(`DROP VIEW IF EXISTS "${alias}";`); } catch (_) {}
 		tableColumns.delete(alias);
 		userSources = userSources.filter(s => s.alias !== alias);

@@ -88,7 +88,57 @@ DuckDB-WASM supports the following formats out of the box — all are candidates
 ### Out of scope for this phase
 - Fixed-width / positional text files (no DuckDB reader)
 - XML (no native DuckDB reader without extension)
-- Database dump files (`.sql`, `.db`)
+- Database files (`.sqlite`, `.db`, `.duckdb`) — see Phase 1.6d
+
+---
+
+## Phase 1.6d — Database File Import & Tree Browser
+
+**Goal:** Allow users to import a local database file (SQLite, DuckDB `.db`) and browse its contents — databases → tables → columns with data types — using the same tree-style schema panel already used for individual datasets.
+
+DuckDB-WASM can attach and query SQLite and DuckDB database files directly, making this a natural extension of the existing "Add Source" flow.
+
+### Supported database formats
+
+| Format | DuckDB reader | Notes |
+|---|---|---|
+| SQLite (`.sqlite`, `.db`) | `ATTACH '...' (TYPE sqlite)` | Requires the `sqlite` extension; auto-loaded by DuckDB |
+| DuckDB (`.duckdb`, `.db`) | `ATTACH '...'` | Native format — zero conversion |
+
+### UX: tree browser
+
+When a database file is imported, the sidebar entry expands into a **three-level tree** rather than a flat field list:
+
+```
+▼ my_database.sqlite            ← database node (alias)
+   ▼ roads                      ← table name
+      id          INTEGER
+      name        VARCHAR
+      geom        GEOMETRY
+   ▶ bridges                    ← collapsed table
+   ▶ counties
+```
+
+- Clicking a **table node** populates the SQL editor with `SELECT * FROM my_database.roads LIMIT 100` and makes the table available as a chart/EDA source
+- Clicking a **field name** copies the fully-qualified column reference (`my_database.roads.name`) to the clipboard
+- The tree state (expanded/collapsed) is preserved in `sessionStorage`
+
+### Implementation tasks
+- Add `.sqlite`, `.db`, `.duckdb` to `setLocalFile()` allowed extensions
+- New `registerSourceFromDatabase(alias, bytes)` function:
+  1. Write bytes to a DuckDB virtual filesystem buffer
+  2. `ATTACH '__vfs_alias.sqlite' AS alias (TYPE sqlite, READ_ONLY)` (or native ATTACH for `.duckdb`)
+  3. `SHOW ALL TABLES` to enumerate tables in the attached database
+  4. `DESCRIBE alias.tablename` for each table to collect schema
+- Extend the sidebar tree renderer to support the three-level database → table → field hierarchy
+- Each table in the attached database is individually selectable as a chart/EDA source — registered as a view `alias__tablename` for flat compatibility with existing chart and SQL code
+- Remove / detach cleans up all derived views and drops the ATTACH
+- Update the About modal to document database import
+
+### Out of scope for this phase
+- Live database connections (server-side PostgreSQL, MySQL) — local file only
+- Schema modification (INSERT, UPDATE, CREATE TABLE) — read-only import
+- `.sql` dump files (text SQL scripts, not binary database files)
 
 ---
 
@@ -190,6 +240,36 @@ analysis-eda-tool/
 - "Add Source" supports the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) — user picks a local CSV or Parquet file
 - DuckDB reads it in-place via a File object URL — the file never needs to be fully copied into the browser
 - Multi-GB local files are queryable with zero upload
+
+### 3.1b Unified geometry field picker (map configuration UX)
+
+**Goal:** Replace the separate Latitude / Longitude dropdowns with a single, geometry-aware field picker that works across coordinate formats.
+
+**Problem with the current UI:**
+- Forces users to know which columns are lat/lon and pick them separately
+- Breaks entirely for datasets that store geometry as a single WKT column (`POINT(lon lat)`), a GeoJSON `geometry` field, or a PostGIS-style `GEOMETRY` type
+- Provides no guidance when a dataset has no obvious coordinate columns
+
+**Proposed approach:**
+- On map tab activation, inspect the registered dataset's columns via `DESCRIBE`
+- Auto-classify columns into geometry "roles":
+  - **WKT / GEOMETRY**: single column matching type `GEOMETRY` or containing values like `POINT(`, `LINESTRING(`, `POLYGON(`
+  - **Lat/Lon pair**: two numeric columns whose names match common patterns (`lat`, `latitude`, `y`, `lon`, `longitude`, `x`, etc.)
+  - **GeoJSON geometry**: a text/JSON column containing `{"type":"Point"` or similar
+- Present a single **Geometry Source** dropdown with options like:
+  - `Lat + Lon columns → pick two fields`
+  - `WKT column → pick one field` (use `ST_X()` / `ST_Y()` via the `spatial` extension to extract coords)
+  - `GeoJSON geometry column → pick one field`
+- When WKT or GeoJSON geometry is selected, use DuckDB `spatial` extension to extract point coordinates server-side before passing rows to Leaflet
+- Fall back gracefully to the current lat/lon picker UI if `spatial` extension is unavailable
+
+**Why this matters:**
+- Datasets imported from GIS tools (ArcGIS, QGIS, PostGIS exports) often use WKT or GeoJSON geometry columns rather than separate lat/lon fields
+- Reduces friction for the most common case (lat/lon pair) while unlocking support for richer geospatial formats added in Phase 1.6c
+
+**Dependencies:** `spatial` extension (DuckDB-WASM) for WKT/GeoJSON extraction. Lat/Lon pair mode has no new dependencies.
+
+---
 
 ### 3.2 Cross-dataset SQL (joins in charts)
 - Chart dimension/metric controls gain an optional "join" picker
