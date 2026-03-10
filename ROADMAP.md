@@ -36,16 +36,24 @@ This document maps out the full evolution of the app from its current state thro
 - ✅ `prepareSeries()` / `sortSeries()` retained as a genuine error fallback only
 - ✅ App versioned at `v1.2.0` displayed in the About modal
 
-### 1.3 SQL-driven Tabulator (paged)
-- Replace full `state.allRows` table load with `SELECT * FROM t LIMIT 500 OFFSET 0`
-- Tabulator uses `ajaxRequestFunc` (or a custom data loader) calling DuckDB on each page turn
-- Column filters become SQL `WHERE` clauses; sort becomes `ORDER BY`
-- "Download CSV" becomes `COPY (SELECT ...) TO 'result.csv'` via DuckDB's file export
+### 1.3 SQL-driven Tabulator (paged) ✅
+- ✅ `renderTable()` uses DuckDB `ajaxRequestFunc` when DuckDB is ready and `state.allRows` is empty — falls back to local Tabulator pagination when rows are already in memory (the current normal case)
+- ✅ `filterMode: 'remote'` + `sortMode: 'remote'` — header filters become SQL `ILIKE` clauses; sort becomes `ORDER BY` when in DuckDB mode
+- ✅ `buildWhereSQL()` / `buildOrderSQL()` helpers translate Tabulator filter/sort params to safe SQL fragments
+- ✅ `applyChartFilter()` uses a serializable `{field, type: '=', value}` object in DuckDB mode; `'Unknown'` maps to `IS NULL OR TRIM(...) = ''` in SQL
+- ✅ "Download Full" queries DuckDB for all rows when in DuckDB table mode
+- ✅ "Download Filtered" queries DuckDB with the current filter + sort state in DuckDB mode
+- ✅ All `_edaQuery` calls serialized through a single promise chain — prevents concurrent-query collisions on the single DuckDB-WASM connection
+- ✅ DuckDB remote-paging activates automatically on dataset switches once `state.allRows` is no longer pre-loaded (Phase 1.6 prerequisite)
+- ✅ App versioned at `v1.4.0`
 
-### 1.4 Unify the IDB stores
-- One IDB (or OPFS, see Phase 2) for all cached data — managed datasets and user-added sources
-- Remove the `eda_sql_user_sources` second database
-- User-imported data goes through the same DuckDB registration path as managed datasets
+### 1.4 Unify the IDB stores ✅
+- ✅ `analysis_eda_tool_db` bumped to version 2; `onupgradeneeded` adds `sources`, `user_source_data`, `user_source_bytes` stores alongside the existing `partitions` store
+- ✅ `eda_sql_user_sources` database eliminated — both script blocks now open `analysis_eda_tool_db` v2
+- ✅ `loadPersistedUserDatasets()` (IIFE) uses the shared `getDatabase()` connection instead of a separate inline `indexedDB.open()` call; no more `db.close()` on the shared handle
+- ✅ ES module `openUserIDB()` redirected to `analysis_eda_tool_db` v2; `onupgradeneeded` handles both fresh install and v1→v2 upgrade (adds the three user stores without touching `partitions`)
+- ✅ All `idbUser*` / `idbBytes*` functions unchanged — they still reference `userIdb`; only the underlying database changed
+- ✅ App versioned at `v1.5.0`
 
 ### 1.5 Catalog schema via DuckDB only
 - `DESCRIBE <table>` is the single schema source — no raw CSV header parse, no BI-settings fallback

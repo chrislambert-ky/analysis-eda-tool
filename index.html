@@ -548,7 +548,7 @@
 		];
 		const DB_NAME = 'analysis_eda_tool_db';
 		const STORE_NAME = 'partitions';
-		const APP_VERSION = '1.3.0';
+		const APP_VERSION = '1.5.0';
 
 		const state = {
 			datasetId: null,
@@ -563,6 +563,7 @@
 			lastLoadedAt: null,
 			chartFilter: null,   // { field, value, seriesIndex, dataIndex } | null
 			_renderSeq: 0,       // incremented on each renderVisual() call; guards async chart renders
+			tableDuckDB: false,  // true when Tabulator is in DuckDB remote-paging mode
 			hiddenColumns: new Set(),   // columns toggled off in the table view
 			mapConfig: {
 				saved: false,
@@ -603,27 +604,13 @@
 		 * Runs at page load so users never need to open the SQL tab first.
 		 */
 		async function loadPersistedUserDatasets() {
-			const IDB_NAME    = 'eda_sql_user_sources';
-			const IDB_VERSION = 2;
-			const META_STORE  = 'sources';
-			const DATA_STORE  = 'user_source_data';
 			try {
-				const db = await new Promise((resolve, reject) => {
-					const req = indexedDB.open(IDB_NAME, IDB_VERSION);
-					req.onupgradeneeded = e => {
-						const d = e.target.result;
-						if (!d.objectStoreNames.contains(META_STORE))
-							d.createObjectStore(META_STORE, { keyPath: 'alias' });
-						if (!d.objectStoreNames.contains(DATA_STORE))
-							d.createObjectStore(DATA_STORE, { keyPath: 'alias' });
-					};
-					req.onsuccess = e => resolve(e.target.result);
-					req.onerror   = e => reject(e.target.error);
-				});
+				// Use the shared unified IDB — same database as the partition cache.
+				const db = await getDatabase();
 
 				const sources = await new Promise((resolve, reject) => {
-					const req = db.transaction(META_STORE, 'readonly')
-						.objectStore(META_STORE).getAll();
+					const req = db.transaction('sources', 'readonly')
+						.objectStore('sources').getAll();
 					req.onsuccess = e => resolve(e.target.result || []);
 					req.onerror   = e => reject(e.target.error);
 				});
@@ -632,8 +619,8 @@
 
 				for (const src of sources) {
 					const cached = await new Promise((resolve, reject) => {
-						const req = db.transaction(DATA_STORE, 'readonly')
-							.objectStore(DATA_STORE).get(src.alias);
+						const req = db.transaction('user_source_data', 'readonly')
+							.objectStore('user_source_data').get(src.alias);
 						req.onsuccess = e => resolve(e.target.result?.rows || null);
 						req.onerror   = e => reject(e.target.error);
 					});
@@ -655,7 +642,6 @@
 						sel.appendChild(opt);
 					}
 				}
-				db.close();
 			} catch (e) {
 				// Non-fatal — user sources simply won't appear until SQL tab is visited
 				console.warn('loadPersistedUserDatasets:', e);
@@ -734,7 +720,14 @@
 					});
 				});
 
-			document.getElementById('downloadFullButton').addEventListener('click', () => {
+			document.getElementById('downloadFullButton').addEventListener('click', async () => {
+				if (state.tableDuckDB && state.datasetId) {
+					try {
+						const result = await window._edaQuery(`SELECT * FROM "${state.datasetId}"`);
+						downloadAsCSV(arrowToPlainRows(result), `${state.datasetId}-full.csv`);
+					} catch (e) { console.error('Download failed:', e); }
+					return;
+				}
 				if (!state.allRows.length) return;
 				downloadAsCSV(state.allRows, `${state.datasetId}-full.csv`);
 			});
@@ -765,8 +758,21 @@
 				applyChartFilter();
 			});
 
-			document.getElementById('downloadFilteredButton').addEventListener('click', () => {
+			document.getElementById('downloadFilteredButton').addEventListener('click', async () => {
 				if (!state.tabulator) return;
+				if (state.tableDuckDB && state.datasetId) {
+					// In DuckDB mode getRows('active') only returns the current page;
+					// re-query DuckDB with the current filter/sort state for all matching rows.
+					try {
+						const filters = state.tabulator.getFilters(true);
+						const sorts   = state.tabulator.getSorters();
+						const sql = `SELECT * FROM "${state.datasetId}" ${buildWhereSQL(filters)} ${buildOrderSQL(sorts)}`;
+						const result = await window._edaQuery(sql);
+						const rows = arrowToPlainRows(result);
+						if (rows.length) downloadAsCSV(rows, `${state.datasetId}-filtered.csv`);
+					} catch (e) { console.error('Filtered download failed:', e); }
+					return;
+				}
 				const filteredRows = state.tabulator.getRows('active').map(row => row.getData());
 				if (!filteredRows.length) return;
 				downloadAsCSV(filteredRows, `${state.datasetId}-filtered.csv`);
@@ -814,6 +820,13 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					applyMapTableFilters();
 				}
 			});
+
+			// When DuckDB becomes ready, subsequent dataset switches will automatically
+			// use DuckDB remote-paging mode. We do NOT rebuild the current table here:
+			// state.allRows is already fully loaded and the local Tabulator is showing
+			// correct data — tearing it down to rebuild in DuckDB mode mid-session
+			// causes a visible blank/gray flash with no benefit.
+			document.addEventListener('eda:duckdb-ready', () => { /* intentionally empty */ });
 
 		}
 
@@ -1308,6 +1321,54 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 		// ── DuckDB SQL chart helpers ────────────────────────────────────────────
 
+		/**
+		 * Build a SQL WHERE clause from a Tabulator filter array.
+		 * Supports types: '=' (with 'Unknown' mapped to IS NULL/blank), '!=', 'like', '<', '<=', '>', '>='.
+		 */
+		function buildWhereSQL(filters) {
+			if (!filters || !filters.length) return '';
+			const clauses = filters.map(f => {
+				const col = `"${String(f.field).replace(/"/g, '""')}"`;
+				const val = String(f.value ?? '').replace(/'/g, "''");
+				switch (f.type) {
+					case '=':
+						// Chart filter: 'Unknown' represents blank/null values normalized in JS
+						if (f.value === 'Unknown') {
+							return `(${col} IS NULL OR TRIM(CAST(${col} AS VARCHAR)) = '')`;
+						}
+						return `CAST(${col} AS VARCHAR) = '${val}'`;
+					case '!=':
+						return `CAST(${col} AS VARCHAR) != '${val}'`;
+					case 'like':
+						return val ? `CAST(${col} AS VARCHAR) ILIKE '%${val}%'` : '1=1';
+					case '<':
+						return `TRY_CAST(${col} AS DOUBLE) < ${parseFloat(f.value) || 0}`;
+					case '<=':
+						return `TRY_CAST(${col} AS DOUBLE) <= ${parseFloat(f.value) || 0}`;
+					case '>':
+						return `TRY_CAST(${col} AS DOUBLE) > ${parseFloat(f.value) || 0}`;
+					case '>=':
+						return `TRY_CAST(${col} AS DOUBLE) >= ${parseFloat(f.value) || 0}`;
+					default:
+						return `CAST(${col} AS VARCHAR) = '${val}'`;
+				}
+			});
+			return `WHERE ${clauses.join(' AND ')}`;
+		}
+
+		/**
+		 * Build a SQL ORDER BY clause from a Tabulator sorter array.
+		 * Handles both ajaxRequestFunc params ({column, dir}) and getSorters() output ({field, dir}).
+		 */
+		function buildOrderSQL(sorts) {
+			if (!sorts || !sorts.length) return '';
+			const parts = sorts.map(s => {
+				const col = s.column || s.field;
+				return `"${String(col).replace(/"/g, '""')}" ${s.dir === 'desc' ? 'DESC' : 'ASC'}`;
+			});
+			return `ORDER BY ${parts.join(', ')}`;
+		}
+
 		/** Convert an Apache Arrow result set to plain JS objects (handles BigInt). */
 		function arrowToPlainRows(result) {
 			const cols = result.schema.fields.map(f => f.name);
@@ -1490,12 +1551,18 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			}
 
 			const { field, value } = state.chartFilter;
-			// Use a function-based filter to match normalizeGroupValue logic
-			state.tabulator.setFilter(function (rowData) {
-				const raw = rowData[field];
-				const normalized = (raw === undefined || raw === null || String(raw).trim() === '') ? 'Unknown' : String(raw);
-				return normalized === value;
-			});
+
+			if (state.tableDuckDB) {
+				// Remote mode: use a serializable filter object; buildWhereSQL handles 'Unknown' → IS NULL
+				state.tabulator.setFilter([{ field, type: '=', value }]);
+			} else {
+				// Local mode: use a function filter to apply the same normalizeGroupValue logic
+				state.tabulator.setFilter(function (rowData) {
+					const raw = rowData[field];
+					const normalized = (raw === undefined || raw === null || String(raw).trim() === '') ? 'Unknown' : String(raw);
+					return normalized === value;
+				});
+			}
 
 			if (badge) badge.style.display = '';
 			if (badgeText) {
@@ -1776,14 +1843,38 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				state.tabulator = null;
 			}
 			container.innerHTML = '';
-			if (!state.allRows.length) {
+			state.tableDuckDB = false;
+
+			// Use DuckDB remote-paging only when there are no in-memory rows.
+			// If state.allRows is populated (the normal case for all current datasets)
+			// we use local Tabulator mode — it's simpler, faster, and avoids DuckDB
+			// connection contention. DuckDB mode is reserved for future large datasets
+			// that are never fully loaded into memory (Phase 1.6+).
+			const canUseDuckDB = !state.allRows.length
+				&& typeof window._edaQuery === 'function'
+				&& state.datasetId
+				&& window._edaTableColumns?.has(state.datasetId);
+
+			if (!canUseDuckDB && !state.allRows.length) {
 				container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
 				populateColumnPicker();
 				return;
 			}
+
 			// Remove from hidden set any columns that are now locked (dimension/metric/split)
 			getLockedColumns().forEach(c => state.hiddenColumns.delete(c));
-			const allColKeys = Object.keys(state.allRows[0]);
+
+			// Derive column list from allRows (always populated today) with DuckDB schema as fallback
+			const allColKeys = state.allRows.length
+				? Object.keys(state.allRows[0])
+				: (window._edaTableColumns.get(state.datasetId) || []).map(c => c.name);
+
+			if (!allColKeys.length) {
+				container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
+				populateColumnPicker();
+				return;
+			}
+
 			// When map is active, also respect the map-specific tableHidden set
 			const mapTableHid = (state.chartType === 'map') ? state.mapOptions.tableHidden : null;
 			const columns = allColKeys
@@ -1796,18 +1887,51 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					headerSort: true,
 					minWidth: 160
 				}));
-			state.tabulator = new Tabulator(container, {
-				data: state.allRows,
-				layout: 'fitDataStretch',
-				height: '420px',
-				pagination: 'local',
-				paginationSize: 15,
-				paginationSizeSelector: [15, 25, 50, 100],
-				columns,
-				placeholder: 'No rows to display.',
-				resizableColumns: true,
-				autoColumns: false
-			});
+
+			if (canUseDuckDB) {
+				state.tableDuckDB = true;
+				const alias = state.datasetId;
+				state.tabulator = new Tabulator(container, {
+					ajaxURL: 'duckdb',
+					ajaxRequestFunc: async (_url, _cfg, params) => {
+						const { page = 1, size = 25, filter = [], sort = [] } = params;
+						const offset   = (page - 1) * size;
+						const whereSql = buildWhereSQL(filter);
+						const orderSql = buildOrderSQL(sort);
+						// DuckDB-WASM uses a single connection — queries must be sequential.
+						const countResult = await window._edaQuery(`SELECT COUNT(*) AS n FROM "${alias}" ${whereSql}`);
+						const total       = Number(arrowToPlainRows(countResult)[0]?.n ?? 0);
+						const dataResult  = await window._edaQuery(`SELECT * FROM "${alias}" ${whereSql} ${orderSql} LIMIT ${size} OFFSET ${offset}`);
+						const rows        = arrowToPlainRows(dataResult);
+						return { data: rows, last_page: Math.ceil(total / size) || 1 };
+					},
+					filterMode: 'remote',
+					sortMode: 'remote',
+					layout: 'fitDataStretch',
+					height: '420px',
+					pagination: 'remote',
+					paginationSize: 25,
+					paginationSizeSelector: [25, 50, 100, 200],
+					columns,
+					placeholder: 'No rows to display.',
+					resizableColumns: true,
+					autoColumns: false
+				});
+			} else {
+				state.tabulator = new Tabulator(container, {
+					data: state.allRows,
+					layout: 'fitDataStretch',
+					height: '420px',
+					pagination: 'local',
+					paginationSize: 15,
+					paginationSizeSelector: [15, 25, 50, 100],
+					columns,
+					placeholder: 'No rows to display.',
+					resizableColumns: true,
+					autoColumns: false
+				});
+			}
+
 			// Re-apply any active chart filter after rebuilding the table
 			if (state.chartFilter) applyChartFilter();
 			// Re-apply map filter selections as row filters when map is active
@@ -2131,11 +2255,22 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		async function getDatabase() {
 			if (!dbPromise) {
 				dbPromise = new Promise((resolve, reject) => {
-					const request = indexedDB.open(DB_NAME, 1);
-					request.onupgradeneeded = () => {
-						const db = request.result;
+					const request = indexedDB.open(DB_NAME, 2);
+					request.onupgradeneeded = e => {
+						const db = e.target.result;
+						// v1 store — partition cache for managed datasets
 						if (!db.objectStoreNames.contains(STORE_NAME)) {
 							db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+						}
+						// v2 stores — user-added source metadata, row data, and binary files
+						if (!db.objectStoreNames.contains('sources')) {
+							db.createObjectStore('sources', { keyPath: 'alias' });
+						}
+						if (!db.objectStoreNames.contains('user_source_data')) {
+							db.createObjectStore('user_source_data', { keyPath: 'alias' });
+						}
+						if (!db.objectStoreNames.contains('user_source_bytes')) {
+							db.createObjectStore('user_source_bytes', { keyPath: 'alias' });
 						}
 					};
 					request.onsuccess = () => resolve(request.result);
@@ -2733,9 +2868,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		{ alias: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',     url: 'data/raw/eda_programmanagement_authorized_detailed.csv' }
 	];
 
-	// ── IndexedDB for user-added sources ────────────────────────────────────────
-	const USER_IDB_NAME    = 'eda_sql_user_sources';
-	const USER_IDB_VERSION = 3;   // v3: added user_source_bytes store for parquet
+	// ── IndexedDB for user-added sources (unified with main partition-cache IDB) ─
+	const USER_IDB_NAME    = 'analysis_eda_tool_db'; // same DB as the partition cache
+	const USER_IDB_VERSION = 2;   // v2: added sources, user_source_data, user_source_bytes
 	const USER_STORE       = 'sources';
 	const USER_DATA_STORE  = 'user_source_data';
 	const USER_BYTES_STORE = 'user_source_bytes';
@@ -2746,6 +2881,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const req = indexedDB.open(USER_IDB_NAME, USER_IDB_VERSION);
 			req.onupgradeneeded = e => {
 				const db = e.target.result;
+				// v1 store (partition cache) — created on fresh install
+				if (!db.objectStoreNames.contains('partitions'))
+					db.createObjectStore('partitions', { keyPath: 'key' });
+				// v2 stores (user sources) — added whether upgrading from v1 or fresh
 				if (!db.objectStoreNames.contains(USER_STORE))
 					db.createObjectStore(USER_STORE, { keyPath: 'alias' });
 				if (!db.objectStoreNames.contains(USER_DATA_STORE))
@@ -2891,8 +3030,16 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			initialized  = true;
 			initializing = false;
 			setStatus('ready', 'ready');
-			// Expose query interface so the IIFE can use DuckDB for chart aggregation
-			window._edaQuery       = (sql) => conn.query(sql);
+			// Expose query interface so the IIFE can use DuckDB for chart aggregation.
+			// All calls are serialized through a single promise chain so concurrent
+			// callers (chart render + table page request) never collide on the one connection.
+			let _queryChain = Promise.resolve();
+			window._edaQuery = (sql) => {
+				const result = _queryChain.then(() => conn.query(sql));
+				// Reset the chain on error so a failed query doesn't block all future ones.
+				_queryChain = result.catch(() => {});
+				return result;
+			};
 			window._edaDuckDBReady = () => initialized;
 			// Notify the IIFE so any chart rendered during loading upgrades to SQL
 			document.dispatchEvent(new CustomEvent('eda:duckdb-ready'));
