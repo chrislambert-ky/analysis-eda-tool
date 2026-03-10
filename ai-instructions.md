@@ -30,6 +30,51 @@ IDB / OPFS cache ─────────→   Single query interface  →  T
 
 ---
 
+## Architecture Decisions
+
+### ADR-001 — Why DuckDB-WASM replaces JS aggregation and IDB partition caching
+
+**Decision:** Replace the partition-CSV + IndexedDB + `state.allRows` pipeline with DuckDB-WASM as the single query engine. Charts, table pagination, schema inspection, and SQL workbench all route through DuckDB SQL.
+
+**Context:** The original architecture cached pre-filtered per-district CSV partitions in IndexedDB so that chart aggregations (JavaScript loops over `state.allRows`) could run instantly on repeat visits. It worked but had a fundamental cost: every interaction required materializing the full dataset as an array of JS objects in the browser's heap.
+
+**Performance — why DuckDB is as fast or faster than IDB row retrieval:**
+
+IDB is fast at *retrieving* rows, but the data still had to be deserialized into the JS heap and then looped over by the aggregation code. For a `COUNT(*) GROUP BY DISTRICT` query on 50,000 rows, the JS engine touched every row object to produce 13 numbers.
+
+DuckDB-WASM is a columnar database compiled to WebAssembly. The same aggregation:
+- reads only the `DISTRICT` column from its compressed columnar store (not every field in every row)
+- executes the GROUP BY in native compiled WASM, not interpreted JavaScript
+- returns 13 rows to JS — that is all the JS heap ever sees
+
+The result is that for typical chart interactions (aggregations, filters, splits) DuckDB returns far less data to JS than the IDB path ever did, and does so without the deserialization overhead.
+
+**Memory — why DuckDB-WASM avoids the pandas problem:**
+
+A common pattern in Python data analysis is to load a dataset into a pandas DataFrame. Because pandas is row-oriented and stores each value as a Python object, a 50 MB CSV can expand to 200–400 MB in RAM. This is essentially the same problem as `state.allRows` in JavaScript — an array of 50,000 JS objects carries per-value boxing overhead and no compression.
+
+DuckDB is columnar. Internally a column of 50,000 rows looks like:
+
+```
+DISTRICT:  [01, 01, 02, 01, 03, ...]   ← packed integers, run-length compressed
+AMOUNT:    [120000, 85000, 210000, ...]  ← packed doubles
+```
+
+There are no row objects, no per-value boxing, and low-cardinality columns (like DISTRICT with 13 unique values) compress extremely well. DuckDB typically uses 3–5× less memory than a row-oriented in-memory store for the same data. For datasets that exceed available WASM heap, DuckDB can spill to the virtual filesystem — it does not crash.
+
+**What IDB still provides (Phase 1 → Phase 2 transition):**
+- IDB continues to cache the raw CSV bytes for managed datasets (one entry per dataset, not 13 partition files) so repeat visits avoid a network round-trip — same offline benefit, simpler storage.
+- User-uploaded files are persisted in IDB and re-registered with DuckDB on each page load (DuckDB views are not persistent across reloads until Phase 2 OPFS).
+- Phase 2 replaces IDB entirely with DuckDB's Origin Private File System (OPFS) VFS — a persistent `.duckdb` file in the browser's private storage that survives reloads natively.
+
+**Consequences:**
+- `state.allRows` materialisation is eliminated for charts and table (map lat/lon rows remain until Phase 3).
+- Partition CSV files under `data/report/` become redundant and will be deleted after Phase 1 validation.
+- ETL simplifies to: download raw CSV → write BI settings JSON (no partition splitting).
+- Offline capability is temporarily reduced between Phase 1.6 (partition removal) and Phase 2 (OPFS), unless the intermediate IDB raw-bytes cache is implemented.
+
+---
+
 ## 1. Current Architecture Snapshot (transitional)
 
 **Front-end**
