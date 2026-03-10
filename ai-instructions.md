@@ -88,18 +88,18 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
 - A second IDB (`eda_sql_user_sources`) stores user-added source metadata and row data. **Will be merged into OPFS in Phase 2.**
 - UI supports charts (horizontal/vertical bar, pie), map mode, Tabulator grid, SQL workbench, and Data Catalog.
 
-**Current data layer (transitional — see target above)**
-- Partitioned data and configuration live in `data/report/<dataset>/` as:
-  - Partition CSVs: `<dataset>-District-XX.csv`
-  - Index file: `<dataset>.index.json` (record counts per partition)
-  - BI settings: `<dataset>-bi-settings.json` (dimensions, metrics, aggregation options, map metadata)
-- Raw source CSV downloads stored in `data/raw/` — these are the authoritative source for DuckDB views.
-- The partition CSV infrastructure exists only because the legacy JS aggregation engine needed pre-filtered data. Once Phase 1 is complete and charts are SQL-driven, the partition files become redundant.
+**Current data layer (Phase 1.6 — DuckDB-first)**
+- Raw CSVs live in `data/raw/` — the authoritative source for DuckDB views.
+- BI settings live in `data/report/<dataset>/<dataset>-bi-settings.json` — contains `totalRecords`, `dimensions`, `metrics`, and optional `map` config. No partition CSVs or `index.json`.
+- `state.allRows` is **empty** for managed datasets until the map tab is activated; charts and table use DuckDB SQL exclusively.
+- Map rows are fetched lazily via `loadMapRowsFromDuckDB()` when `chartType === 'map'` and `state.allRows` is empty.
+- Dimension/metric selector lists are expanded from DuckDB native column types by `expandControlsFromDuckDB()` once `eda:duckdb-ready` fires.
+- IDB `partitions` store is no longer written to; will be dropped in Phase 2 (OPFS).
 
-**ETL (transitional)**
-- `etl.js` (Node 20-compatible) downloads remote CSVs, filters rows to valid districts (`District ##` or `Various`), and writes partitioned outputs + settings using `csv-parse` and `csv-stringify`.
-- Long-term: ETL will write Parquet files and updated BI settings only. Partition CSVs will be dropped.
-- Map configuration for the bridge dataset includes clustering defaults and color-field options.
+**ETL (Phase 1.6)**
+- `etl.js` (Node 20-compatible) downloads remote CSVs to `data/raw/` and writes `bi-settings.json` per dataset using `csv-parse`.
+- No partition splitting, no `index.json`. `totalRecords` is counted from the raw CSV and embedded in `bi-settings.json`.
+- Map configuration for the bridge dataset is hardcoded in `etl.js` (clustering defaults, color-field options).
 
 **Automation**
 - `.github/workflows/nightly-etl.yml` runs nightly (05:15 UTC) to refresh data, commit, and push.
@@ -139,10 +139,22 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
 
 Each dataset definition exists in `DATASETS` array at the top of `index.html`. The value of `id` must match the folder name under `data/report/`.
 
-### Partitioning rules
-- Recognize districts of the form `District ##` (case/spacing tolerant) or `Various`.
-- Skip all other values; log skip counts in ETL output.
-- Rewrite the `DISTRICT` column in partitions to a normalized `District 0X` or `Various` label.
+### BI settings format (Phase 1.6+)
+Each `data/report/<dataset>/<dataset>-bi-settings.json` contains:
+```json
+{
+  "datasetName": "<dataset>",
+  "totalRecords": 12345,
+  "dimensions": ["DISTRICT", "COUNTY"],
+  "metrics": ["Record Count"],
+  "aggregationTypes": ["Count"],
+  "orderBy": ["Dimension", "Metric Agg Result"],
+  "order": ["Ascending", "Descending"],
+  "map": { ... }   // optional, present when lat/lon fields exist
+}
+```
+- `totalRecords` replaces the old `index.json` as the record count source.
+- There are no partition CSV files or `index.json` files.
 
 ### Map metadata
 - Bridge dataset (`eda_assets_bridge_condition_owner_area`) includes:

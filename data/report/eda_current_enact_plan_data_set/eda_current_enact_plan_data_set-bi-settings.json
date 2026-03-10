@@ -1,6 +1,6 @@
 {
   "datasetName": "eda_current_enact_plan_data_set",
-  "indexFile": "eda_current_enact_plan_data_set.index.json",
+  "totalRecords": 3999,
   "dimensions": [
     "DISTRICT",
     "COUNTY"
