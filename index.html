@@ -185,14 +185,19 @@
 				<h1 class="mb-1">Exploratory Data Analysis Tool</h1>
 				<p class="text-muted mb-0">Self-serve, in-browser analytics &mdash; explore, query, and visualize your data without leaving the browser.</p>
 			</div>
-			<div class="d-flex align-items-center gap-2 mt-1">
+			<div class="d-flex align-items-start gap-2 mt-1">
 				<span id="duckdbStatus" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#888;display:flex;align-items:center;gap:4px" title="DuckDB WASM status">
 					<span class="sql-status-dot loading" id="duckdbStatusDot"></span>
 					<span id="duckdbStatusText">DuckDB</span>
 				</span>
-				<button class="btn btn-outline-secondary btn-sm" id="aboutBtn" title="About &amp; Help" style="white-space:nowrap;font-size:12px">
-					<i class="bi bi-info-circle"></i> About
-				</button>
+				<div class="d-flex flex-column gap-1">
+					<button class="btn btn-outline-secondary btn-sm" id="aboutBtn" title="About &amp; Help" style="white-space:nowrap;font-size:12px">
+						<i class="bi bi-info-circle"></i> About
+					</button>
+					<button class="btn btn-outline-secondary btn-sm" id="shareStateBtn" title="Copy link with current dashboard state" style="white-space:nowrap;font-size:12px">
+						<i class="bi bi-share"></i> Share
+					</button>
+				</div>
 			</div>
 		</header>
 
@@ -455,6 +460,9 @@
 				<h6>Charts</h6>
 				<p>Use the <strong>Dimension</strong>, <strong>Metric</strong>, <strong>Aggregation</strong>, <strong>Split By</strong>, and <strong>Order</strong> controls to configure the chart. Supported aggregations are <em>Count</em>, <em>Distinct Count</em>, <em>Sum</em>, <em>Average</em>, <em>Min</em>, and <em>Max</em>. Chart types include Horizontal Bar, Vertical Bar, and Pie. Click a bar or slice to filter the data table below to matching rows.</p>
 
+				<h6>Share State</h6>
+				<p>Click <strong>Share</strong> under the <em>About</em> button to copy a URL that includes your current dashboard selections (dataset, chart type, dimension, metric, aggregation, split, and ordering). Opening that link restores the same state for preloaded datasets.</p>
+
 				<h6>Dataset Catalog</h6>
 				<p>Click the <strong>Catalog</strong> button to browse all available datasets. Each entry shows a description, record count, last-cached date, and an expandable <strong>Schema</strong> panel listing every field with its DuckDB-native data type (<code>VARCHAR</code>, <code>BIGINT</code>, <code>DOUBLE</code>, <code>DATE</code>, etc.) and dimension/metric classification. User-imported datasets also appear here.</p>
 
@@ -549,6 +557,29 @@
 		const DB_NAME = 'analysis_eda_tool_db';
 		const STORE_NAME = 'partitions';
 		const APP_VERSION = '1.5.0';
+		const PRESET_DATASET_SLUGS = {
+			eda_assets_bridge_condition_owner_area: 'assets_bridge_condition_owner_area',
+			eda_construction_procurement: 'construction_procurement',
+			eda_current_enact_plan_data_set: 'current_enacted_plan',
+			eda_programmanagement_authorized_detailed: 'programmanagement_authorized_detailed'
+		};
+		const CHART_TYPE_TO_SHARE = {
+			'bar-horizontal': 'hbar',
+			'bar-vertical': 'vbar',
+			pie: 'pie',
+			map: 'map',
+			sql: 'sql',
+			catalog: 'catalog'
+		};
+		const SHARE_TO_CHART_TYPE = {
+			hbar: 'bar-horizontal',
+			vbar: 'bar-vertical',
+			pie: 'pie',
+			map: 'map',
+			sql: 'sql',
+			catalog: 'catalog'
+		};
+		const SHARE_PARAM_KEYS = ['data','graph','dimension','metrics','aggregation','splitby','orderby','order'];
 
 		const state = {
 			datasetId: null,
@@ -581,12 +612,14 @@
 		};
 
 		let dbPromise;
+		let startupShareState = null;
 
 		document.addEventListener('DOMContentLoaded', init);
 
 		async function init() {
 			const verEl = document.getElementById('appVersion');
 			if (verEl) verEl.textContent = `v${APP_VERSION}`;
+			startupShareState = parseSharedStateFromUrl();
 			populateDatasetOptions();
 			bindUIEvents();
 			// Restore any user-added datasets from IndexedDB before the first
@@ -594,7 +627,150 @@
 			// requiring the user to visit the SQL tab first.
 			await loadPersistedUserDatasets();
 			if (DATASETS.length) {
-				await selectDataset(DATASETS[0].id);
+				const initialDatasetId = startupShareState?.datasetId || DATASETS[0].id;
+				await selectDataset(initialDatasetId);
+				if (startupShareState) {
+					applySharedStateToDashboard(startupShareState);
+					startupShareState = null;
+				}
+			}
+		}
+
+		function normalizeShareToken(value) {
+			return String(value ?? '')
+				.trim()
+				.toLowerCase()
+				.replace(/[\s-]+/g, '_')
+				.replace(/[^a-z0-9_]/g, '_')
+				.replace(/_+/g, '_')
+				.replace(/^_+|_+$/g, '');
+		}
+
+		function isPresetDatasetId(datasetId) {
+			return DATASETS.some(ds => ds.id === datasetId);
+		}
+
+		function encodeDatasetShareValue(datasetId) {
+			return PRESET_DATASET_SLUGS[datasetId] || normalizeShareToken(datasetId).replace(/^eda_/, '');
+		}
+
+		function decodeDatasetShareValue(rawValue) {
+			if (!rawValue) return null;
+			const token = normalizeShareToken(rawValue);
+			const mapped = Object.entries(PRESET_DATASET_SLUGS)
+				.find(([, slug]) => normalizeShareToken(slug) === token)?.[0];
+			if (mapped) return mapped;
+			const byId = DATASETS.find(ds => normalizeShareToken(ds.id) === token);
+			return byId?.id || null;
+		}
+
+		function setSelectValueFromShareToken(selectId, token) {
+			if (!token) return;
+			const select = document.getElementById(selectId);
+			if (!select) return;
+			const normalized = normalizeShareToken(token);
+			const option = [...select.options].find(opt =>
+				normalizeShareToken(opt.value) === normalized
+				|| normalizeShareToken(opt.textContent) === normalized
+			);
+			if (option) select.value = option.value;
+		}
+
+		function parseSharedStateFromUrl() {
+			const params = new URLSearchParams(window.location.search);
+			const hasShareParam = SHARE_PARAM_KEYS.some(k => params.has(k));
+			if (!hasShareParam) return null;
+
+			const datasetId = decodeDatasetShareValue(params.get('data'));
+			if (!datasetId || !isPresetDatasetId(datasetId)) return null;
+
+			const chartToken = normalizeShareToken(params.get('graph'));
+			const chartType = SHARE_TO_CHART_TYPE[chartToken] || null;
+
+			return {
+				datasetId,
+				chartType,
+				dimension: params.get('dimension') || '',
+				metric: params.get('metrics') || '',
+				aggregation: params.get('aggregation') || '',
+				splitBy: params.get('splitby') || '',
+				orderBy: params.get('orderby') || '',
+				order: params.get('order') || ''
+			};
+		}
+
+		function applySharedStateToDashboard(sharedState) {
+			if (!sharedState) return;
+			if (sharedState.chartType && CHART_TYPE_TO_SHARE[sharedState.chartType]) {
+				state.chartType = sharedState.chartType;
+			}
+			setSelectValueFromShareToken('dimensionSelect', sharedState.dimension);
+			setSelectValueFromShareToken('metricSelect', sharedState.metric);
+			setSelectValueFromShareToken('aggregationSelect', sharedState.aggregation);
+			setSelectValueFromShareToken('splitSelect', sharedState.splitBy);
+			setSelectValueFromShareToken('orderBySelect', sharedState.orderBy);
+
+			const orderToken = normalizeShareToken(sharedState.order);
+			const orderSelect = document.getElementById('orderDirectionSelect');
+			if (orderSelect) {
+				if (orderToken === 'ascending' || orderToken === 'asc') orderSelect.value = 'asc';
+				if (orderToken === 'descending' || orderToken === 'desc') orderSelect.value = 'desc';
+			}
+
+			updateChartButtons();
+			renderVisual();
+			if (state.chartType !== 'sql' && state.chartType !== 'catalog') {
+				renderTable();
+			}
+		}
+
+		function buildShareUrlFromCurrentState() {
+			if (!isPresetDatasetId(state.datasetId)) return null;
+
+			const params = new URLSearchParams();
+			const getVal = (id) => document.getElementById(id)?.value || '';
+
+			params.set('data', encodeDatasetShareValue(state.datasetId));
+			params.set('graph', CHART_TYPE_TO_SHARE[state.chartType] || 'hbar');
+			params.set('dimension', normalizeShareToken(getVal('dimensionSelect')));
+			params.set('metrics', normalizeShareToken(getVal('metricSelect')));
+			params.set('aggregation', normalizeShareToken(getVal('aggregationSelect')));
+			params.set('splitby', normalizeShareToken(getVal('splitSelect')));
+			params.set('orderby', normalizeShareToken(getVal('orderBySelect')));
+			params.set('order', getVal('orderDirectionSelect') === 'desc' ? 'descending' : 'ascending');
+
+			const baseUrl = `${window.location.origin}${window.location.pathname}`;
+			return `${baseUrl}?${params.toString()}`;
+		}
+
+		function updateShareButtonState() {
+			const btn = document.getElementById('shareStateBtn');
+			if (!btn) return;
+			const enabled = isPresetDatasetId(state.datasetId);
+			btn.disabled = !enabled;
+			btn.title = enabled
+				? 'Copy link with current dashboard state'
+				: 'Share links are available only for preloaded datasets';
+		}
+
+		async function handleShareStateClick() {
+			const shareUrl = buildShareUrlFromCurrentState();
+			if (!shareUrl) {
+				updateProgress('Share links are available only for preloaded datasets.');
+				return;
+			}
+
+			try {
+				if (navigator.clipboard?.writeText) {
+					await navigator.clipboard.writeText(shareUrl);
+					updateProgress('Share URL copied to clipboard.');
+				} else {
+					window.prompt('Copy this share URL:', shareUrl);
+					updateProgress('Share URL ready to copy.');
+				}
+			} catch (error) {
+				window.prompt('Copy this share URL:', shareUrl);
+				updateProgress('Clipboard access blocked. Share URL shown for manual copy.');
 			}
 		}
 
@@ -662,6 +838,10 @@
 		function bindUIEvents() {
 			document.getElementById('datasetSelect').addEventListener('change', async (event) => {
 				await selectDataset(event.target.value);
+			});
+
+			document.getElementById('shareStateBtn')?.addEventListener('click', () => {
+				handleShareStateClick();
 			});
 
 			document.getElementById('refreshButton').addEventListener('click', async () => {
@@ -2035,6 +2215,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					button.setAttribute('title', enabled ? 'Show Leaflet map view' : 'Map not available \u2014 load a dataset first');
 				}
 			});
+			updateShareButtonState();
 			updateControlVisibility();
 		}
 
