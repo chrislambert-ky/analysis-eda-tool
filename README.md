@@ -2,6 +2,8 @@
 
 A single-page, fully in-browser exploratory data analysis tool built with vanilla HTML/CSS/JS and CDN libraries. Datasets are pre-partitioned by district so the UI loads data incrementally and caches it in IndexedDB. No server, no build step, no data ever leaves your browser.
 
+> This application was built entirely with AI. The project is a deliberate demonstration that a complete, working app can be developed 100% through AI-driven implementation, with the human role limited to direction, prompting, testing, and evaluation rather than hand-editing code. No line of code in this application was manually written by the project owner.
+
 **Live app:** https://chrislambert-ky.github.io/analysis-eda-tool/  
 **Repository:** https://github.com/chrislambert-ky/analysis-eda-tool  
 **Data source:** https://trak.kytc.ky.gov/
@@ -158,3 +160,46 @@ Drop the repository root onto any static file host (Netlify, S3, Azure Static We
 - Update `ai-instructions.md` with any technical decisions that future contributors or AI assistants should know.
 - Keep ETL output under version control so GitHub Pages stays in sync.
 - Open issues or PRs for new dataset integrations, UI improvements, or automation tweaks.
+
+---
+
+## Estimated Manual Development Effort
+
+The estimates below are meant to answer a practical question: how long would this same application likely take to build without AI doing the implementation work?
+
+These estimates were developed by AI as a reasoned approximation based on the application's current feature set and integration complexity.
+
+At the time of writing, this project has involved approximately 10 hours of human effort spent prompting, directing, testing, and reviewing AI-generated implementation. This figure is expected to be updated as development continues.
+
+These ranges assume a single developer is building the current feature set from scratch, including UI work, library integration, debugging, state management, browser storage, and deployment setup.
+
+### Estimated Total Hours
+
+| Developer level | Estimated hours |
+|---|---:|
+| Beginner | 180-320 |
+| Intermediate | 70-140 |
+| Senior | 35-80 |
+
+### Feature-by-Feature Estimate
+
+| Feature area | Beginner | Intermediate | Senior |
+|---|---:|---:|---:|
+| Base single-page app shell, layout, and control wiring | 20-35 | 8-16 | 4-8 |
+| Charting with multiple modes and aggregation logic | 28-45 | 12-22 | 6-12 |
+| Data table integration, filtering, paging, and CSV export | 16-28 | 7-14 | 4-8 |
+| Map view, clustering, popup configuration, and filters | 22-38 | 10-18 | 5-10 |
+| DuckDB-WASM SQL workbench and query result rendering | 30-55 | 14-28 | 8-16 |
+| IndexedDB caching and persistence for managed and user datasets | 20-36 | 8-18 | 5-10 |
+| User data import flow for URL and local files | 16-30 | 8-16 | 4-8 |
+| Dataset catalog and schema inspection | 14-24 | 6-12 | 3-6 |
+| URL share-state support and live URL syncing | 8-16 | 3-6 | 2-4 |
+| ETL scripting, dataset metadata, and deployment automation | 14-24 | 6-12 | 3-6 |
+| Integration debugging, browser edge cases, and final polish | 24-45 | 10-22 | 6-12 |
+
+### Interpreting the Estimate
+
+- The app is small in footprint but not small in integration complexity.
+- The real effort is not HTML or JavaScript syntax; it is making ECharts, Leaflet, Tabulator, DuckDB-WASM, IndexedDB, CSV parsing, and state synchronization work together cleanly.
+- The senior estimate is much lower because most of the time savings come from architectural judgment and faster debugging, not from typing speed.
+- The ranges are intentionally broad because a large share of the effort depends on how much time is lost to integration bugs, async timing issues, and browser-specific behavior.
