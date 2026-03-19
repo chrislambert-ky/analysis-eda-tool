@@ -480,7 +480,8 @@
 				<p>The <strong>SQL</strong> tab gives direct access to the DuckDB-WASM engine. Join your own data against preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend. Use <kbd>Ctrl+Enter</kbd> to run a query.</p>
 
 				<h6>Source Code</h6>
-				<p>This project is open source. View the code, report issues, or contribute on GitHub:</p>
+				<p>This application was built entirely with AI. The project is a deliberate demonstration that a complete, working app can be developed 100% through AI-driven implementation, with the human role limited to direction, prompting, and evaluation rather than hand-editing code.</p>
+				<p>The code for this project is available on GitHub. View the code, follow development, or report issues here:</p>
 				<a class="gh-link" href="https://github.com/chrislambert-ky/analysis-eda-tool" target="_blank" rel="noopener">
 					<i class="bi bi-github"></i> github.com/chrislambert-ky/analysis-eda-tool
 				</a>
@@ -613,6 +614,7 @@
 
 		let dbPromise;
 		let startupShareState = null;
+		let shareUrlFrameHandle = null;
 
 		document.addEventListener('DOMContentLoaded', init);
 
@@ -722,6 +724,7 @@
 			if (state.chartType !== 'sql' && state.chartType !== 'catalog') {
 				renderTable();
 			}
+			scheduleBrowserUrlSync();
 		}
 
 		function buildShareUrlFromCurrentState() {
@@ -741,6 +744,24 @@
 
 			const baseUrl = `${window.location.origin}${window.location.pathname}`;
 			return `${baseUrl}?${params.toString()}`;
+		}
+
+		function syncBrowserUrlToState() {
+			const currentUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+			const shareUrl = buildShareUrlFromCurrentState();
+			const targetUrl = shareUrl || `${window.location.origin}${window.location.pathname}`;
+			if (targetUrl === currentUrl) return;
+			window.history.replaceState(null, '', targetUrl);
+		}
+
+		function scheduleBrowserUrlSync() {
+			if (shareUrlFrameHandle !== null) {
+				window.cancelAnimationFrame(shareUrlFrameHandle);
+			}
+			shareUrlFrameHandle = window.requestAnimationFrame(() => {
+				shareUrlFrameHandle = null;
+				syncBrowserUrlToState();
+			});
 		}
 
 		function updateShareButtonState() {
@@ -884,6 +905,7 @@
 					if (chartType === 'map' && !state.allRows.length) return;
 					state.chartType = chartType;
 					updateChartButtons();
+					scheduleBrowserUrlSync();
 					if (chartType === 'sql') {
 						// Signal the SQL workbench module to initialize (lazy)
 						document.dispatchEvent(new CustomEvent('eda:sql-activate'));
@@ -896,6 +918,7 @@
 			['dimensionSelect','metricSelect','aggregationSelect','splitSelect','orderBySelect','orderDirectionSelect']
 				.forEach(id => {
 					document.getElementById(id).addEventListener('change', () => {
+						scheduleBrowserUrlSync();
 						renderVisual();
 					});
 				});
@@ -1036,6 +1059,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				renderSummary();
 				renderVisual();
 				renderTable();
+				scheduleBrowserUrlSync();
 				updateProgress(`User source "${userDs.title}" loaded: ${userDs.rows.length.toLocaleString()} rows.`);
 				return;
 			}
@@ -1095,6 +1119,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				renderSummary();
 				renderVisual();
 				renderTable();
+				scheduleBrowserUrlSync();
 				updateProgress('All partitions loaded.');
 			} catch (error) {
 				console.error(error);
