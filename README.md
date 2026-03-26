@@ -15,6 +15,7 @@ A single-page, fully in-browser exploratory data analysis tool built with vanill
 ### Visualisation & Table
 - **Chart types:** Horizontal Bar, Vertical Bar, Pie, interactive Map (Leaflet + MarkerCluster), SQL Workbench, and **Dataset Catalog**.
 - **Controls:** Dimension, Metric, Aggregation, Split By, Order By, and Order Direction selectors update the chart instantly.
+- **Share state:** The **Share** button copies a URL containing the current dashboard selections for preloaded datasets. Opening that link restores the same state, while normal use of the app continues on the clean base URL.
 - **Data Table:** Tabulator-powered table with per-column header filters, horizontal scroll, and consistent column widths.
 - **Download:** Export the full dataset or the currently filtered rows to CSV.
 - **Chart filter:** Clicking a chart series/segment filters the table to matching rows; a badge shows the active filter with a one-click clear.
@@ -34,15 +35,15 @@ The **Catalog** view (accessible via the Catalog button in the chart-type toolba
 - Editor with line numbers, resizable panes, and `Ctrl+Enter` to run.
 - Results render in a scrollable table with row count and execution time.
 - Export query results to CSV with the **↓ CSV** button.
-- DuckDB is initialised lazily — the WASM bundle is only downloaded when the SQL tab is first opened.
+- DuckDB is initialised automatically when the page loads, so SQL, chart aggregation, and schema inspection are ready as soon as the engine finishes loading.
 
 ### Adding Your Own Data
 The **+ Add Source** button — available in both the **Catalog** sidebar and the **SQL** sidebar — lets you bring in your own data:
 
 | Option | How it works |
 |---|---|
-| **From URL** | Point to a publicly accessible `.csv` or `.parquet` file. The file must allow CORS. |
-| **Local File** | Upload a `.csv` or `.parquet` file directly from your computer. |
+| **From URL** | Point to a publicly accessible `.csv`, `.parquet`, `.geojson`, or `.json` file. The file must allow CORS. |
+| **Local File** | Upload a `.csv`, `.parquet`, `.geojson`, or `.json` file directly from your computer. |
 
 - Give the source a short **table alias** (letters, numbers, underscores) — this becomes the SQL table name.
 - The file is parsed in-browser and stored in **IndexedDB**, so it persists across page refreshes.
@@ -90,13 +91,15 @@ analysis-eda-tool/
 ### Running the ETL
 ```bash
 npm install          # Install ETL dependencies (csv-parse, csv-stringify, node-fetch, etc.)
-node etl.js          # Download source CSVs, partition by district, write data/report/
+node etl.js          # Download source CSVs and refresh BI settings metadata
 ```
 
 The ETL:
 1. Downloads fresh source CSVs into `data/raw/`.
-2. Filters and partitions rows into `data/report/<dataset>/`.
-3. Writes `<dataset>.index.json` (with a `generatedAt` timestamp) and `<dataset>-bi-settings.json` (including map metadata where applicable).
+2. Reads each raw CSV to infer dataset metadata.
+3. Writes `<dataset>-bi-settings.json` files (including map metadata where applicable) into `data/report/<dataset>/`.
+
+Current managed dataset partitions under `data/report/` remain part of the deployed app data. The ETL no longer regenerates the per-district CSV partition files.
 
 ### Serving the App
 Open `index.html` directly in a browser, or serve the repo root with any static server:
