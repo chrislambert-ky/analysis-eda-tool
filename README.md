@@ -4,7 +4,7 @@ A single-page, fully in-browser exploratory data analysis tool built with vanill
 
 > This application was built entirely with AI. The project is a deliberate demonstration that a complete, working app can be developed 100% through AI-driven implementation, with the human role limited to direction, prompting, testing, and evaluation rather than hand-editing code. No line of code in this application was manually written by the project owner.
 
-**Live app:** https://chrislambert-ky.github.io/analysis-eda-tool/  
+**Hosted version:** https://chrislambert-ky.github.io/analysis-eda-tool/ — open this URL to use the app without any local setup.  
 **Repository:** https://github.com/chrislambert-ky/analysis-eda-tool  
 **Data source:** https://trak.kytc.ky.gov/
 
