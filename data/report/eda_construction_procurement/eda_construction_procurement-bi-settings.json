@@ -1,6 +1,6 @@
 {
   "datasetName": "eda_construction_procurement",
-  "totalRecords": 5048,
+  "totalRecords": 5072,
   "dimensions": [
     "DISTRICT",
     "COUNTY"
