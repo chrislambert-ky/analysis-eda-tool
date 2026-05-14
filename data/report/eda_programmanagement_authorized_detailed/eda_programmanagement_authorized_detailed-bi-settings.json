@@ -1,6 +1,6 @@
 {
   "datasetName": "eda_programmanagement_authorized_detailed",
-  "totalRecords": 30529,
+  "totalRecords": 30540,
   "dimensions": [
     "DISTRICT",
     "COUNTY"
