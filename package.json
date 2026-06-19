@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "echo \"No tests yet\" && exit 0"
+    "etl": "node etl.js",
+    "test": "node --test"
   },
   "dependencies": {
   "csv-parse": "^6.1.0",
