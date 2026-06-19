@@ -28,7 +28,7 @@ jobs:
         run: npm install --no-audit --progress=false
 
       - name: Run ETL
-        run: npm run etl
+        run: node etl.js
 
       - name: Configure Git
         run: |
