@@ -1,40 +1,40 @@
 {
-  "totalRecords": 4976,
+  "totalRecords": 4344,
   "eda_current_enact_plan_data_set-District-01.csv": {
-    "records": 372
+    "records": 320
   },
   "eda_current_enact_plan_data_set-District-02.csv": {
-    "records": 410
+    "records": 350
   },
   "eda_current_enact_plan_data_set-District-03.csv": {
-    "records": 359
+    "records": 305
   },
   "eda_current_enact_plan_data_set-District-04.csv": {
-    "records": 374
+    "records": 316
   },
   "eda_current_enact_plan_data_set-District-05.csv": {
-    "records": 749
+    "records": 663
   },
   "eda_current_enact_plan_data_set-District-06.csv": {
-    "records": 471
+    "records": 425
   },
   "eda_current_enact_plan_data_set-District-07.csv": {
-    "records": 498
+    "records": 427
   },
   "eda_current_enact_plan_data_set-District-08.csv": {
-    "records": 307
+    "records": 286
   },
   "eda_current_enact_plan_data_set-District-09.csv": {
-    "records": 326
+    "records": 281
   },
   "eda_current_enact_plan_data_set-District-10.csv": {
-    "records": 270
+    "records": 222
   },
   "eda_current_enact_plan_data_set-District-11.csv": {
-    "records": 433
+    "records": 383
   },
   "eda_current_enact_plan_data_set-District-12.csv": {
-    "records": 361
+    "records": 320
   },
   "eda_current_enact_plan_data_set-District-Various.csv": {
     "records": 46
