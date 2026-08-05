@@ -1,16 +1,16 @@
 {
-  "totalRecords": 5125,
+  "totalRecords": 5131,
   "eda_construction_procurement-District-01.csv": {
-    "records": 298
+    "records": 299
   },
   "eda_construction_procurement-District-02.csv": {
     "records": 501
   },
   "eda_construction_procurement-District-03.csv": {
-    "records": 359
+    "records": 361
   },
   "eda_construction_procurement-District-04.csv": {
-    "records": 431
+    "records": 433
   },
   "eda_construction_procurement-District-05.csv": {
     "records": 487
@@ -19,7 +19,7 @@
     "records": 459
   },
   "eda_construction_procurement-District-07.csv": {
-    "records": 475
+    "records": 476
   },
   "eda_construction_procurement-District-08.csv": {
     "records": 331
