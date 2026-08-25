@@ -1,10 +1,10 @@
 {
-  "totalRecords": 5120,
+  "totalRecords": 5122,
   "eda_construction_procurement-District-01.csv": {
     "records": 303
   },
   "eda_construction_procurement-District-02.csv": {
-    "records": 507
+    "records": 508
   },
   "eda_construction_procurement-District-03.csv": {
     "records": 362
@@ -34,7 +34,7 @@
     "records": 511
   },
   "eda_construction_procurement-District-12.csv": {
-    "records": 516
+    "records": 517
   },
   "eda_construction_procurement-District-Various.csv": {
     "records": 0
