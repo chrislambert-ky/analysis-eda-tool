@@ -1,6 +1,6 @@
 {
   "datasetName": "eda_assets_bridge_condition_owner_area",
-  "totalRecords": 14456,
+  "totalRecords": 14351,
   "dimensions": [
     "DISTRICT",
     "COUNTY"
