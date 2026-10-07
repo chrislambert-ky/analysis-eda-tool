@@ -1,10 +1,10 @@
 {
-  "totalRecords": 33537,
+  "totalRecords": 33584,
   "eda_programmanagement_authorized_detailed-District-01.csv": {
     "records": 2197
   },
   "eda_programmanagement_authorized_detailed-District-02.csv": {
-    "records": 2628
+    "records": 2669
   },
   "eda_programmanagement_authorized_detailed-District-03.csv": {
     "records": 1992
@@ -31,7 +31,7 @@
     "records": 3070
   },
   "eda_programmanagement_authorized_detailed-District-11.csv": {
-    "records": 2776
+    "records": 2782
   },
   "eda_programmanagement_authorized_detailed-District-12.csv": {
     "records": 4216
