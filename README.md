@@ -90,19 +90,18 @@ analysis-eda-tool/
 
 ### Running the ETL
 ```bash
-npm install          # Install ETL dependencies (csv-parse, csv-stringify, node-fetch, etc.)
-node etl.js          # Download source CSVs and refresh BI settings metadata
+npm install          # Install ETL dependencies
+npm run etl          # Download source CSVs, partitions, and refresh BI settings
+npm test             # Run ETL unit tests
 ```
 
 The ETL:
 1. Downloads fresh source CSVs into `data/raw/`.
-2. Reads each raw CSV to infer dataset metadata.
-3. Writes `<dataset>-bi-settings.json` files (including map metadata where applicable) into `data/report/<dataset>/`.
-
-Current managed dataset partitions under `data/report/` remain part of the deployed app data. The ETL no longer regenerates the per-district CSV partition files.
+2. Reads each raw CSV and partitions records by district.
+3. Writes district partition CSVs, the dataset index, and `<dataset>-bi-settings.json` files (including map metadata where applicable) into `data/report/<dataset>/`.
 
 ### Serving the App
-Open `index.html` directly in a browser, or serve the repo root with any static server:
+Serve the repository root with a static server; opening `index.html` as a `file://` URL does not support the app's data fetches:
 
 ```bash
 npx serve .
@@ -110,7 +109,7 @@ npx serve .
 python -m http.server 8080
 ```
 
-No build step is required. The browser app has no Node.js dependencies — all libraries are loaded from CDN.
+No build step is required. The browser app's libraries are loaded from CDN; Node.js dependencies are used by the ETL and its tests.
 
 ---
 
@@ -147,13 +146,13 @@ Drop the repository root onto any static file host (Netlify, S3, Azure Static We
 
 | Library | Version | Purpose |
 |---|---|---|
-| Bootstrap | 5.3.3 | Layout and UI components |
-| Bootstrap Icons | 1.11 | Icon font |
-| Apache ECharts | 5.5.0 | Bar and pie charts |
-| Tabulator | 5.5.2 | Data table with filters and sorting |
+| Bootstrap | 5.3.8 | Layout and UI components |
+| Bootstrap Icons | 1.13.2 | Icon font |
+| Apache ECharts | 6.1.0 | Bar and pie charts |
+| Tabulator | 6.7.1 | Data table with filters and sorting |
 | Leaflet | 1.9.4 | Interactive map |
 | Leaflet.MarkerCluster | 1.5.3 | Map marker clustering |
-| DuckDB-WASM | 1.29.0 | In-browser SQL engine |
+| DuckDB-WASM | 1.32.0 | In-browser SQL engine |
 | IBM Plex Mono | — | Monospace font for code/SQL areas |
 
 ---
