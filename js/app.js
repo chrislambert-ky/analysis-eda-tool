@@ -1621,6 +1621,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					const description = item.description || item.fileName || item.url || 'Imported in this browser';
 					const canRefresh = item.sourceType === 'preloaded'
 						|| typeof window._edaRefreshUserSource === 'function';
+					const canRemove = item.sourceType === 'user'
+						&& typeof window._edaRemoveUserSource === 'function';
 					return `<div class="dataset-tree-entry" role="treeitem" data-catalog-dataset="${escHtml(item.id)}">`
 						+ `<div class="dataset-tree-node" title="${escHtml(description)}">`
 						+ `<i class="bi bi-table" aria-hidden="true"></i><span>${escHtml(item.title)}</span><span class="dataset-tree-loaded" hidden>Loaded</span>`
@@ -1630,6 +1632,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 						+ `<button type="button" class="btn btn-outline-primary btn-sm" data-catalog-action="preview" data-dataset-id="${escHtml(item.id)}" title="Preview data and schema"><i class="bi bi-eye" aria-hidden="true"></i> Preview</button>`
 						+ `<button type="button" class="btn btn-primary btn-sm" data-catalog-action="analyze" data-dataset-id="${escHtml(item.id)}" title="Load this dataset into the visualization and table">Analyze</button>`
 						+ (canRefresh ? `<button type="button" class="btn btn-outline-secondary btn-sm" data-catalog-action="refresh" data-dataset-id="${escHtml(item.id)}" title="Download a fresh copy and update the browser cache">Refresh</button>` : '')
+						+ (canRemove ? `<button type="button" class="btn btn-outline-danger btn-sm" data-catalog-action="remove" data-dataset-id="${escHtml(item.id)}" title="Remove this imported data source">Remove</button>` : '')
 						+ `</div></div>`;
 				}).join('')
 				+ `</div></section>`
@@ -1678,6 +1681,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const analyzeButton = entry.querySelector('[data-catalog-action="analyze"]');
 			analyzeButton.disabled = isLoaded;
 			analyzeButton.textContent = isLoaded ? 'Active' : 'Analyze';
+			analyzeButton.classList.toggle('btn-success', isLoaded);
+			analyzeButton.classList.toggle('btn-primary', !isLoaded);
 		});
 	}
 
@@ -1834,12 +1839,26 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		}
 		if (button.dataset.catalogAction === 'refresh') {
 			await refreshCatalogDataset(dataset);
+			return;
+		}
+		if (button.dataset.catalogAction === 'remove' && window._edaRemoveUserSource) {
+			try {
+				const removed = await window._edaRemoveUserSource(dataset.id);
+				if (!removed) return;
+				if (state.datasetId === dataset.id && DATASETS.length) {
+					await selectDataset(DATASETS[0].id);
+				}
+				renderCatalog();
+			} catch (error) {
+				console.error(`Could not remove dataset "${dataset.id}":`, error);
+				updateProgress(`Could not remove "${dataset.title}": ${error.message}`);
+			}
 		}
 	}
 
 	async function refreshCatalogDataset(dataset) {
 		const entry = [...document.querySelectorAll('#catalogDatasetList .dataset-tree-entry')]
-			.find(item => item.querySelector('[data-catalog-dataset]')?.dataset.catalogDataset === dataset.id);
+			.find(item => item.dataset.catalogDataset === dataset.id);
 		const status = entry?.querySelector('[data-cache-status]');
 		const buttons = entry?.querySelectorAll('[data-catalog-action]');
 		if (!entry || !status || !buttons) return;

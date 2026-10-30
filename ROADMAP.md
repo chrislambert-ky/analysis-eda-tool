@@ -1,20 +1,19 @@
 # EDA Tool — Development Roadmap
 
-This document maps out the full evolution of the app from its current state through a DuckDB-first progressive web app and, eventually, an Electron desktop application. Pick up any phase independently; each builds on the previous but the app remains fully functional between phases.
+This document describes a staged path from the current GitHub Pages tool to a more complete, installable browser app. Keep the app useful and deployable at every stage; do not introduce a backend or desktop wrapper unless a concrete requirement justifies it.
 
 ---
 
-## Current State (as of v1.2.0)
+## Current State (October 2026)
 
-- Single `index.html` (~3,800 lines), no build step, deployed to GitHub Pages
-- **Two-script architecture** (IIFE + ES module — see note in 1.1):
-  - IIFE script: fetches partition CSVs → JS parse → materializes rows into `state.allRows`; chart aggregation now routes through DuckDB when ready, falls back to `prepareSeries()` otherwise
-  - ES module: DuckDB-WASM — **now eager-initialised on `DOMContentLoaded`** (not on SQL tab click); exposes `window._edaQuery` and dispatches `eda:duckdb-ready` when ready
-- Charts upgraded from JS aggregation to DuckDB SQL automatically via `eda:duckdb-ready` event after WASM loads
-- Header shows a live DuckDB status dot (loading → ready / error)
-- IndexedDB: two separate stores (`analysis_eda_tool_db` partitions + `eda_sql_user_sources`)
-- Table and map still depend on `state.allRows` being fully loaded in memory
-- No offline support, no installability, no desktop packaging
+- Static, no-build app hosted on GitHub Pages; no backend, and user data stays in the browser.
+- `index.html` is now the page shell; styles and browser logic are split across `css/app.css` and native ES modules in `js/`.
+- Modules extracted so far: chart engine, dataset loader, shared IndexedDB store, share-link helpers, and DuckDB-WASM SQL workbench. `js/app.js` remains the large UI coordinator; further feature-boundary extraction is still needed.
+- The app has a full-height dataset tree with Preview / Analyze / Refresh, a 10-row preview and separate schema view, chart and SQL surfaces, a chart view, a paged data table, and the existing Leaflet map/options.
+- Chart aggregation uses DuckDB-WASM when available with a tested JavaScript fallback. Managed CSV partitions and imported user sources are cached in the shared IndexedDB database.
+- The left catalog drives dataset selection; the header indicates the active dataset. Chart controls sit beside the chart; table-column controls sit beside the table.
+- **Not yet implemented:** multiple independent canvas tabs, persisted workspace/canvas state, OPFS-backed DuckDB database, service worker/offline app shell, PWA manifest/install flow, file conversion, and desktop packaging.
+- Current test suite covers ETL, chart engine, dataset loader, IndexedDB initialization, and share-link helpers.
 
 ---
 
@@ -49,16 +48,14 @@ This document maps out the full evolution of the app from its current state thro
 
 ### 1.4 Unify the IDB stores ✅
 - ✅ `analysis_eda_tool_db` bumped to version 2; `onupgradeneeded` adds `sources`, `user_source_data`, `user_source_bytes` stores alongside the existing `partitions` store
-- ✅ `eda_sql_user_sources` database eliminated — both script blocks now open `analysis_eda_tool_db` v2
-- ✅ `loadPersistedUserDatasets()` (IIFE) uses the shared `getDatabase()` connection instead of a separate inline `indexedDB.open()` call; no more `db.close()` on the shared handle
-- ✅ ES module `openUserIDB()` redirected to `analysis_eda_tool_db` v2; `onupgradeneeded` handles both fresh install and v1→v2 upgrade (adds the three user stores without touching `partitions`)
-- ✅ All `idbUser*` / `idbBytes*` functions unchanged — they still reference `userIdb`; only the underlying database changed
+- ✅ `eda_sql_user_sources` database eliminated; dashboard and SQL workbench share `analysis_eda_tool_db` v2
+- ✅ Shared `getDatabase()` connection/schema initialization extracted to `js/data-store.mjs`
+- ✅ Dashboard and SQL workbench use the same opener and preserve all four existing stores
 - ✅ App versioned at `v1.5.0`
 
-### 1.5 Catalog schema via DuckDB only
-- `DESCRIBE <table>` is the single schema source — no raw CSV header parse, no BI-settings fallback
-- Catalog always shows accurate DuckDB-native types (`BIGINT`, `DATE`, `VARCHAR`, etc.)
-- Remove `fetchRawCsvSample()`, `inferColumnType()`, and `catalogSchemaCache` partial-schema logic
+### 1.5 Catalog schema via DuckDB only (Deferred)
+- Current preview uses DuckDB schema when available, with sampled CSV and BI-settings fallback paths.
+- Consolidate schema lookup on `DESCRIBE` after the catalog and SQL data-source lifecycles have a stable interface.
 
 ### 1.6 ETL simplification
 - Remove partition CSV generation from `etl.js` — only write `data/raw/*.csv` and BI settings JSON
@@ -162,52 +159,39 @@ When a database file is imported, the sidebar entry expands into a **three-level
 
 ---
 
-## Phase 1.7 — File Structure Refactor (Recommended alongside Phase 1)
+## Phase 1.7 — File Structure Refactor (In Progress)
 
-**Goal:** Split `index.html` into focused, single-purpose files without introducing a build step. No bundler, no npm scripts — just plain `<script type="module" src="...">` references.
+**Goal:** Keep the GitHub Pages app build-free while moving browser behavior into focused, single-purpose native ES modules.
 
 **Why this matters:**
-- A single file growing past ~4,000 lines degrades AI-assisted editing reliability. The AI may only see part of the file in context at once and produce changes that are locally correct but break something elsewhere.
-- Named, focused files give AI editors (and humans) unambiguous targets: *"fix the chart aggregation"* → `js/charts.js`, *"update the table pager"* → `js/table.js`.
-- Browser caching becomes granular: a CSS tweak no longer forces a full HTML re-download.
+- Smaller modules give contributors and AI editors clear ownership boundaries.
+- Native modules work directly from the static GitHub Pages deployment; no bundler or browser build step is required.
+- Browser caching remains granular, and isolated logic can be tested in Node.
 
-### Proposed structure
+### Current module structure
 
 ```
 analysis-eda-tool/
-├── index.html              (~150 lines — HTML skeleton, <script> wiring only)
-├── etl.js                  (unchanged — Node.js ETL, not loaded by browser)
-├── css/
-│   └── app.css             (all styles, currently inline or in <style> blocks)
-├── js/
-│   ├── engine.js           (DuckDB init, query runner, IDB/OPFS cache layer)
-│   ├── charts.js           (ECharts rendering, chart control state, query builder)
-│   ├── table.js            (Tabulator setup, paging, column filters, CSV export)
-│   ├── map.js              (Leaflet init, point layer, future choropleth layer)
-│   ├── catalog.js          (dataset listing, schema display, user source import)
-│   └── sql-editor.js       (CodeMirror setup, SQL tab, result grid)
-├── data/
-│   └── ...
-└── ...
+├── index.html
+├── css/app.css
+└── js/
+    ├── app.js                 (page startup, UI state, event wiring; still oversized)
+    ├── chart-engine.mjs       (aggregation, sorting, ECharts options)
+    ├── data-store.mjs         (shared IndexedDB schema and partition API)
+    ├── dataset-loader.mjs     (CSV parsing, partition fetch/cache, previews)
+    ├── share.mjs              (pure share-link parsing/serialization)
+    └── duckdb.js              (DuckDB-WASM, SQL workbench, imported sources)
 ```
 
-### Migration approach (no big-bang rewrite)
-1. Create each `js/*.js` file as an ES module (`export`/`import`)
-2. Move one logical section at a time from `index.html` into its module — test after each move
-3. Replace the moved `<script>` block in `index.html` with `<script type="module" src="js/engine.js">` (the top-level entry point that imports the others)
-4. No code logic changes required during the move — only file boundaries change
+### Remaining work
+1. Extract table setup, paging, column visibility, and downloads into a table module.
+2. Extract dataset tree and preview behavior into a catalog module.
+3. Extract map UI/rendering only after the product direction for maps is clearer; keep the current map unchanged until then.
+4. Reduce `app.js` to a small entry point that composes modules and owns shared app/workspace state.
+5. Replace ad hoc `window._eda*` coupling with an explicit, documented module/event interface. Do this incrementally; do not repeat the earlier risky all-at-once bridge consolidation.
+6. Preserve direct GitHub Pages hosting and validate each move with targeted tests and a browser smoke test.
 
-### File responsibility rules (prevents "lost track" problem)
-| File | Owns | Never touches |
-|---|---|---|
-| `engine.js` | DuckDB conn, query execution, cache | DOM, ECharts, Leaflet |
-| `charts.js` | ECharts instances, chart controls | DuckDB directly (calls engine) |
-| `table.js` | Tabulator instance, paging | ECharts, Leaflet |
-| `map.js` | Leaflet map, layers | ECharts, Tabulator |
-| `catalog.js` | Dataset management UI | Chart/map rendering |
-| `sql-editor.js` | SQL tab UI, CodeMirror | Chart/map state |
-
-**Milestone:** `index.html` is under 200 lines of HTML. All JS logic lives in named modules. No build tooling required.
+The HTML contains real page markup and does not need an arbitrary line-count target. The completion criterion is clear ownership and testable module boundaries, not a 200-line `index.html`.
 
 ---
 
@@ -236,7 +220,7 @@ analysis-eda-tool/
 - Users can browse, rename, and delete imported datasets from the Catalog page
 - Datasets survive browser restarts without requiring the SQL tab or a re-import
 
-**Milestone:** App works entirely offline after first load. Storage is a single OPFS DuckDB file. Remote Parquet queries work against multi-GB files without full download.
+**Milestone:** Where supported, managed and imported data can persist in OPFS and be queried after reload/offline. Retain a clear fallback for browsers without the required storage support. Remote Parquet range queries are a separately verified optimization, not a requirement for the initial app migration.
 
 ---
 
@@ -359,7 +343,8 @@ Minimal manifest to enable "Add to Home Screen" / "Install App" in Chrome and Ed
 {
   "name": "EDA Tool",
   "short_name": "EDA",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f5f6f8",
   "theme_color": "#0d6efd",
@@ -375,15 +360,15 @@ Minimal manifest to enable "Add to Home Screen" / "Install App" in Chrome and Ed
 - `display: "standalone"` removes the browser address bar and tab UI — the app feels native
 
 ### 4.2 Service Worker (`sw.js`)
-- Pre-cache all static assets (HTML, CSS, JS bundles, CDN scripts) at install time
-- Cache-first strategy for app shell; network-first for data files
+- Pre-cache the same-origin app shell and modules with an explicit cache version
+- Use network-first or stale-while-revalidate for managed dataset files; preserve HTTP Range behavior if remote Parquet is later used
 - DuckDB WASM bundle is large (~8 MB) — cache it permanently, update only on version bump
-- Managed dataset Parquets cached after first fetch; stale-while-revalidate on ETL refresh
+- Do not assume third-party CDN assets can be safely or reliably pre-cached; decide fallback/update behavior for each dependency
 
 ```
 sw.js responsibilities:
-  install  → cache app shell + DuckDB WASM bundle
-  fetch    → serve app shell from cache; fetch data with network fallback
+  install  → cache same-origin app shell and versioned modules
+  fetch    → serve shell with network fallback; preserve data refresh and range requests
   activate → clean up old cache versions
 ```
 
@@ -402,18 +387,24 @@ sw.js responsibilities:
 - `icons/icon-192.png`
 - `icons/icon-512.png`
 
-**Note:** OPFS (Phase 2) is the critical dependency for a useful offline PWA. The app shell can be cached without OPFS, but data won't be available offline until datasets are stored there.
+**Note:** The app shell can be installable before all datasets are offline-ready. Offline data availability depends on the selected storage strategy and which datasets the user has loaded; communicate that explicitly instead of promising all data is available offline.
 
 ---
 
-## Phase 5 — Electron Desktop App
+## Phase 5 — Optional Local Desktop App (Far Future)
 
-**Goal:** A native desktop application with local filesystem access, no browser required.
+**Goal:** Revisit whether a local desktop app is worthwhile if GitHub Pages and browser storage eventually limit real user workflows. This is explicitly a far-future option, not part of the current delivery plan.
+
+### 5.0 Evaluate the need and implementation options
+- First identify a measured limitation that the GitHub Pages/PWA version cannot address (for example, very large local files, storage quotas, or native filesystem access).
+- Compare a Rust-backed local app (for example, Tauri with a Rust command layer and a web UI) against a mostly-Rust UI and Electron. Do not select a framework based only on expected speed; benchmark actual data-loading, query, packaging, and maintenance needs.
+- Reuse the current browser app and DuckDB-WASM where it remains sufficient. Consider a Rust core or native DuckDB integration only if it solves a demonstrated problem.
+- Keep any future local app able to open the existing CSV/Parquet inputs and preserve documented workspace/data formats where practical.
 
 ### 5.1 Why Electron (and when to consider alternatives)
-- **Electron** bundles Chromium + Node.js — the app runs identically to the browser version with zero code changes in the renderer (HTML/JS) layer
+- Electron is one possible implementation, not the default or a commitment. It bundles Chromium + Node.js and can reuse the browser renderer.
 - Node.js access layer (`main.js`) unlocks: native file dialogs, direct filesystem reads, background jobs, system tray, auto-update
-- **Alternative:** [Tauri](https://tauri.app/) — Rust + system WebView instead of Chromium. Much smaller binary (~5 MB vs ~120 MB) but requires Rust toolchain and has a smaller DuckDB-WASM compatibility surface. Evaluate at implementation time.
+- **Alternative:** [Tauri](https://tauri.app/) uses Rust with a system WebView; a Rust-native UI is another option. Evaluate toolchain, DuckDB integration, platform support, binary size, and maintenance at implementation time.
 
 ### 5.2 Project structure (Electron)
 
@@ -497,8 +488,8 @@ npx electron-builder --linux  # .AppImage
 | [PondPilot](https://app.pondpilot.io/) | Instructional empty state; sidebar of datasets + saved queries; preview table on load; "+" tab opening a blank canvas that becomes a query view or a chart; chart toolbar (x, y, type, group-by, aggregation, sort, title/labels) |
 | [GeoLibre](https://web.geolibre.app/), [Kepler.gl](https://kepler.gl/), [GeoForger](https://mapryx.geoforger.com/map) | Map canvas with layer panel, styling, filters, and spatial-SQL-driven layers |
 
-### 6.0 Prerequisite — Phase 1.7 file split
-Do not add these features to the single `index.html`. Complete Phase 1.7 first (or at minimum extract `js/state.js`, `js/duckdb.js`, `js/ui/*.js`, `css/app.css`) using native ES modules (no bundler), which GitHub Pages serves directly. Add tests for pure logic (SQL builders, format detection) under `test/` before moving on. Resolve the two-script (IIFE + module) split here by moving to a single module entry point with an explicit event/bus API.
+### 6.0 Prerequisite — modular app foundation
+The initial split is done: HTML and CSS are externalized; chart logic, dataset loading, shared storage, and share-link logic are native modules with tests. Finish the remaining Phase 1.7 work—especially table/catalog boundaries and a documented app-state interface—before adding multi-canvas persistence. Keep the no-build GitHub Pages deployment working throughout.
 
 ### 6.1 App shell: sidebar + empty state
 - Full-height, docked left pane with a dataset tree grouped into **Preloaded** and **Imported** sources; future sections may include **Queries** and **Settings/Options**
@@ -519,9 +510,10 @@ Do not add these features to the single `index.html`. Complete Phase 1.7 first (
 - Schema surface: columns, types, null counts, distinct counts, basic profile (all via DuckDB `SUMMARIZE`/`DESCRIBE`)
 
 ### 6.4 Workspace tabs and canvases
-- "+" button opens a new tab: blank canvas → user chooses **Query/Table**, **Chart**, or **Map**
-- Tab state is a serializable object `{id, type, datasetRef, config}` so tabs can be persisted (IndexedDB) and restored
-- Each canvas owns its surface; SQL statements stay in the SQL canvas and are not displayed above chart output
+- "+" opens a new tab. A blank canvas lets the user choose **Query/Table**, **Chart**, or **Map**.
+- Model each canvas as serializable state, for example `{id, kind, title, datasetRef, query, view, config}`. Keep the SQL editor/query text in query canvases, not above chart output.
+- A canvas owns its own selected dataset/query, view type, and control configuration. Switching canvases must not silently overwrite another canvas's state.
+- First ship in-memory tab state; persist and restore canvases only after the state model and migration/versioning behavior are tested.
 - **Chart canvas toolbar:** x-axis, y-axis (multi), chart type (bar, horizontal bar, stacked bar, line, area, pie), group-by/series, aggregation (sum, avg, count, min, max, count distinct), sort (field + direction), title and axis labels. Config → SQL builder → ECharts option; the builder is a pure function and unit tested.
 
 ### 6.5 Export & Convert
@@ -547,9 +539,47 @@ Do not add these features to the single `index.html`. Complete Phase 1.7 first (
 
 ### Risks
 - Regressing the current working app during refactor: keep each step shippable, move code without behavior changes, and verify in-browser after each move
-- The previous `window._eda*` bridge consolidation failed on execution order; the module-based entry point must make initialization order explicit (await DuckDB ready before registering datasets)
+- The previous `window._eda*` bridge consolidation failed on execution order; make initialization order explicit and replace globals incrementally
+- Canvas persistence can entangle SQL, dataset, chart, and map state if introduced before a clear per-canvas state model exists
 - Browser memory limits for large file conversion
 - DuckDB-WASM spatial extension availability and size
+
+---
+
+## App Migration Strategy — GitHub Pages First
+
+**Product constraint:** Maximize the functionality of the GitHub Pages-hosted browser app. Do not require paid hosting, a backend, or a new deployment environment for the planned work. A future move to another platform is a distant possibility to revisit only if funding and concrete requirements justify it; it is not a current milestone.
+
+**Product direction:** Make the browser app feel like a capable desktop workspace while preserving static GitHub Pages hosting and in-browser data processing. An installable PWA is an enhancement to that same hosted app, not a migration away from Pages. Electron/Tauri is explicitly out of the near-term plan.
+
+### Milestone A — Finish module boundaries
+- Extract the table and catalog UI from `app.js`; keep data access in `data-store.mjs` / `dataset-loader.mjs` and rendering in feature modules.
+- Define one explicit app/workspace state contract and lifecycle for DuckDB readiness, dataset selection, and view changes.
+- Keep browser UI, dataset/query behavior, and storage integration separated so a future local Rust app can reuse documented data/workspace concepts without requiring a rewrite today.
+- Keep each change behavior-preserving and covered by focused tests.
+- **Exit:** changing a dataset or surface does not depend on script load order or undocumented globals.
+
+### Milestone B — Make it a workspace
+- Introduce canvas tabs and a blank-canvas state. Begin with in-memory canvases so each canvas can independently own a dataset, query, visualization type, and settings.
+- Provide focused **Table**, **Chart**, and **SQL/Query** experiences; keep SQL text/results inside the query experience.
+- Add chart configuration controls to chart canvases and preserve the existing table/chart/map behaviors during migration.
+- **Exit:** users can open and switch between two canvases without one canvas changing the other's controls or result.
+
+### Milestone C — Persist workspace and data safely
+- Version and migrate persisted workspace state; restore tab/canvas selection and configuration after reload.
+- Evaluate DuckDB-WASM OPFS for managed/imported data, with IndexedDB/CSV fallback where OPFS or browser support is unavailable.
+- Keep the current hosted CSV partitions as the source of truth initially. Treat hosted Parquet/range querying as a later opt-in optimization after real files, CORS, HTTP range behavior, and DuckDB-WASM compatibility are verified.
+- **Exit:** a reload restores workspace state and previously imported data without silently corrupting existing IndexedDB data.
+
+### Milestone D — Installable GitHub Pages app
+- Add a manifest, app icons, install guidance, and a service worker only after the shell and storage behavior are stable.
+- Resolve all asset, start, scope, and service-worker URLs relative to the GitHub Pages project path (the site is not hosted at the domain root).
+- Cache only assets with a deliberate update policy; do not make releases depend on an opaque cache of third-party CDN files.
+- **Exit:** install, update, reload, and offline-unavailable states are understandable and tested on the hosted Pages URL.
+
+### Milestone E — Advanced browser features
+- Add file conversion/export as a distinct workflow, then revisit the map last after deciding whether the existing Leaflet map remains the default or an advanced GIS canvas is added.
+- Keep desktop packaging and a hosting migration out of scope unless a concrete browser limitation and funding make them worthwhile; if that point arrives, evaluate Rust/Tauri alongside Electron rather than assuming either.
 
 ---
 
@@ -569,20 +599,20 @@ Do not add these features to the single `index.html`. Complete Phase 1.7 first (
 ## Recommended Implementation Order
 
 ```
-Now          Phase 1 (DuckDB engine)     — highest leverage, unblocks everything
+Now          Finish Phase 1.7           — complete feature modules and explicit app state
              ↓
-Q2 2026      Phase 2 (OPFS persistence)  — enables offline + big data
+Next         Phase 6.3–6.4               — surface navigation, independent in-memory canvases
              ↓
-Q3 2026      Phase 3 (big data features) — value-add on solid foundation
+Then         Phase 2                     — versioned OPFS persistence with browser fallback
              ↓
-Q3 2026      Phase 4 (PWA)               — parallel with Phase 3, low effort
+Then         Phase 4                     — installable PWA; GitHub Pages subpath-aware caching
              ↓
-Q4 2026      Phase 5 (Electron)          — after PWA validates the offline UX
+Later        Phase 6.5 + Phase 3         — conversion/export and advanced analysis
+Last         Phase 6.6                   — choose/evolve GIS canvas after map requirements settle
+Far future   Phase 5                     — evaluate a local Rust/Tauri, Rust-native, or Electron app only if justified
 ```
 
-Phase 6 (workspace UX) starts with the Phase 1.7 file split and can proceed in parallel with Phases 2–4.
-
-Phases 3 and 4 can run in parallel — PWA manifest and service worker are largely independent of the data layer work.
+Phase 6.1 and 6.2 (the docked dataset browser, preview, Analyze/Refresh flow) are implemented. Phase 1 DuckDB chart aggregation, shared IndexedDB, modular CSS, and several tested ES modules are also in place. The immediate work is to finish the app-state/module boundary, then build canvases in memory before deciding persistence details. This order reduces the risk of persisting an unstable state model.
 
 ---
 

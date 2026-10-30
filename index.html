@@ -152,12 +152,10 @@
 								</select>
 							</div>
 						</div>
-					<!-- SQL Sidebar Panel (shown when chart type = sql) -->
+					<!-- SQL Schema Panel (shown when chart type = sql) -->
 						<div id="sqlSidebarPanel" style="display:none" class="flex-column flex-grow-1 mb-2">
-							<button class="btn btn-outline-info btn-sm w-100 mb-2" id="sqlAddSourceBtn" style="font-size:11px" disabled>
-								&#xff0b; Add Source
-							</button>
-							<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Data Sources</div>
+							<div class="text-uppercase text-secondary fw-medium mb-1" style="font-size:10px;letter-spacing:1.5px">Dataset Schema</div>
+							<div class="text-muted mb-2" style="font-size:10px">Expand a dataset to inspect columns. Select a dataset name to use it in the SQL editor.</div>
 							<div class="flex-grow-1 overflow-auto border rounded" id="sqlTableList" style="min-height:0">
 								<div class="sql-state-msg">Loading&hellip;</div>
 							</div>
@@ -317,14 +315,14 @@
 				<p>Use the full-height <strong>Datasets</strong> pane to browse preloaded and imported data. Select <strong>Preview</strong> to see its first 10 rows with type icons or switch to the separate Schema view. Choose <strong>Analyze</strong> to load it into the visualization and table, or <strong>Refresh</strong> to download a fresh copy.</p>
 
 				<h6>Adding Your Own Data</h6>
-				<p>Load your own data file and query it alongside the preloaded datasets. Click <strong>+ Add Source</strong> in the docked dataset pane or the <strong>SQL</strong> sidebar. Three formats are supported:</p>
+				<p>Load your own data file and query it alongside the preloaded datasets. Click <strong>+ Add Source</strong> in the docked dataset pane. Three formats are supported:</p>
 				<ul>
 					<li><code>.csv</code> &mdash; comma-separated values; headers auto-detected</li>
 					<li><code>.parquet</code> &mdash; columnar binary format; registered directly in DuckDB for full type fidelity</li>
 					<li><code>.geojson</code> / <code>.json</code> &mdash; GeoJSON FeatureCollections; feature <code>properties</code> become table columns; Point geometry coordinates are extracted as <code>_lat</code> and <code>_lon</code> for use in the Map tab</li>
 				</ul>
 				<p>Choose <em>From URL</em> to point to a publicly accessible file (CORS required), or <em>Local File</em> to upload directly from your computer. Give the source a short table alias &mdash; this becomes its SQL table name &mdash; then click <strong>Add &amp; Load</strong>. The source is registered in DuckDB and persisted in your browser&rsquo;s IndexedDB so it survives page refreshes.</p>
-				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. They appear in the dataset tree and SQL sidebar. To remove a source, click the &times; next to it in the SQL sidebar.</p>
+				<p class="text-muted" style="font-size:.8rem">User-added sources are stored entirely in your browser and are never sent to any server. They appear in the dataset tree and SQL schema panel. Add or remove them from the docked dataset pane.</p>
 
 				<h6>SQL Workbench</h6>
 				<p>The <strong>SQL</strong> tab gives direct access to the DuckDB-WASM engine. Join your own data against preloaded datasets, filter, aggregate, and export results to CSV &mdash; all without a backend. Use <kbd>Ctrl+Enter</kbd> to run a query.</p>

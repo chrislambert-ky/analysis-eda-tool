@@ -90,9 +90,6 @@
 	.td-null { color: #adb5bd; font-style: italic; }
 	.td-num  { color: #003764; }
 	.td-bool { color: #6f42c1; }
-	/* delete button on user sources */
-	.sql-del-btn { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 11px; padding: 0 2px; line-height: 1; flex-shrink: 0; opacity: .6; transition: opacity .15s; }
-	.sql-del-btn:hover { opacity: 1; }
 	.app-shell { max-width: none; min-height: 100vh; padding: 0; }
 	.workspace-layout { display: grid; grid-template-columns: 276px minmax(0, 1fr); align-items: stretch; gap: 0; min-height: 100vh; }
 	.workspace-main { min-width: 0; padding: 1rem 1.25rem; }

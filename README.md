@@ -36,11 +36,12 @@ The docked **Datasets** pane provides a tree of preloaded and imported datasets:
 - Write and run arbitrary SQL against any combination of managed and user-added datasets.
 - Editor with line numbers, resizable panes, and `Ctrl+Enter` to run.
 - Results render in a scrollable table with row count and execution time.
+- The SQL-side panel is a schema explorer for datasets managed in the left pane; expand a source to inspect its columns or select its name to insert a table reference into the editor.
 - Export query results to CSV with the **↓ CSV** button.
 - DuckDB is initialised automatically when the page loads, so SQL, chart aggregation, and schema inspection are ready as soon as the engine finishes loading.
 
 ### Adding Your Own Data
-The **+ Add Source** button in the docked dataset pane or the **SQL** sidebar lets you bring in your own data:
+The **+ Add Source** button in the docked dataset pane lets you bring in your own data:
 
 | Option | How it works |
 |---|---|
@@ -50,8 +51,8 @@ The **+ Add Source** button in the docked dataset pane or the **SQL** sidebar le
 - Give the source a short **table alias** (letters, numbers, underscores) — this becomes the SQL table name.
 - The file is parsed in-browser and stored in **IndexedDB**, so it persists across page refreshes.
 - Local file sources are reloaded from the browser cache on refresh; URL sources are re-fetched from the network.
-- Remove a source by clicking the **×** next to it in the SQL sidebar.
-- User-added datasets appear immediately in the docked tree and SQL table list.
+- Remove an imported source from its entry in the docked dataset tree.
+- User-added datasets appear immediately in the docked tree and SQL schema explorer.
 
 ### Preloaded Datasets
 Four managed datasets are sourced from the [Kentucky Transportation Cabinet TRAK system](https://trak.kytc.ky.gov/), partitioned by district, and cached in IndexedDB:

@@ -91,6 +91,7 @@ let initialized   = false;
 let initializing  = false;
 let tableColumns     = new Map();   // alias → [{name, type}]
 window._edaTableColumns = tableColumns; // expose to catalog schema resolver
+window._edaRemoveUserSource = removeUserSource;
 let sqlSettingsCache = new Map();   // alias → BI settings object (or null)
 let lastResult    = null;        // { cols, rows } for CSV export
 let sqlTabulator  = null;        // current Tabulator instance in the results pane
@@ -163,8 +164,6 @@ async function initDuckDB() {
 		document.dispatchEvent(new CustomEvent('eda:duckdb-ready'));
 		const runBtn = $('sqlRunBtn');
 		if (runBtn) runBtn.disabled = false;
-		const addBtn = $('sqlAddSourceBtn');
-		if (addBtn) addBtn.disabled = false;
 		const catalogAddBtn = $('catalogAddSourceBtn');
 		if (catalogAddBtn) catalogAddBtn.disabled = false;
 	} catch (e) {
@@ -215,13 +214,13 @@ async function registerSource(src) {
 }
 
 // ── Sidebar rendering ──────────────────────────────────────────────────────
-function makeTableItem(src, isUser) {
+function makeTableItem(src) {
 	const wrapper = document.createElement('div');
 	wrapper.className = 'sql-table-item-wrapper';
 	wrapper.id = `sql-tiw-${src.alias}`;
 
 	const item = document.createElement('div');
-	item.className = 'sql-table-item' + (isUser ? ' sql-table-item-user' : '');
+	item.className = 'sql-table-item';
 	item.id = `sql-ti-${src.alias}`;
 
 	const ft   = guessFileType(src.url);
@@ -232,15 +231,11 @@ function makeTableItem(src, isUser) {
 		<span style="font-size:10px;opacity:0.4;flex-shrink:0">${icon}</span>
 		<span class="sql-table-name" title="SQL alias: ${escHtml(src.alias)}">${escHtml(src.title || src.alias)}</span>
 		<span class="badge bg-secondary bg-opacity-25 text-secondary ms-auto" id="sql-badge-${escHtml(src.alias)}" style="font-size:10px">&#x2026;</span>
-		${isUser ? `<button class="sql-del-btn" title="Remove source" data-alias="${escHtml(src.alias)}">&#x2715;</button>` : ''}
 	`;
 
 	item.querySelector('.sql-expand-btn').addEventListener('click', e => { e.stopPropagation(); toggleExpand(src.alias); });
-	if (isUser) {
-		item.querySelector('.sql-del-btn').addEventListener('click', e => { e.stopPropagation(); removeUserSource(src.alias); });
-	}
 	item.addEventListener('click', e => {
-		if (!e.target.closest('.sql-expand-btn') && !e.target.closest('.sql-del-btn')) insertTableRef(src.alias);
+		if (!e.target.closest('.sql-expand-btn')) insertTableRef(src.alias);
 	});
 
 	const fieldList = document.createElement('div');
@@ -262,14 +257,14 @@ function renderSidebar() {
 	managedLabel.className = 'sql-source-label';
 	managedLabel.textContent = 'Managed';
 	list.appendChild(managedLabel);
-	SQL_DATASETS.forEach(src => list.appendChild(makeTableItem(src, false)));
+	SQL_DATASETS.forEach(src => list.appendChild(makeTableItem(src)));
 
 	if (userSources.length) {
 		const userLabel = document.createElement('div');
 		userLabel.className = 'sql-source-label';
 		userLabel.textContent = 'My Sources';
 		list.appendChild(userLabel);
-		userSources.forEach(src => list.appendChild(makeTableItem(src, true)));
+		userSources.forEach(src => list.appendChild(makeTableItem(src)));
 	}
 }
 
@@ -613,11 +608,21 @@ async function saveNewSource() {
 }
 
 async function removeUserSource(alias) {
-	if (!confirm(`Remove "${alias}" from your sources?\nThis only affects your browser.`)) return;
+	if (!confirm(`Remove "${alias}" from your sources?\nThis only affects your browser.`)) return false;
+	if (!userIdb) {
+		userIdb = await getDatabase();
+		userSources = await idbUserGetAll();
+	}
 	await idbUserDelete(alias);
 	await idbUserDataDelete(alias);
 	await idbBytesDelete(alias);
-	try { await conn.query(`DROP VIEW IF EXISTS "${alias}";`); } catch (_) {}
+	if (conn) {
+		try {
+			await conn.query(`DROP VIEW IF EXISTS "${alias}";`);
+		} catch (error) {
+			console.warn(`Could not drop DuckDB view for "${alias}":`, error);
+		}
+	}
 	tableColumns.delete(alias);
 	userSources = userSources.filter(s => s.alias !== alias);
 	removeUserDatasetFromEDA(alias);
@@ -625,6 +630,7 @@ async function removeUserSource(alias) {
 	renderSidebar();
 	SQL_DATASETS.forEach(s => updateBadge(s.alias, tableColumns.has(s.alias) ? 'loaded' : 'error'));
 	userSources.forEach(s  => updateBadge(s.alias,  tableColumns.has(s.alias)  ? 'loaded' : 'error'));
+	return true;
 }
 
 // ── Column fetching & field browser ───────────────────────────────────────
@@ -1001,7 +1007,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	$('sqlExportBtn')?.addEventListener('click', exportCSV);
 
-	$('sqlAddSourceBtn')?.addEventListener('click', openAddModal);
 	$('catalogAddSourceBtn')?.addEventListener('click', openAddModal);
 	$('sqlAddModalClose')?.addEventListener('click',  closeAddModal);
 	$('sqlAddModalCancel')?.addEventListener('click', closeAddModal);
