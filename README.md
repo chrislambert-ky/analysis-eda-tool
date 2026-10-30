@@ -13,21 +13,23 @@ A single-page, fully in-browser exploratory data analysis tool built with vanill
 ## Features
 
 ### Visualisation & Table
-- **Chart types:** Horizontal Bar, Vertical Bar, Pie, interactive Map (Leaflet + MarkerCluster), SQL Workbench, and **Dataset Catalog**.
+- **Views:** Horizontal Bar, Vertical Bar, Pie, interactive Map (Leaflet + MarkerCluster), and SQL Workbench. A docked dataset tree provides browsing, preview, load, and refresh actions.
 - **Controls:** Dimension, Metric, Aggregation, Split By, Order By, and Order Direction selectors update the chart instantly.
 - **Share state:** The **Share** button copies a URL containing the current dashboard selections for preloaded datasets. Opening that link restores the same state, while normal use of the app continues on the clean base URL.
 - **Data Table:** Tabulator-powered table with per-column header filters, horizontal scroll, and consistent column widths.
+- **Contextual controls:** Chart settings sit beside the graph, while table-column visibility controls sit beside the data table.
 - **Download:** Export the full dataset or the currently filtered rows to CSV.
 - **Chart filter:** Clicking a chart series/segment filters the table to matching rows; a badge shows the active filter with a one-click clear.
 - **Map options:** Clustering (on by default), district/county filter, and color-by-field controls appear automatically when a dataset has map configuration. Selecting a specific district or county temporarily disables clustering.
 
 ### Dataset Catalog
-The **Catalog** view (accessible via the Catalog button in the chart-type toolbar) provides a browsable directory of all available datasets:
+The docked **Datasets** pane provides a tree of preloaded and imported datasets:
 
-- Each entry shows the dataset title, description with clickable source links, source type badge (preloaded / imported), record count, and last-cached date.
-- **Schema browser:** Expand any entry to view its full field list with inferred SQL-style column types (`VARCHAR`, `INTEGER`, `DOUBLE`, `DATE`) and dimension/metric classifications. Schema is resolved from live state if the dataset is active, from the IndexedDB partition cache if it has been previously loaded, or from the BI-settings configuration as a fallback.
-- User-imported datasets (added via the SQL tab) appear alongside preloaded datasets.
-- The sidebar shows a count of preloaded and user-imported datasets.
+- Preloaded and user-imported datasets are grouped in the tree with descriptions and browser-cache status.
+- Selecting a dataset opens a preview dialog. The Data view shows the first 10 rows with type icons beside column names; the Schema view is separate.
+- **Analyze** makes that dataset active in the visualization and table.
+- **Refresh** updates that dataset's cached partitions. If it is active, the app reloads it; otherwise, the active dataset is unchanged and the left pane remains available.
+- The schema includes inferred SQL-style column types (`VARCHAR`, `INTEGER`, `DOUBLE`, `DATE`) and dimension/metric classifications.
 
 ### SQL Workbench
 - **In-browser SQL** powered by [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview.html) — no backend required.
@@ -38,7 +40,7 @@ The **Catalog** view (accessible via the Catalog button in the chart-type toolba
 - DuckDB is initialised automatically when the page loads, so SQL, chart aggregation, and schema inspection are ready as soon as the engine finishes loading.
 
 ### Adding Your Own Data
-The **+ Add Source** button — available in both the **Catalog** sidebar and the **SQL** sidebar — lets you bring in your own data:
+The **+ Add Source** button in the docked dataset pane or the **SQL** sidebar lets you bring in your own data:
 
 | Option | How it works |
 |---|---|
@@ -49,7 +51,7 @@ The **+ Add Source** button — available in both the **Catalog** sidebar and th
 - The file is parsed in-browser and stored in **IndexedDB**, so it persists across page refreshes.
 - Local file sources are reloaded from the browser cache on refresh; URL sources are re-fetched from the network.
 - Remove a source by clicking the **×** next to it in the SQL sidebar.
-- User-added datasets appear immediately in the Catalog view, the main Dataset dropdown, and the SQL table list.
+- User-added datasets appear immediately in the docked tree and SQL table list.
 
 ### Preloaded Datasets
 Four managed datasets are sourced from the [Kentucky Transportation Cabinet TRAK system](https://trak.kytc.ky.gov/), partitioned by district, and cached in IndexedDB:
@@ -67,7 +69,16 @@ Four managed datasets are sourced from the [Kentucky Transportation Cabinet TRAK
 
 ```
 analysis-eda-tool/
-├── index.html                          # Entire UI — all JS/CSS inline, CDN assets only
+├── index.html                          # HTML shell and static/CDN asset wiring
+├── css/
+│   └── app.css                         # Application styles
+├── js/
+│   ├── app.js                          # Dashboard UI and application logic
+│   ├── chart-engine.mjs                # Chart aggregation, sorting, and ECharts options
+│   ├── data-store.mjs                  # Shared IndexedDB database and partition-cache API
+│   ├── dataset-loader.mjs              # CSV parsing, partition fetching, and cache coordination
+│   ├── share.mjs                       # Pure share-link parsing and serialization
+│   └── duckdb.js                       # DuckDB-WASM SQL workbench
 ├── etl.js                              # Node ETL: downloads CSVs, partitions by district
 ├── data/
 │   ├── raw/                            # Latest raw CSV downloads (overwritten each ETL run)
@@ -115,7 +126,7 @@ No build step is required. The browser app's libraries are loaded from CDN; Node
 
 ## Adding / Removing Managed Datasets
 
-1. Add a new entry to the `DATASETS` array in `index.html` (id, title, description), matching the folder name under `data/report/`.
+1. Add a new entry to the `DATASETS` array in `js/app.js` (id, title, description), matching the folder name under `data/report/`.
 2. Add the corresponding ETL configuration in `etl.js`.
 3. Run `node etl.js` to generate the partitioned data files.
 

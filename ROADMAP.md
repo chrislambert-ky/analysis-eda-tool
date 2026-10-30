@@ -484,6 +484,75 @@ npx electron-builder --linux  # .AppImage
 
 ---
 
+## Phase 6 — Workspace UX Redesign (Data Formulator / PondPilot / Kepler-inspired)
+
+**Goal:** Evolve from a fixed dashboard into a workspace: load data once, then switch between surfaces and open multiple canvases. Remains a no-build static site hosted on GitHub Pages; all processing stays in-browser on DuckDB-WASM.
+
+**Inspiration and what we take from each**
+
+| Source | Ideas adopted |
+|---|---|
+| [Data Formulator](https://data-formulator.ai/) | Collapsible sidebar listing datasets; hover tooltip with dataset description; "Browse Data Sources" catalog dialog (tree of tables + data preview on the right before loading) |
+| [KY Explorer – Overture Maps](https://chrislambert-ky.github.io/ky-explorer-overturemaps/) | Top surface bar: Results · SQL Editor · Map Preview · Export & Convert · Schema; export/convert options |
+| [PondPilot](https://app.pondpilot.io/) | Instructional empty state; sidebar of datasets + saved queries; preview table on load; "+" tab opening a blank canvas that becomes a query view or a chart; chart toolbar (x, y, type, group-by, aggregation, sort, title/labels) |
+| [GeoLibre](https://web.geolibre.app/), [Kepler.gl](https://kepler.gl/), [GeoForger](https://mapryx.geoforger.com/map) | Map canvas with layer panel, styling, filters, and spatial-SQL-driven layers |
+
+### 6.0 Prerequisite — Phase 1.7 file split
+Do not add these features to the single `index.html`. Complete Phase 1.7 first (or at minimum extract `js/state.js`, `js/duckdb.js`, `js/ui/*.js`, `css/app.css`) using native ES modules (no bundler), which GitHub Pages serves directly. Add tests for pure logic (SQL builders, format detection) under `test/` before moving on. Resolve the two-script (IIFE + module) split here by moving to a single module entry point with an explicit event/bus API.
+
+### 6.1 App shell: sidebar + empty state
+- Full-height, docked left pane with a dataset tree grouped into **Preloaded** and **Imported** sources; future sections may include **Queries** and **Settings/Options**
+- Dataset rows show a hover tooltip (description, row count, source, last refresh) sourced from catalog metadata (extend `etl.js` output / dataset JSON with a `description` field; user-loaded files get an editable description)
+- Link to the KYTC Data Hub from the dataset pane; blank-state landing page has short instructions for adding files and opening the SQL editor
+- Queries list: save, rename, delete; persisted in IndexedDB (reuse the existing user-sources store)
+
+### 6.2 Browse Data Sources catalog
+- Docked tree remains visible beside the workspace; selecting a dataset opens a preview dialog
+- Preview shows the first 10 rows with type icons in column headers; schema and data are separate preview modes, never shown together
+- Per-dataset **Analyze** activates the dataset in the visualization and table; **Refresh** updates its cache and only reloads the active dataset
+- Reuses Phase 1.6d tree browser work; preview queries must be cheap (`LIMIT`, no full scan)
+
+### 6.3 Surface bar (per-dataset views)
+- Horizontal top bar: **Results · SQL Editor · Map Preview · Export & Convert · Schema**
+- Each surface operates on the active dataset/tab; switching surfaces never reloads data
+- Map Preview is shown only when a geometry/lat-lon column is detected
+- Schema surface: columns, types, null counts, distinct counts, basic profile (all via DuckDB `SUMMARIZE`/`DESCRIBE`)
+
+### 6.4 Workspace tabs and canvases
+- "+" button opens a new tab: blank canvas → user chooses **Query/Table**, **Chart**, or **Map**
+- Tab state is a serializable object `{id, type, datasetRef, config}` so tabs can be persisted (IndexedDB) and restored
+- Each canvas owns its surface; SQL statements stay in the SQL canvas and are not displayed above chart output
+- **Chart canvas toolbar:** x-axis, y-axis (multi), chart type (bar, horizontal bar, stacked bar, line, area, pie), group-by/series, aggregation (sum, avg, count, min, max, count distinct), sort (field + direction), title and axis labels. Config → SQL builder → ECharts option; the builder is a pure function and unit tested.
+
+### 6.5 Export & Convert
+- Export current result or whole dataset to CSV, JSON, NDJSON, Parquet, Excel (if feasible), GeoJSON, and GeoParquet via DuckDB `COPY ... TO` into the WASM filesystem then download
+- **Converter mode:** drop any supported file (e.g. one received by email), pick a target format, download, with no dataset registration required
+- Options: column selection, row filter, compression, CRS for spatial outputs
+- Large files: warn above a configurable size; stream where possible
+
+### 6.6 Map canvas (spatial)
+- Library decision deferred (Leaflet + spatial-SQL layers vs. MapLibre GL + deck.gl). Evaluate when 6.1–6.5 ship, against: WebGL performance with >100k features, vector tiles, and licensing/CDN needs for GitHub Pages
+- Layer panel (add/remove/reorder), each layer backed by a SQL query returning a geometry (as GeoJSON via `ST_AsGeoJSON` or WKB)
+- Styling: fill/stroke, color by column (categorical/quantile), size, opacity, tooltips, legend
+- Filters: attribute and spatial (bbox, within, buffer) exposed as UI controls that generate SQL
+- Expose DuckDB spatial functions through a "Spatial tools" menu: buffer, intersection, union/dissolve, centroid, simplify, area/length, spatial join, distance, reproject (`ST_Transform`), H3 if the extension is available in WASM
+- **Open verification item:** confirm which `spatial` extension functions and file readers (`ST_Read` formats) are actually available in the DuckDB-WASM build we ship; document the supported list in the UI
+
+### Suggested order
+1. 6.0 file split + tests
+2. 6.1 sidebar/empty state → 6.2 catalog
+3. 6.3 surface bar → 6.5 export/convert (high value, low risk)
+4. 6.4 canvases and chart toolbar
+5. 6.6 map canvas
+
+### Risks
+- Regressing the current working app during refactor: keep each step shippable, move code without behavior changes, and verify in-browser after each move
+- The previous `window._eda*` bridge consolidation failed on execution order; the module-based entry point must make initialization order explicit (await DuckDB ready before registering datasets)
+- Browser memory limits for large file conversion
+- DuckDB-WASM spatial extension availability and size
+
+---
+
 ## Dependency & Compatibility Notes
 
 | Feature | Browser Requirement | Notes |
@@ -510,6 +579,8 @@ Q3 2026      Phase 4 (PWA)               — parallel with Phase 3, low effort
              ↓
 Q4 2026      Phase 5 (Electron)          — after PWA validates the offline UX
 ```
+
+Phase 6 (workspace UX) starts with the Phase 1.7 file split and can proceed in parallel with Phases 2–4.
 
 Phases 3 and 4 can run in parallel — PWA manifest and service worker are largely independent of the data layer work.
 

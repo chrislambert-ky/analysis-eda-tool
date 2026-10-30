@@ -1,0 +1,2008 @@
+import {
+	buildShareUrl,
+	CHART_TYPE_TO_SHARE,
+	isPresetDatasetId,
+	normalizeShareToken,
+	parseSharedState
+} from './share.mjs';
+import {
+	estimatePartitionStorageBytes,
+	getDatabase,
+	readCachedRecordCount,
+	readCachedSample,
+	readDatasetCachedAt
+} from './data-store.mjs';
+import {
+	DATA_ROOT,
+	DISTRICTS,
+	fetchJSON,
+	fetchRawCsvSample,
+	loadPartition,
+	parseCSV,
+	refreshPartitionCache
+} from './dataset-loader.mjs';
+import {
+	buildChartOption,
+	buildSqlAggExpr,
+	prepareSeries,
+	sortSeries
+} from './chart-engine.mjs';
+
+(function () {
+	'use strict';
+
+	const MAP_ALL_OPTION = '__all__';
+	// ECharts 5 default palette — used for both charts and map markers so colors stay consistent
+	const CHART_PALETTE = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
+	const DATASETS = [
+		{ id: 'eda_assets_bridge_condition_owner_area',    title: 'Bridge Condition & Owner Area',              description: 'Bridge inventory and condition ratings. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
+		{ id: 'eda_construction_procurement',              title: 'Construction Procurement',                   description: 'Awarded construction contracts. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
+		{ id: 'eda_current_enact_plan_data_set',           title: 'Current Enacted Plan',                       description: 'Current enacted highway plan, including funding allocations. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
+		{ id: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',   description: 'Details of authorized dollars including project phases, costs, and schedule data. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' }
+	];
+	const APP_VERSION = '1.5.0';
+	const PRESET_DATASET_SLUGS = {
+		eda_assets_bridge_condition_owner_area: 'assets_bridge_condition_owner_area',
+		eda_construction_procurement: 'construction_procurement',
+		eda_current_enact_plan_data_set: 'current_enacted_plan',
+		eda_programmanagement_authorized_detailed: 'programmanagement_authorized_detailed'
+	};
+	const state = {
+		datasetId: null,
+		settings: null,
+		index: null,
+		allRows: [],
+		chartType: 'bar-horizontal',
+		chartInstance: null,
+		mapInstance: null,
+		mapLayer: null,
+		tabulator: null,
+		lastLoadedAt: null,
+		chartFilter: null,   // { field, value, seriesIndex, dataIndex } | null
+		_renderSeq: 0,       // incremented on each renderVisual() call; guards async chart renders
+		tableDuckDB: false,  // true when Tabulator is in DuckDB remote-paging mode
+		hiddenColumns: new Set(),   // columns toggled off in the table view
+		mapConfig: {
+			saved: false,
+			latField: null,
+			lonField: null,
+			filterFields: [null, null, null],
+			colorField: null
+		},
+		mapOptions: {
+			cluster: true,
+			filterValues: [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION],
+			popupHidden: new Set(),
+			tableHidden: new Set()
+		}
+	};
+
+	let startupShareState = null;
+	let tableControlsResizeObserver = null;
+
+	document.addEventListener('DOMContentLoaded', init);
+
+	async function init() {
+		const verEl = document.getElementById('appVersion');
+		if (verEl) verEl.textContent = `v${APP_VERSION}`;
+		startupShareState = parseSharedState(window.location.search, DATASETS, PRESET_DATASET_SLUGS);
+		bindUIEvents();
+		initializeTableControlsSizing();
+		// Restore any user-added datasets from IndexedDB before the first
+		// dataset selection so they appear in the docked tree immediately.
+		await loadPersistedUserDatasets();
+		renderCatalog();
+		if (DATASETS.length) {
+			const initialDatasetId = startupShareState?.datasetId || DATASETS[0].id;
+			await selectDataset(initialDatasetId);
+			if (startupShareState) {
+				applySharedStateToDashboard(startupShareState);
+				window.history.replaceState(null, '', `${window.location.origin}${window.location.pathname}`);
+				startupShareState = null;
+			}
+		}
+	}
+
+	function setSelectValueFromShareToken(selectId, token) {
+		if (!token) return;
+		const select = document.getElementById(selectId);
+		if (!select) return;
+		const normalized = normalizeShareToken(token);
+		const option = [...select.options].find(opt =>
+			normalizeShareToken(opt.value) === normalized
+			|| normalizeShareToken(opt.textContent) === normalized
+		);
+		if (option) select.value = option.value;
+	}
+
+	function applySharedStateToDashboard(sharedState) {
+		if (!sharedState) return;
+		if (sharedState.chartType && CHART_TYPE_TO_SHARE[sharedState.chartType]) {
+			state.chartType = sharedState.chartType;
+		}
+		setSelectValueFromShareToken('dimensionSelect', sharedState.dimension);
+		setSelectValueFromShareToken('metricSelect', sharedState.metric);
+		setSelectValueFromShareToken('aggregationSelect', sharedState.aggregation);
+		setSelectValueFromShareToken('splitSelect', sharedState.splitBy);
+		setSelectValueFromShareToken('orderBySelect', sharedState.orderBy);
+
+		const orderToken = normalizeShareToken(sharedState.order);
+		const orderSelect = document.getElementById('orderDirectionSelect');
+		if (orderSelect) {
+			if (orderToken === 'ascending' || orderToken === 'asc') orderSelect.value = 'asc';
+			if (orderToken === 'descending' || orderToken === 'desc') orderSelect.value = 'desc';
+		}
+
+		updateChartButtons();
+		renderVisual();
+		if (state.chartType !== 'sql' && state.chartType !== 'catalog') {
+			renderTable();
+		}
+	}
+
+	function buildShareUrlFromCurrentState() {
+		const getVal = (id) => document.getElementById(id)?.value || '';
+		return buildShareUrl({
+			datasetId: state.datasetId,
+			chartType: state.chartType,
+			dimension: getVal('dimensionSelect'),
+			metric: getVal('metricSelect'),
+			aggregation: getVal('aggregationSelect'),
+			splitBy: getVal('splitSelect'),
+			orderBy: getVal('orderBySelect'),
+			order: getVal('orderDirectionSelect')
+		}, {
+			baseUrl: `${window.location.origin}${window.location.pathname}`,
+			datasets: DATASETS,
+			presetDatasetSlugs: PRESET_DATASET_SLUGS
+		});
+	}
+
+	function updateShareButtonState() {
+		const btn = document.getElementById('shareStateBtn');
+		if (!btn) return;
+		const enabled = isPresetDatasetId(state.datasetId, DATASETS);
+		btn.disabled = !enabled;
+		btn.title = enabled
+			? 'Copy link with current dashboard state'
+			: 'Share links are available only for preloaded datasets';
+	}
+
+	async function handleShareStateClick() {
+		const shareUrl = buildShareUrlFromCurrentState();
+		if (!shareUrl) {
+			updateProgress('Share links are available only for preloaded datasets.');
+			return;
+		}
+
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(shareUrl);
+				updateProgress('Share URL copied to clipboard.');
+			} else {
+				window.prompt('Copy this share URL:', shareUrl);
+				updateProgress('Share URL ready to copy.');
+			}
+		} catch (error) {
+			window.prompt('Copy this share URL:', shareUrl);
+			updateProgress('Clipboard access blocked. Share URL shown for manual copy.');
+		}
+	}
+
+	/**
+	 * Reads user-added sources and their cached row data from the SQL
+	 * module's IndexedDB and injects them into the shared dataset registry.
+	 * Runs at page load so imported sources appear in the docked dataset tree.
+	 */
+	async function loadPersistedUserDatasets() {
+		try {
+			// Use the shared unified IDB — same database as the partition cache.
+			const db = await getDatabase();
+
+			const sources = await new Promise((resolve, reject) => {
+				const req = db.transaction('sources', 'readonly')
+					.objectStore('sources').getAll();
+				req.onsuccess = e => resolve(e.target.result || []);
+				req.onerror   = e => reject(e.target.error);
+			});
+
+			sources.sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+
+			for (const src of sources) {
+				const cached = await new Promise((resolve, reject) => {
+					const req = db.transaction('user_source_data', 'readonly')
+						.objectStore('user_source_data').get(src.alias);
+					req.onsuccess = e => resolve(e.target.result?.rows || null);
+					req.onerror   = e => reject(e.target.error);
+				});
+				if (!cached || !cached.length) continue;
+				// Populate the shared user dataset registry (same as SQL module does)
+				if (!window._edaUserDatasets) window._edaUserDatasets = new Map();
+				window._edaUserDatasets.set(src.alias, {
+					id:    src.alias,
+					title: src.title || src.alias,
+					rows:  cached
+				});
+			}
+		} catch (e) {
+			// Preloaded datasets remain available if imported-source storage cannot be read.
+			console.warn('loadPersistedUserDatasets:', e);
+		}
+	}
+
+	function bindUIEvents() {
+		document.getElementById('catalogDatasetList').addEventListener('click', async event => {
+			const groupToggle = event.target.closest('[data-catalog-group-toggle]');
+			if (groupToggle) {
+				const children = groupToggle.nextElementSibling;
+				const expanded = groupToggle.getAttribute('aria-expanded') === 'true';
+				groupToggle.setAttribute('aria-expanded', String(!expanded));
+				children.hidden = expanded;
+				return;
+			}
+			if (event.target.closest('[data-catalog-action]')) {
+				await handleCatalogAction(event);
+			}
+		});
+		document.getElementById('datasetPreviewModal').addEventListener('click', event => {
+			const previewTab = event.target.closest('[data-preview-tab]');
+			if (previewTab) {
+				setCatalogPreviewMode(previewTab.dataset.previewTab);
+				return;
+			}
+			handleCatalogAction(event);
+		});
+
+		document.getElementById('shareStateBtn')?.addEventListener('click', () => {
+			handleShareStateClick();
+		});
+
+		document.querySelectorAll('.btn-chart').forEach(button => {
+			button.addEventListener('click', () => {
+				const chartType = button.getAttribute('data-chart');
+				if (chartType === 'map' && !state.allRows.length) return;
+				state.chartType = chartType;
+				updateChartButtons();
+				if (chartType === 'sql') {
+					// Signal the SQL workbench module to initialize (lazy)
+					document.dispatchEvent(new CustomEvent('eda:sql-activate'));
+				} else {
+					renderVisual();
+				}
+			});
+		});
+
+		['dimensionSelect','metricSelect','aggregationSelect','splitSelect','orderBySelect','orderDirectionSelect']
+			.forEach(id => {
+				document.getElementById(id).addEventListener('change', () => {
+					renderVisual();
+				});
+			});
+
+		document.getElementById('downloadFullButton').addEventListener('click', async () => {
+			if (state.tableDuckDB && state.datasetId) {
+				try {
+					const result = await window._edaQuery(`SELECT * FROM "${state.datasetId}"`);
+					downloadAsCSV(arrowToPlainRows(result), `${state.datasetId}-full.csv`);
+				} catch (e) { console.error('Download failed:', e); }
+				return;
+			}
+			if (!state.allRows.length) return;
+			downloadAsCSV(state.allRows, `${state.datasetId}-full.csv`);
+		});
+
+		document.getElementById('colPickerShowAll').addEventListener('click', () => {
+			state.hiddenColumns.clear();
+			renderTable();
+		});
+
+		document.getElementById('colPickerClearAll').addEventListener('click', () => {
+			if (!state.allRows.length) return;
+			const locked = getLockedColumns();
+			Object.keys(state.allRows[0]).forEach(col => {
+				if (!locked.has(col)) state.hiddenColumns.add(col);
+			});
+			renderTable();
+		});
+
+		document.getElementById('chartFilterClear').addEventListener('click', () => {
+			if (state.chartInstance && state.chartFilter) {
+				state.chartInstance.dispatchAction({
+					type: 'unselect',
+					seriesIndex: state.chartFilter.seriesIndex,
+					dataIndex: state.chartFilter.dataIndex
+				});
+			}
+			state.chartFilter = null;
+			applyChartFilter();
+		});
+
+		document.getElementById('downloadFilteredButton').addEventListener('click', async () => {
+			if (!state.tabulator) return;
+			if (state.tableDuckDB && state.datasetId) {
+				// In DuckDB mode getRows('active') only returns the current page;
+				// re-query DuckDB with the current filter/sort state for all matching rows.
+				try {
+					const filters = state.tabulator.getFilters(true);
+					const sorts   = state.tabulator.getSorters();
+					const sql = `SELECT * FROM "${state.datasetId}" ${buildWhereSQL(filters)} ${buildOrderSQL(sorts)}`;
+					const result = await window._edaQuery(sql);
+					const rows = arrowToPlainRows(result);
+					if (rows.length) downloadAsCSV(rows, `${state.datasetId}-filtered.csv`);
+				} catch (e) { console.error('Filtered download failed:', e); }
+				return;
+			}
+			const filteredRows = state.tabulator.getRows('active').map(row => row.getData());
+			if (!filteredRows.length) return;
+			downloadAsCSV(filteredRows, `${state.datasetId}-filtered.csv`);
+		});
+
+		const clusterToggle = document.getElementById('mapClusterToggle');
+		if (clusterToggle) {
+			clusterToggle.addEventListener('change', (event) => {
+				state.mapOptions.cluster = event.target.checked;
+				if (state.chartType === 'map') renderVisual();
+			});
+		}
+
+document.getElementById('mapPopupShowAll').addEventListener('click', () => {
+				if (!state.allRows.length) return;
+				state.mapOptions.popupHidden.clear();
+				const cols = Object.keys(state.allRows[0]);
+				buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
+			});
+
+			document.getElementById('mapPopupClearAll').addEventListener('click', () => {
+				if (!state.allRows.length) return;
+				const cols = Object.keys(state.allRows[0]);
+				cols.forEach(col => state.mapOptions.popupHidden.add(col));
+				buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
+			});
+
+			document.getElementById('mapPopupRefresh').addEventListener('click', () => {
+				if (state.chartType === 'map') renderVisual();
+			});
+
+			document.getElementById('mapSaveConfigBtn').addEventListener('click', saveMapConfig);
+		document.getElementById('mapEditConfigBtn').addEventListener('click', editMapConfig);
+
+		// Delegate filter-value changes inside #mapOptFiltersSection
+		document.getElementById('mapOptFiltersSection').addEventListener('change', e => {
+			if (!e.target.matches('[data-filter-idx]')) return;
+			const idx = parseInt(e.target.dataset.filterIdx, 10);
+			state.mapOptions.filterValues[idx] = e.target.value;
+			// Cascade: refresh downstream dropdowns to only show values
+			// present in rows matched by the upstream selections
+			refreshCascadeFilters(idx + 1);
+			if (state.chartType === 'map') {
+				renderVisual();
+				applyMapTableFilters();
+			}
+		});
+
+		// When DuckDB becomes ready, subsequent dataset switches will automatically
+		// use DuckDB remote-paging mode. We do NOT rebuild the current table here:
+		// state.allRows is already fully loaded and the local Tabulator is showing
+		// correct data — tearing it down to rebuild in DuckDB mode mid-session
+		// causes a visible blank/gray flash with no benefit.
+		document.addEventListener('eda:duckdb-ready', () => { /* intentionally empty */ });
+
+	}
+
+	function initializeTableControlsSizing() {
+		const tableCard = document.querySelector('.table-card');
+		const controlsCard = document.getElementById('tableControlsCard');
+		if (!tableCard || !controlsCard) return;
+
+		const syncHeight = () => {
+			if (!window.matchMedia('(min-width: 992px)').matches) {
+				controlsCard.style.height = '';
+				return;
+			}
+			const tableHeight = tableCard.getBoundingClientRect().height;
+			if (tableHeight > 0) controlsCard.style.height = `${Math.round(tableHeight)}px`;
+		};
+
+		syncHeight();
+		if (typeof ResizeObserver !== 'undefined') {
+			tableControlsResizeObserver = new ResizeObserver(syncHeight);
+			tableControlsResizeObserver.observe(tableCard);
+		}
+		window.addEventListener('resize', syncHeight);
+	}
+
+	async function selectDataset(datasetId) {
+		if (!datasetId) return;
+		// Check if this is a user-added source injected by the SQL module
+		const userDs = window._edaUserDatasets?.get(datasetId);
+		if (userDs) {
+			selectedCatalogDatasetId = datasetId;
+			state.datasetId = datasetId;
+			updateCatalogTreeState();
+			state.allRows   = userDs.rows;
+			const cols    = Object.keys(userDs.rows[0] || {});
+			const numCols = cols.filter(c => userDs.rows.slice(0, 50)
+				.some(r => { const v = parseFloat(r[c]); return Number.isFinite(v) && String(r[c]).trim() !== ''; }));
+			// All columns are available as dimensions — numeric fields (e.g. district IDs) are valid grouping keys too
+			state.settings = enrichSettings({
+				dimensions:       cols,
+				metrics:          ['Record Count', ...numCols],
+				aggregationTypes: ['Count', 'Distinct Count', 'Sum', 'Average', 'Min', 'Max']
+			});
+			state.index = { totalRecords: userDs.rows.length };
+			state.hiddenColumns = new Set();
+			populateControls();
+			updateDatasetInfo();
+			updateChartButtons();
+			initializeMapControls();
+			state.lastLoadedAt = new Date();
+			renderSummary();
+			renderVisual();
+			renderTable();
+			updateProgress(`User source "${userDs.title}" loaded: ${userDs.rows.length.toLocaleString()} rows.`);
+			updateActiveDatasetIndicator(datasetId, userDs.title);
+			return;
+		}
+		selectedCatalogDatasetId = datasetId;
+		state.datasetId = datasetId;
+		updateCatalogTreeState();
+		state.hiddenColumns = new Set();
+		await loadDataset(datasetId);
+	}
+
+	async function loadDataset(datasetId) {
+		try {
+			updateProgress('Loading dataset configuration…');
+			const settingsPath = `${DATA_ROOT}/${datasetId}/${datasetId}-bi-settings.json`;
+			const indexPath = `${DATA_ROOT}/${datasetId}/${datasetId}.index.json`;
+			const [settings, indexData] = await Promise.all([
+				fetchJSON(settingsPath),
+				fetchJSON(indexPath)
+			]);
+			state.settings = enrichSettings(settings);
+			state.index = indexData;
+			populateControls();
+			updateDatasetInfo();
+			updateChartButtons();
+			await loadPartitionsIntoState();
+			// After rows load, merge any field not already in dimensions so numeric
+			// columns (e.g. DISTRICT stored as 1–12) are selectable as grouping keys.
+			// Also expand metrics to include all numeric columns so users can freely
+			// change the metric — same behaviour as user-loaded datasets.
+			if (state.allRows.length) {
+				const allCols  = Object.keys(state.allRows[0]);
+
+				// Expand dimensions
+				const existingDims = new Set(state.settings.dimensions);
+				const extraDims    = allCols.filter(c => !existingDims.has(c));
+				if (extraDims.length) {
+					state.settings.dimensions = [...state.settings.dimensions, ...extraDims];
+				}
+
+				// Expand metrics with all numeric columns not already listed
+				const existingMetrics = new Set(state.settings.metrics);
+				const numCols = allCols.filter(c => !existingMetrics.has(c) &&
+					state.allRows.slice(0, 50).some(r => {
+						const v = parseFloat(r[c]);
+						return Number.isFinite(v) && String(r[c]).trim() !== '';
+					}));
+				if (numCols.length) {
+					state.settings.metrics = [...state.settings.metrics, ...numCols];
+				}
+
+				if (extraDims.length || numCols.length) {
+					// Re-populate selects; dimension defaults to first entry (DISTRICT),
+					// metric defaults to the first bi-settings metric (preserved as first item).
+					populateControls(); // refresh selects with the complete field list
+				}
+			}
+			initializeMapControls();
+			state.lastLoadedAt = new Date();
+			renderSummary();
+			renderVisual();
+			renderTable();
+			updateActiveDatasetIndicator(datasetId);
+			updateProgress('All partitions loaded.');
+			const catalogItems = buildCatalogItems();
+			updateCatalogCacheStatuses(catalogItems);
+			updateCatalogSummary(catalogItems);
+		} catch (error) {
+			console.error(error);
+			updateProgress('Failed to load dataset. Check console for details.');
+		}
+	}
+
+	function updateActiveDatasetIndicator(datasetId, title) {
+		const indicator = document.getElementById('activeDatasetIndicator');
+		if (!indicator) return;
+		const dataset = DATASETS.find(item => item.id === datasetId);
+		const userSource = window._edaUserDatasets?.get(datasetId);
+		indicator.textContent = `Now working with: ${title || userSource?.title || dataset?.title || datasetId || 'No dataset loaded'}`;
+	}
+
+	function enrichSettings(settings) {
+		const clone = { ...settings };
+		if (!Array.isArray(clone.dimensions) || !clone.dimensions.length) {
+			clone.dimensions = ['DISTRICT'];
+		}
+		if (!Array.isArray(clone.metrics) || !clone.metrics.length) {
+			clone.metrics = ['Record Count'];
+		}
+		// Always offer the full set of aggregations — Count-only is useless once
+		// numeric metrics are available, and Count still works for all metrics.
+		const ALL_AGGS = ['Count', 'Distinct Count', 'Sum', 'Average', 'Min', 'Max'];
+		if (!Array.isArray(clone.aggregationTypes) || !clone.aggregationTypes.length) {
+			clone.aggregationTypes = ALL_AGGS;
+		} else {
+			// Merge any existing entries then append missing standard ones
+			const set = new Set([...clone.aggregationTypes]);
+			ALL_AGGS.forEach(a => set.add(a));
+			clone.aggregationTypes = Array.from(set);
+		}
+		if (!Array.isArray(clone.orderBy) || !clone.orderBy.length) {
+			clone.orderBy = ['Dimension', 'Metric Agg Result'];
+		}
+		return clone;
+	}
+
+	function populateControls() {
+		const { dimensions, metrics, aggregationTypes, orderBy } = state.settings;
+		fillSelect('dimensionSelect', dimensions);
+		fillSelect('metricSelect', metrics);
+		fillSelect('aggregationSelect', aggregationTypes);
+		const splitOptions = ['None', ...dimensions];
+		fillSelect('splitSelect', splitOptions);
+		const orderValues = orderBy.map(option => ({
+			label: option,
+			value: option.toLowerCase().includes('dimension') ? 'dimension' : 'metric'
+		}));
+		fillSelect('orderBySelect', orderValues, true);
+		document.getElementById('orderDirectionSelect').value = 'asc';
+	}
+
+	function fillSelect(selectId, values, isObjectList = false) {
+		const select = document.getElementById(selectId);
+		select.innerHTML = '';
+		values.forEach(value => {
+			const option = document.createElement('option');
+			if (isObjectList && typeof value === 'object') {
+				option.value = value.value;
+				option.textContent = value.label;
+			} else {
+				option.value = value;
+				option.textContent = value;
+			}
+			select.appendChild(option);
+		});
+	}
+
+	function updateDatasetInfo() {
+		const info = document.getElementById('datasetInfo');
+		if (!state.settings || !state.index) {
+			info.textContent = 'Select a dataset to load details.';
+			return;
+		}
+		const datasetMeta = DATASETS.find(item => item.id === state.datasetId);
+		const totalRecords = state.index?.totalRecords ?? 0;
+		info.innerHTML = `
+			<div><strong>Name:</strong> ${datasetMeta ? datasetMeta.title : state.datasetId}</div>
+			<div><strong>ID:</strong> ${state.datasetId}</div>
+			<div><strong>Total Records:</strong> ${formatNumber(totalRecords)}</div>
+		`;
+	}
+
+	async function loadPartitionsIntoState() {
+		if (!state.datasetId || !state.index) return;
+		const combined = [];
+		let processed = 0;
+		updateProgress('Loading partitions…');
+		for (const district of DISTRICTS) {
+			const key = `${state.datasetId}-District-${district}.csv`;
+			const expected = state.index[key]?.records ?? 0;
+			const partitionRows = await loadPartition(state.datasetId, district, expected);
+			combined.push(...partitionRows);
+			processed += 1;
+			updateProgress(`Loaded ${processed}/${DISTRICTS.length} partitions…`);
+		}
+		state.allRows = combined;
+	}
+
+	function initializeMapControls() {
+		const container = document.getElementById('mapOptions');
+		if (!container) return;
+		if (!state.allRows.length) {
+			container.classList.add('d-none');
+			return;
+		}
+		const mapCfg  = state.settings?.map;
+		const cols    = Object.keys(state.allRows[0]);
+
+		// Reset to edit (unconfigured) state on dataset change
+		state.mapConfig = {
+			saved:        false,
+			latField:     (mapCfg?.latitudeField  && cols.includes(mapCfg.latitudeField))  ? mapCfg.latitudeField  : null,
+			lonField:     (mapCfg?.longitudeField && cols.includes(mapCfg.longitudeField)) ? mapCfg.longitudeField : null,
+			filterFields: [null, null, null],
+			colorField:   (mapCfg?.defaultColorField && cols.includes(mapCfg.defaultColorField)) ? mapCfg.defaultColorField : null
+		};
+		state.mapOptions = {
+			cluster:      mapCfg?.clusterDefault !== false,
+			filterValues: [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION],
+			popupHidden:  new Set(),
+			tableHidden:  new Set()
+		};
+
+		// Pre-fill defaults for Bridge Condition & Owner Area so new users
+		// can see how configuration works on that dataset.
+		if (state.datasetId === 'eda_assets_bridge_condition_owner_area') {
+			const bd = { lat: 'LATITUDE', lon: 'LONGITUDE', f1: 'DISTRICT', f2: 'COUNTY', color: 'GFP' };
+			if (cols.includes(bd.lat))   state.mapConfig.latField        = bd.lat;
+			if (cols.includes(bd.lon))   state.mapConfig.lonField        = bd.lon;
+			if (cols.includes(bd.f1))    state.mapConfig.filterFields[0] = bd.f1;
+			if (cols.includes(bd.f2))    state.mapConfig.filterFields[1] = bd.f2;
+			if (cols.includes(bd.color)) state.mapConfig.colorField      = bd.color;
+			// Default popup fields to show only the 5 mapped columns
+			const keepInPopup = new Set([bd.lat, bd.lon, bd.f1, bd.f2, bd.color, 'BRIDGE_ID']);
+			cols.forEach(col => { if (!keepInPopup.has(col)) state.mapOptions.popupHidden.add(col); });
+		}
+
+		const clusterToggle = document.getElementById('mapClusterToggle');
+		if (clusterToggle) clusterToggle.checked = state.mapOptions.cluster;
+
+		populateMapConfigForm(cols);
+		// Show form, hide summary + options
+		document.getElementById('mapConfigForm').style.display    = '';
+		document.getElementById('mapConfigSummary').style.display = 'none';
+		document.getElementById('mapOptionsSection').style.display = 'none';
+
+		updateChartButtons();
+	}
+
+	function populateMapConfigForm(cols) {
+		const noOpt   = [{ label: '\u2014 select \u2014', value: '' }];
+		const noFilt  = [{ label: '\u2014 none \u2014',   value: '' }];
+		const colOpts = cols.map(c => ({ label: c, value: c }));
+		fillSelect('mapCfgLat',     [...noOpt,  ...colOpts], true);
+		fillSelect('mapCfgLon',     [...noOpt,  ...colOpts], true);
+		fillSelect('mapCfgFilter1', [...noFilt, ...colOpts], true);
+		fillSelect('mapCfgFilter2', [...noFilt, ...colOpts], true);
+		fillSelect('mapCfgFilter3', [...noFilt, ...colOpts], true);
+		fillSelect('mapCfgColor',   [...noFilt, ...colOpts], true);
+		// Pre-fill from mapConfig state
+		document.getElementById('mapCfgLat').value     = state.mapConfig.latField    || '';
+		document.getElementById('mapCfgLon').value     = state.mapConfig.lonField    || '';
+		document.getElementById('mapCfgFilter1').value = state.mapConfig.filterFields[0] || '';
+		document.getElementById('mapCfgFilter2').value = state.mapConfig.filterFields[1] || '';
+		document.getElementById('mapCfgFilter3').value = state.mapConfig.filterFields[2] || '';
+		document.getElementById('mapCfgColor').value   = state.mapConfig.colorField   || '';
+	}
+
+	function saveMapConfig() {
+		state.mapConfig.latField     = document.getElementById('mapCfgLat').value     || null;
+		state.mapConfig.lonField     = document.getElementById('mapCfgLon').value     || null;
+		state.mapConfig.filterFields[0] = document.getElementById('mapCfgFilter1').value || null;
+		state.mapConfig.filterFields[1] = document.getElementById('mapCfgFilter2').value || null;
+		state.mapConfig.filterFields[2] = document.getElementById('mapCfgFilter3').value || null;
+		state.mapConfig.colorField   = document.getElementById('mapCfgColor').value   || null;
+		state.mapConfig.saved        = true;
+		// Reset filter values whenever config changes
+		state.mapOptions.filterValues = [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION];
+
+		renderMapConfigSummary();
+		document.getElementById('mapConfigForm').style.display     = 'none';
+		document.getElementById('mapConfigSummary').style.display  = '';
+		populateMapOptionsSection();
+		document.getElementById('mapOptionsSection').style.display = '';
+		if (state.chartType === 'map') renderVisual();
+		renderTable(); // refresh table with new tableHidden if any
+	}
+
+	function editMapConfig() {
+		state.mapConfig.saved = false;
+		const cols = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+		populateMapConfigForm(cols);
+		document.getElementById('mapConfigForm').style.display     = '';
+		document.getElementById('mapConfigSummary').style.display  = 'none';
+		document.getElementById('mapOptionsSection').style.display = 'none';
+	}
+
+	function renderMapConfigSummary() {
+		const c   = state.mapConfig;
+		const el  = document.getElementById('mapConfigSummaryContent');
+		const row = (lbl, val) => {
+			const hasVal = val && val !== '';
+			return `<div class="map-cfg-row">`
+				+ `<span class="map-cfg-lbl">${lbl}</span>`
+				+ `<span class="map-cfg-val${hasVal ? '' : ' none'}">${hasVal ? val : 'none'}</span>`
+				+ `</div>`;
+		};
+		el.innerHTML =
+			row('Lat',   c.latField)
+			+ row('Lon',   c.lonField)
+			+ row('Flt 1', c.filterFields[0])
+			+ row('Flt 2', c.filterFields[1])
+			+ row('Flt 3', c.filterFields[2])
+			+ row('Color', c.colorField);
+	}
+
+	function populateMapOptionsSection() {
+		const cols = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+		// Rebuild filter value dropdowns
+		const filtersEl = document.getElementById('mapOptFiltersSection');
+		filtersEl.innerHTML = '';
+		state.mapConfig.filterFields.forEach((field, idx) => {
+			if (!field) return;
+			const vals = getUniqueValues(state.allRows, field);
+			const wrap = document.createElement('div');
+			wrap.className = 'mb-2';
+			wrap.innerHTML = `<div class="map-opt-filter-lbl mb-1">${field}</div>`;
+			const sel = document.createElement('select');
+			sel.className = 'form-select form-select-sm';
+			sel.dataset.filterIdx = idx;
+			const allOpt = document.createElement('option');
+			allOpt.value = MAP_ALL_OPTION;
+			allOpt.textContent = '\u2014 all \u2014';
+			sel.appendChild(allOpt);
+			vals.forEach(v => {
+				const o = document.createElement('option');
+				o.value = v; o.textContent = v;
+				sel.appendChild(o);
+			});
+			sel.value = state.mapOptions.filterValues[idx];
+			wrap.appendChild(sel);
+			filtersEl.appendChild(wrap);
+		});
+		// Checklist helpers
+		buildFieldChecklist(
+			document.getElementById('mapPopupFieldList'),
+			state.mapOptions.popupHidden, cols
+		);
+	}
+
+	function buildFieldChecklist(listEl, hiddenSet, cols, onChange) {
+		if (!listEl) return;
+		listEl.innerHTML = '';
+		cols.forEach(col => {
+			const isHidden = hiddenSet.has(col);
+			const item = document.createElement('div');
+			item.className = 'col-picker-item' + (isHidden ? ' col-picker-hidden' : '');
+			const cb = document.createElement('input');
+			cb.type = 'checkbox'; cb.className = 'col-picker-cb form-check-input mt-0'; cb.checked = !isHidden;
+			const lbl = document.createElement('label');
+			lbl.className = 'col-picker-name'; lbl.textContent = col; lbl.title = col;
+			item.appendChild(cb); item.appendChild(lbl);
+			cb.addEventListener('change', () => {
+				if (cb.checked) hiddenSet.delete(col); else hiddenSet.add(col);
+				item.classList.toggle('col-picker-hidden', !cb.checked);
+				if (onChange) onChange();
+			});
+			listEl.appendChild(item);
+		});
+	}
+
+	function getMapFilteredRows() {
+		return state.allRows.filter(row => {
+			for (let i = 0; i < 3; i++) {
+				const field = state.mapConfig.filterFields[i];
+				const val   = state.mapOptions.filterValues[i];
+				if (field && val !== MAP_ALL_OPTION) {
+					if (String(row[field] ?? '') !== val) return false;
+				}
+			}
+			return true;
+		});
+	}
+
+	/**
+	 * Rebuilds filter-value <select> options for indexes fromIdx..2,
+	 * restricting each dropdown to values that exist in rows already
+	 * matched by all upstream (lower-index) filter selections.
+	 */
+	function refreshCascadeFilters(fromIdx) {
+		for (let i = fromIdx; i < 3; i++) {
+			const field = state.mapConfig.filterFields[i];
+			if (!field) continue;
+			// Rows that pass all filters before index i
+			const upstream = state.allRows.filter(row => {
+				for (let j = 0; j < i; j++) {
+					const f = state.mapConfig.filterFields[j];
+					const v = state.mapOptions.filterValues[j];
+					if (f && v !== MAP_ALL_OPTION && String(row[f] ?? '') !== v) return false;
+				}
+				return true;
+			});
+			const vals = getUniqueValues(upstream, field);
+			const sel = document.querySelector(`#mapOptFiltersSection [data-filter-idx="${i}"]`);
+			if (!sel) continue;
+			const currentVal = state.mapOptions.filterValues[i];
+			sel.innerHTML = '';
+			const allOpt = document.createElement('option');
+			allOpt.value = MAP_ALL_OPTION; allOpt.textContent = '\u2014 all \u2014';
+			sel.appendChild(allOpt);
+			vals.forEach(v => {
+				const o = document.createElement('option');
+				o.value = v; o.textContent = v;
+				sel.appendChild(o);
+			});
+			// If the previously selected value no longer exists, reset to "all"
+			if (currentVal !== MAP_ALL_OPTION && !vals.includes(currentVal)) {
+				state.mapOptions.filterValues[i] = MAP_ALL_OPTION;
+			}
+			sel.value = state.mapOptions.filterValues[i];
+		}
+	}
+
+	/**
+	 * Applies the current map filter selections as Tabulator row filters
+	 * so the data table reflects the same rows shown on the map.
+	 */
+	function applyMapTableFilters() {
+		if (!state.tabulator) return;
+		const filters = [];
+		for (let i = 0; i < 3; i++) {
+			const field = state.mapConfig.filterFields[i];
+			const val   = state.mapOptions.filterValues[i];
+			if (field && val !== MAP_ALL_OPTION) {
+				filters.push({ field, type: '=', value: val });
+			}
+		}
+		if (filters.length) {
+			state.tabulator.setFilter(filters);
+		} else {
+			state.tabulator.clearFilter();
+		}
+	}
+
+	function renderSummary() {
+		const summary = document.getElementById('dataSummary');
+		if (!state.index) {
+			summary.textContent = '';
+			return;
+		}
+		const totalRecords = state.index.totalRecords ?? state.allRows.length;
+		const timestamp = state.lastLoadedAt ? formatTimestamp(state.lastLoadedAt) : '—';
+		summary.textContent = `Records loaded: ${formatNumber(state.allRows.length)} · Index total: ${formatNumber(totalRecords)} · Last refreshed: ${timestamp}`;
+	}
+
+	function renderVisual() {
+		// SQL mode has its own rendering — DuckDB queries CSV files directly
+		if (state.chartType === 'sql') return;
+		if (state.chartType === 'catalog') {
+			state.chartType = 'bar-horizontal';
+			updateChartButtons();
+		}
+		// Clear any active chart-click filter when the chart is refreshed
+		if (state.chartFilter !== null) {
+			state.chartFilter = null;
+			applyChartFilter();
+		}
+		destroyVisuals();
+		// Increment sequence so a pending async renderChart() knows it is stale
+		state._renderSeq += 1;
+		const seq = state._renderSeq;
+		if (!state.allRows.length) {
+			document.getElementById('chartArea').innerHTML = '<div class="text-muted">No data available for the current selection.</div>';
+			return;
+		}
+		if (state.chartType === 'map') {
+			renderMap();
+		} else {
+			renderChart(seq);
+		}
+		// Refresh lock indicators whenever BI selects change
+		populateColumnPicker();
+	}
+
+	function destroyVisuals() {
+		const chartArea = document.getElementById('chartArea');
+		chartArea.innerHTML = '';
+		if (state.chartInstance) {
+			state.chartInstance.dispose();
+			state.chartInstance = null;
+		}
+		if (state.mapInstance) {
+			state.mapInstance.remove();
+			state.mapInstance = null;
+		}
+		state.mapLayer = null;
+	}
+
+	// ── DuckDB SQL chart helpers ────────────────────────────────────────────
+
+	/**
+	 * Build a SQL WHERE clause from a Tabulator filter array.
+	 * Supports types: '=' (with 'Unknown' mapped to IS NULL/blank), '!=', 'like', '<', '<=', '>', '>='.
+	 */
+	function buildWhereSQL(filters) {
+		if (!filters || !filters.length) return '';
+		const clauses = filters.map(f => {
+			const col = `"${String(f.field).replace(/"/g, '""')}"`;
+			const val = String(f.value ?? '').replace(/'/g, "''");
+			switch (f.type) {
+				case '=':
+					// Chart filter: 'Unknown' represents blank/null values normalized in JS
+					if (f.value === 'Unknown') {
+						return `(${col} IS NULL OR TRIM(CAST(${col} AS VARCHAR)) = '')`;
+					}
+					return `CAST(${col} AS VARCHAR) = '${val}'`;
+				case '!=':
+					return `CAST(${col} AS VARCHAR) != '${val}'`;
+				case 'like':
+					return val ? `CAST(${col} AS VARCHAR) ILIKE '%${val}%'` : '1=1';
+				case '<':
+					return `TRY_CAST(${col} AS DOUBLE) < ${parseFloat(f.value) || 0}`;
+				case '<=':
+					return `TRY_CAST(${col} AS DOUBLE) <= ${parseFloat(f.value) || 0}`;
+				case '>':
+					return `TRY_CAST(${col} AS DOUBLE) > ${parseFloat(f.value) || 0}`;
+				case '>=':
+					return `TRY_CAST(${col} AS DOUBLE) >= ${parseFloat(f.value) || 0}`;
+				default:
+					return `CAST(${col} AS VARCHAR) = '${val}'`;
+			}
+		});
+		return `WHERE ${clauses.join(' AND ')}`;
+	}
+
+	/**
+	 * Build a SQL ORDER BY clause from a Tabulator sorter array.
+	 * Handles both ajaxRequestFunc params ({column, dir}) and getSorters() output ({field, dir}).
+	 */
+	function buildOrderSQL(sorts) {
+		if (!sorts || !sorts.length) return '';
+		const parts = sorts.map(s => {
+			const col = s.column || s.field;
+			return `"${String(col).replace(/"/g, '""')}" ${s.dir === 'desc' ? 'DESC' : 'ASC'}`;
+		});
+		return `ORDER BY ${parts.join(', ')}`;
+	}
+
+	/** Convert an Apache Arrow result set to plain JS objects (handles BigInt). */
+	function arrowToPlainRows(result) {
+		const cols = result.schema.fields.map(f => f.name);
+		return result.toArray().map(r => {
+			const obj = {};
+			cols.forEach(c => {
+				const v = r[c];
+				obj[c] = (v === null || v === undefined) ? null
+					: typeof v === 'bigint' ? Number(v) : v;
+			});
+			return obj;
+		});
+	}
+
+	/** Return the SQL aggregation expression for a metric + aggregation type. */
+	/**
+	 * Build and run a DuckDB aggregation query for the chart, returning the same
+	 * prepared-series structure that buildChartOption() expects.
+	 * Never materialises allRows — all aggregation happens inside DuckDB.
+	 */
+	async function buildChartFromSQL(datasetId, dim, split, metric, agg, orderBy, orderDir) {
+		const useSplit       = split && split !== 'None';
+		const isCountRecords = !metric || metric === 'Record Count';
+		const aggExpr        = buildSqlAggExpr(metric, agg);
+		const seriesLabel    = isCountRecords ? 'Count' : `${agg} of ${metric}`;
+		const safeDs         = String(datasetId).replace(/"/g, '""');
+		const safeDim        = String(dim).replace(/"/g, '""');
+		const dimExpr        = `COALESCE(CAST("${safeDim}" AS VARCHAR), 'Unknown')`;
+		const sqlDir         = orderDir === 'asc' ? 'ASC' : 'DESC';
+
+		if (useSplit) {
+			const safeSplit = String(split).replace(/"/g, '""');
+			const splitExpr = `COALESCE(CAST("${safeSplit}" AS VARCHAR), 'Unknown')`;
+			const sql = `SELECT ${dimExpr} AS dim_val, ${splitExpr} AS split_val, ${aggExpr} AS metric_val `
+				+ `FROM "${safeDs}" GROUP BY dim_val, split_val ORDER BY dim_val, metric_val DESC LIMIT 5000`;
+			const rows = arrowToPlainRows(await window._edaQuery(sql));
+			// Collect ordered dim and split values
+			const dimOrder = [], dimSet = new Set(), splitSet = new Set();
+			rows.forEach(r => {
+				if (!dimSet.has(r.dim_val)) { dimSet.add(r.dim_val); dimOrder.push(r.dim_val); }
+				splitSet.add(r.split_val);
+			});
+			const splitKeys = Array.from(splitSet);
+			// Build dim → split → value lookup
+			const lookup = new Map();
+			rows.forEach(r => {
+				if (!lookup.has(r.dim_val)) lookup.set(r.dim_val, new Map());
+				lookup.get(r.dim_val).set(r.split_val, r.metric_val ?? 0);
+			});
+			const series = splitKeys.map(sk => ({
+				name: sk, type: 'bar', stack: 'total',
+				data: dimOrder.map(dk => {
+					const v = lookup.get(dk)?.get(sk) ?? 0;
+					return typeof v === 'bigint' ? Number(v) : (v ?? 0);
+				})
+			}));
+			// Apply user-requested sort
+			const totals  = dimOrder.map((_, i) => series.reduce((s, sr) => s + (sr.data[i] || 0), 0));
+			const indices = dimOrder.map((_, i) => i);
+			const mult    = orderDir === 'asc' ? 1 : -1;
+			indices.sort((a, b) => orderBy === 'dimension'
+				? String(dimOrder[a]).localeCompare(String(dimOrder[b]), undefined, { numeric: true }) * mult
+				: (totals[a] - totals[b]) * mult);
+			const cats = indices.map(i => dimOrder[i]);
+			series.forEach(s => { s.data = indices.map(i => s.data[i]); });
+			return { categories: cats, seriesLabel, dimensionField: dim, splitField: split, legend: splitKeys, series };
+		} else {
+			const orderCol = orderBy === 'dimension' ? 'dim_val' : 'metric_val';
+			const sql = `SELECT ${dimExpr} AS dim_val, ${aggExpr} AS metric_val `
+				+ `FROM "${safeDs}" GROUP BY dim_val ORDER BY ${orderCol} ${sqlDir} LIMIT 200`;
+			const rows = arrowToPlainRows(await window._edaQuery(sql));
+			const type = state.chartType === 'pie' ? 'pie' : 'bar';
+			return {
+				categories: rows.map(r => r.dim_val ?? 'Unknown'),
+				seriesLabel,
+				dimensionField: dim,
+				splitField: null,
+				legend: [],
+				series: [{
+					name: seriesLabel,
+					type,
+					data: rows.map(r => {
+						const v = r.metric_val;
+						return typeof v === 'bigint' ? Number(v) : (v ?? 0);
+					})
+				}]
+			};
+		}
+	}
+
+	async function renderChart(seq) {
+		const dimensionField  = document.getElementById('dimensionSelect').value;
+		const metricField     = document.getElementById('metricSelect').value;
+		const aggregationType = document.getElementById('aggregationSelect').value;
+		const splitValue      = document.getElementById('splitSelect').value;
+		const orderMode       = document.getElementById('orderDirectionSelect').value;
+		const orderBy         = document.getElementById('orderBySelect').value;
+
+		let prepared;
+		// Use DuckDB for chart aggregation when the connection is available.
+		// On first load DuckDB may still be initialising — the JS fallback produces
+		// the same results and DuckDB is used for all subsequent renders.
+		const canUseDuckDB = typeof window._edaQuery === 'function' && state.datasetId;
+		if (canUseDuckDB) {
+			try {
+				prepared = await buildChartFromSQL(
+					state.datasetId, dimensionField, splitValue,
+					metricField, aggregationType, orderBy, orderMode
+				);
+			} catch (e) {
+				console.warn('DuckDB chart query failed, falling back to JS aggregation:', e);
+				prepared = prepareSeries(state.allRows, dimensionField, splitValue, metricField, aggregationType, state.chartType);
+				sortSeries(prepared, orderBy, orderMode);
+			}
+		} else {
+			prepared = prepareSeries(state.allRows, dimensionField, splitValue, metricField, aggregationType, state.chartType);
+			sortSeries(prepared, orderBy, orderMode);
+		}
+
+		// Bail out if another renderVisual() was called while we awaited DuckDB
+		if (state._renderSeq !== seq) return;
+
+		const chartArea = document.getElementById('chartArea');
+		const chartInstance = echarts.init(chartArea);
+		const option = buildChartOption(prepared, state.chartType, dimensionField);
+		chartInstance.setOption(option);
+		state.chartInstance = chartInstance;
+
+		// ── Chart-click → filter the data table ─────────────────────────────
+		chartInstance.on('click', function (params) {
+			const clickedValue = params.name;
+			if (state.chartFilter && state.chartFilter.value === clickedValue) {
+				// Same element clicked again → toggle the filter off
+				chartInstance.dispatchAction({
+					type: 'unselect',
+					seriesIndex: params.seriesIndex,
+					dataIndex: params.dataIndex
+				});
+				state.chartFilter = null;
+			} else {
+				state.chartFilter = {
+					field: dimensionField,
+					value: clickedValue,
+					seriesIndex: params.seriesIndex,
+					dataIndex: params.dataIndex
+				};
+			}
+			applyChartFilter();
+		});
+	}
+
+	/**
+	 * Apply (or clear) a Tabulator row-filter based on state.chartFilter.
+	 * Also shows/hides the #chartFilterBadge indicator in the table header.
+	 */
+	function applyChartFilter() {
+		const badge    = document.getElementById('chartFilterBadge');
+		const badgeText = document.getElementById('chartFilterText');
+
+		if (!state.tabulator) return;
+
+		if (!state.chartFilter) {
+			state.tabulator.clearFilter();
+			if (badge) badge.style.display = 'none';
+			return;
+		}
+
+		const { field, value } = state.chartFilter;
+
+		if (state.tableDuckDB) {
+			// Remote mode: use a serializable filter object; buildWhereSQL handles 'Unknown' → IS NULL
+			state.tabulator.setFilter([{ field, type: '=', value }]);
+		} else {
+			// Local mode: use a function filter to apply the same normalizeGroupValue logic
+			state.tabulator.setFilter(function (rowData) {
+				const raw = rowData[field];
+				const normalized = (raw === undefined || raw === null || String(raw).trim() === '') ? 'Unknown' : String(raw);
+				return normalized === value;
+			});
+		}
+
+		if (badge) badge.style.display = '';
+		if (badgeText) {
+			badgeText.textContent = `${field} = "${value === 'Unknown' ? '(blank)' : value}"`;
+		}
+	}
+
+	function renderMap() {
+		if (!state.mapConfig.saved) {
+			document.getElementById('chartArea').innerHTML =
+				'<div class="text-muted p-3">Configure and save map settings in the Map Configuration panel on the right.</div>';
+			return;
+		}
+		const latField   = state.mapConfig.latField;
+		const lonField   = state.mapConfig.lonField;
+		const colorField = state.mapConfig.colorField || null;
+		if (!latField || !lonField) {
+			document.getElementById('chartArea').innerHTML =
+				'<div class="text-muted p-3">Please select Latitude and Longitude fields in the Map Configuration panel.</div>';
+			return;
+		}
+		const filteredRows  = getMapFilteredRows();
+		const colorValues   = colorField ? getColorValues(filteredRows, colorField) : [];
+		const colorMap      = new Map(colorValues.map((v, i) => [v, CHART_PALETTE[i % CHART_PALETTE.length]]));
+		const allCols       = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+		const chartArea     = document.getElementById('chartArea');
+		const mapDiv        = document.createElement('div');
+		mapDiv.style.height    = '100%';
+		mapDiv.style.minHeight = '360px';
+		chartArea.appendChild(mapDiv);
+		const map = L.map(mapDiv).setView([37.8, -85.7], 6);
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 18,
+			attribution: '© OpenStreetMap contributors'
+		}).addTo(map);
+		const layerGroup = state.mapOptions.cluster ? L.markerClusterGroup() : L.featureGroup();
+		let markerCount = 0;
+		filteredRows.forEach(row => {
+			const lat = parseFloat(row[latField]);
+			const lon = parseFloat(row[lonField]);
+			if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+			const colorKey           = colorField ? (row[colorField] ?? 'Unknown') : 'Feature';
+			const normalizedColorKey = colorKey === '' ? 'Unknown' : String(colorKey);
+			const strokeColor        = colorMap.get(normalizedColorKey) || CHART_PALETTE[0];
+			const marker = L.circleMarker([lat, lon], {
+				radius: 5, weight: 1,
+				color: strokeColor, fillColor: strokeColor, fillOpacity: 0.75
+			});
+			const popupLines = [];
+			allCols.forEach(col => {
+				if (state.mapOptions.popupHidden.has(col)) return;
+				const val = row[col];
+				if (val === undefined || val === null || String(val).trim() === '') return;
+				popupLines.push(`<b>${col}:</b> ${val}`);
+			});
+			if (popupLines.length) marker.bindPopup(popupLines.join('<br>'));
+			layerGroup.addLayer(marker);
+			markerCount += 1;
+		});
+		layerGroup.addTo(map);
+		if (markerCount) {
+			const bounds = layerGroup.getBounds();
+			if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24] });
+			updateProgress(`${formatNumber(markerCount)} features on map.`);
+		} else {
+			updateProgress('No features match the current map filters.');
+		}
+		state.mapInstance = map;
+		state.mapLayer    = layerGroup;
+	}
+
+	function renderTable() {
+		const container = document.getElementById('tableContainer');
+		if (state.tabulator) {
+			state.tabulator.destroy();
+			state.tabulator = null;
+		}
+		container.innerHTML = '';
+		state.tableDuckDB = false;
+
+		// Use DuckDB remote-paging only when there are no in-memory rows.
+		// If state.allRows is populated (the normal case for all current datasets)
+		// we use local Tabulator mode — it's simpler, faster, and avoids DuckDB
+		// connection contention. DuckDB mode is reserved for future large datasets
+		// that are never fully loaded into memory (Phase 1.6+).
+		const canUseDuckDB = !state.allRows.length
+			&& typeof window._edaQuery === 'function'
+			&& state.datasetId
+			&& window._edaTableColumns?.has(state.datasetId);
+
+		if (!canUseDuckDB && !state.allRows.length) {
+			container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
+			populateColumnPicker();
+			return;
+		}
+
+		// Remove from hidden set any columns that are now locked (dimension/metric/split)
+		getLockedColumns().forEach(c => state.hiddenColumns.delete(c));
+
+		// Derive column list from allRows (always populated today) with DuckDB schema as fallback
+		const allColKeys = state.allRows.length
+			? Object.keys(state.allRows[0])
+			: (window._edaTableColumns.get(state.datasetId) || []).map(c => c.name);
+
+		if (!allColKeys.length) {
+			container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
+			populateColumnPicker();
+			return;
+		}
+
+		// When map is active, also respect the map-specific tableHidden set
+		const mapTableHid = (state.chartType === 'map') ? state.mapOptions.tableHidden : null;
+		const columns = allColKeys
+			.filter(key => !state.hiddenColumns.has(key) && !(mapTableHid && mapTableHid.has(key)))
+			.map(key => ({
+				title: key,
+				field: key,
+				headerFilter: 'input',
+				headerFilterPlaceholder: 'Filter…',
+				headerSort: true,
+				minWidth: 160
+			}));
+
+		if (canUseDuckDB) {
+			state.tableDuckDB = true;
+			const alias = state.datasetId;
+			state.tabulator = new Tabulator(container, {
+				ajaxURL: 'duckdb',
+				ajaxRequestFunc: async (_url, _cfg, params) => {
+					const { page = 1, size = 25, filter = [], sort = [] } = params;
+					const offset   = (page - 1) * size;
+					const whereSql = buildWhereSQL(filter);
+					const orderSql = buildOrderSQL(sort);
+					// DuckDB-WASM uses a single connection — queries must be sequential.
+					const countResult = await window._edaQuery(`SELECT COUNT(*) AS n FROM "${alias}" ${whereSql}`);
+					const total       = Number(arrowToPlainRows(countResult)[0]?.n ?? 0);
+					const dataResult  = await window._edaQuery(`SELECT * FROM "${alias}" ${whereSql} ${orderSql} LIMIT ${size} OFFSET ${offset}`);
+					const rows        = arrowToPlainRows(dataResult);
+					return { data: rows, last_page: Math.ceil(total / size) || 1 };
+				},
+				filterMode: 'remote',
+				sortMode: 'remote',
+				layout: 'fitDataStretch',
+				height: '420px',
+				pagination: 'remote',
+				paginationSize: 25,
+				paginationSizeSelector: [25, 50, 100, 200],
+				columns,
+				placeholder: 'No rows to display.',
+				resizableColumns: true,
+				autoColumns: false
+			});
+		} else {
+			state.tabulator = new Tabulator(container, {
+				data: state.allRows,
+				layout: 'fitDataStretch',
+				height: '420px',
+				pagination: 'local',
+				paginationSize: 15,
+				paginationSizeSelector: [15, 25, 50, 100],
+				columns,
+				placeholder: 'No rows to display.',
+				resizableColumns: true,
+				autoColumns: false
+			});
+		}
+
+		// Re-apply any active chart filter after rebuilding the table
+		if (state.chartFilter) applyChartFilter();
+		// Re-apply map filter selections as row filters when map is active
+		if (state.chartType === 'map') applyMapTableFilters();
+		populateColumnPicker();
+	}
+
+	/** Returns the set of column names that must always stay visible. */
+	function getLockedColumns() {
+		const locked = new Set();
+		const dim    = document.getElementById('dimensionSelect')?.value;
+		const metric = document.getElementById('metricSelect')?.value;
+		const split  = document.getElementById('splitSelect')?.value;
+		if (dim)                               locked.add(dim);
+		if (metric && metric !== 'Record Count') locked.add(metric);
+		if (split  && split  !== 'None')        locked.add(split);
+		return locked;
+	}
+
+	/** Rebuild the column picker list, reflecting current hidden/locked state. */
+	function populateColumnPicker() {
+		const list  = document.getElementById('colPickerList');
+		const badge = document.getElementById('colPickerBadge');
+		if (!list) return;
+		if (!state.allRows.length) {
+			list.innerHTML = '<div class="col-picker-empty">No dataset loaded.</div>';
+			if (badge) badge.style.display = 'none';
+			return;
+		}
+		const allCols   = Object.keys(state.allRows[0]);
+		const locked    = getLockedColumns();
+		// Ensure locked columns are never left in the hidden set
+		locked.forEach(c => state.hiddenColumns.delete(c));
+
+		list.innerHTML = '';
+		allCols.forEach(col => {
+			const isLocked = locked.has(col);
+			const isHidden = state.hiddenColumns.has(col);
+
+			const item = document.createElement('div');
+			item.className = 'col-picker-item'
+				+ (isLocked ? ' col-picker-locked' : '')
+				+ (isHidden ? ' col-picker-hidden' : '');
+
+			const cb = document.createElement('input');
+			cb.type = 'checkbox';
+			cb.className = 'col-picker-cb form-check-input mt-0';
+			cb.checked  = !isHidden;
+			cb.disabled = isLocked;
+			cb.title = isLocked ? 'Required by current chart selection' : (isHidden ? 'Click to show' : 'Click to hide');
+
+			const lbl = document.createElement('label');
+			lbl.className = 'col-picker-name';
+			lbl.textContent = col;
+			lbl.title = col;
+
+			item.appendChild(cb);
+			item.appendChild(lbl);
+
+			if (isLocked) {
+				const lock = document.createElement('i');
+				lock.className = 'bi bi-lock-fill col-picker-lock';
+				lock.title = 'Required by current chart selection';
+				item.appendChild(lock);
+			}
+
+			if (!isLocked) {
+				cb.addEventListener('change', () => {
+					if (cb.checked) {
+						state.hiddenColumns.delete(col);
+					} else {
+						state.hiddenColumns.add(col);
+					}
+					renderTable();
+				});
+				// Also allow clicking the label to toggle
+				item.addEventListener('click', (e) => {
+					if (e.target === cb || e.target === lbl) return; // let native events fire
+					cb.checked = !cb.checked;
+					cb.dispatchEvent(new Event('change'));
+				});
+			}
+
+			list.appendChild(item);
+		});
+
+		const hiddenCount = state.hiddenColumns.size;
+		if (badge) {
+			badge.style.display = hiddenCount > 0 ? '' : 'none';
+			badge.textContent   = hiddenCount > 0 ? `${hiddenCount} hidden` : '';
+		}
+	}
+
+	function updateChartButtons() {
+		document.querySelectorAll('.btn-chart').forEach(button => {
+			const chartType = button.getAttribute('data-chart');
+			button.classList.toggle('active', chartType === state.chartType);
+			if (chartType === 'map') {
+				const enabled = state.allRows.length > 0;
+				button.disabled = !enabled;
+				button.setAttribute('title', enabled ? 'Show Leaflet map view' : 'Map not available \u2014 load a dataset first');
+			}
+		});
+		updateShareButtonState();
+		updateControlVisibility();
+	}
+
+	function updateControlVisibility() {
+		const controlsCard    = document.getElementById('controlsCard');
+		const mapContainer    = document.getElementById('mapOptions');
+		const generalControls = document.getElementById('generalControls');
+		const sqlSidebar      = document.getElementById('sqlSidebarPanel');
+		const chartArea       = document.getElementById('chartArea');
+		const progressMsg     = document.getElementById('progressMessage');
+		const dataSummary     = document.getElementById('dataSummary');
+		const sqlWorkbench    = document.getElementById('sqlWorkbenchPanel');
+		const tableCard       = document.querySelector('.table-card');
+		const tableControlsCard = document.getElementById('tableControlsCard');
+		const hasMap       = state.allRows.length > 0;
+		const mapActive    = state.chartType === 'map' && hasMap;
+		const sqlActive    = state.chartType === 'sql';
+
+		if (controlsCard) {
+			controlsCard.classList.toggle('map-active', mapActive && !sqlActive);
+			controlsCard.classList.toggle('sql-active',     sqlActive);
+		}
+
+		if (mapContainer) {
+			mapContainer.classList.toggle('d-none', !mapActive || sqlActive);
+		}
+
+		if (generalControls) {
+			if (mapActive || sqlActive) {
+				generalControls.setAttribute('aria-hidden', 'true');
+			} else {
+				generalControls.removeAttribute('aria-hidden');
+			}
+		}
+
+		if (sqlSidebar) sqlSidebar.style.display = sqlActive ? 'flex' : 'none';
+
+		if (chartArea)    chartArea.style.display    = sqlActive ? 'none' : '';
+		if (progressMsg)  progressMsg.style.display  = sqlActive ? 'none' : '';
+		if (dataSummary)  dataSummary.style.display  = sqlActive ? 'none' : '';
+		if (sqlWorkbench) sqlWorkbench.style.display = sqlActive    ? 'flex' : 'none';
+
+		if (tableCard) tableCard.style.display = sqlActive ? 'none' : '';
+		if (tableControlsCard) tableControlsCard.style.display = sqlActive ? 'none' : '';
+	}
+
+	function updateProgress(message) {
+		document.getElementById('progressMessage').textContent = message || '';
+	}
+
+	function getUniqueValues(rows, field) {
+		const set = new Set();
+		rows.forEach(row => {
+			const raw = row[field];
+			if (raw === undefined || raw === null) return;
+			const value = String(raw).trim();
+			if (value) set.add(value);
+		});
+		return Array.from(set).sort((a, b) => a.localeCompare(b));
+	}
+
+	function getColorValues(rows, field) {
+		const set = new Set();
+		rows.forEach(row => {
+			let raw = row[field];
+			if (raw === undefined || raw === null || raw === '') {
+				raw = 'Unknown';
+			}
+			set.add(String(raw));
+		});
+		return Array.from(set).sort((a, b) => a.localeCompare(b));
+	}
+
+	function stringToColor(value) {
+		const hash = Math.abs(hashCode(value));
+		const hue = hash % 360;
+		return hslToHex(hue, 65, 50);
+	}
+
+	function hashCode(value) {
+		let hash = 0;
+		for (let i = 0; i < value.length; i += 1) {
+			hash = ((hash << 5) - hash) + value.charCodeAt(i);
+			hash |= 0;
+		}
+		return hash;
+	}
+
+	function hslToHex(h, s, l) {
+		s /= 100;
+		l /= 100;
+		const k = (n) => (n + h / 30) % 12;
+		const a = s * Math.min(l, 1 - l);
+		const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+		const toHex = (x) => Math.round(x * 255).toString(16).padStart(2, '0');
+		return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+	}
+
+	function formatNumber(value) {
+		return Number.isFinite(value) ? value.toLocaleString() : '0';
+	}
+
+	function formatTimestamp(date) {
+		const pad = (num) => String(num).padStart(2, '0');
+		return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+	}
+
+	function downloadAsCSV(rows, filename) {
+		if (!rows.length) return;
+		const headers = Object.keys(rows[0]);
+		const csvLines = [headers.join(',')];
+		rows.forEach(row => {
+			const line = headers.map(header => {
+				const value = row[header] ?? '';
+				const escaped = String(value).replace(/"/g, '""');
+				if (escaped.search(/("|,|\n)/) >= 0) {
+					return `"${escaped}"`;
+				}
+				return escaped;
+			});
+			csvLines.push(line.join(','));
+		});
+		const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const anchor = document.createElement('a');
+		anchor.href = url;
+		anchor.download = filename;
+		anchor.click();
+		URL.revokeObjectURL(url);
+	}
+
+	/** Infer a SQL-like column type from sampled row values. */
+	function inferColumnType(name, rows) {
+		const samples = [];
+		for (let i = 0; i < rows.length && samples.length < 200; i++) {
+			const v = rows[i][name];
+			if (v !== null && v !== undefined && String(v).trim() !== '') samples.push(String(v).trim());
+		}
+		if (!samples.length) return 'VARCHAR';
+		if (samples.every(v => /^-?\d+$/.test(v))) return 'INTEGER';
+		if (samples.every(v => !Number.isNaN(Number(v)))) return 'DOUBLE';
+		if (samples.every(v => /^\d{4}-\d{2}-\d{2}(T[\d:.Z+-]*)?$/.test(v))) return 'DATE';
+		return 'VARCHAR';
+	}
+
+	// Expose CSV parser for the SQL module to use when copying sources into EDA
+	window._edaParseCsv = parseCSV;
+	window._edaRenderCatalog = () => renderCatalog();
+
+	// ── Data Catalog ────────────────────────────────────────────────────────
+	const catalogSchemaCache = new Map();
+	let selectedCatalogDatasetId = null;
+	let catalogPreviewSequence = 0;
+
+	function linkifyDesc(text) {
+		return escHtml(text).replace(
+			/https?:\/\/[^\s&]+/g,
+			url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+		);
+	}
+
+	function escHtml(str) {
+		return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+	}
+
+	function buildCatalogItems() {
+		const items = DATASETS.map(ds => ({
+			id:          ds.id,
+			title:       ds.title,
+			description: ds.description || '',
+			sourceType:  'preloaded',
+			settingsUrl: `${DATA_ROOT}/${ds.id}/${ds.id}-bi-settings.json`,
+			indexUrl:    `${DATA_ROOT}/${ds.id}/${ds.id}.index.json`
+		}));
+		if (window._edaUserDatasets) {
+			window._edaUserDatasets.forEach((ds, alias) => {
+				items.push({
+					id:          alias,
+					title:       ds.title || alias,
+					description: '',
+					sourceType:  'user',
+					rows:        ds.rows,
+					addedAt:     ds.addedAt  || null,
+					fileName:    ds.fileName || null,
+					url:         ds.url      || null
+				});
+			});
+		}
+		return items;
+	}
+
+	function renderCatalog() {
+		const list = document.getElementById('catalogDatasetList');
+		if (!list) return;
+		const items = buildCatalogItems();
+		if (!items.length) {
+			list.innerHTML = '<div class="catalog-empty-preview">No datasets are available.</div>';
+			return;
+		}
+		const groups = [
+			{ id: 'preloaded', label: 'Preloaded datasets', items: items.filter(item => item.sourceType === 'preloaded') },
+			{ id: 'imported', label: 'Imported datasets', items: items.filter(item => item.sourceType === 'user') }
+		].filter(group => group.items.length);
+		list.innerHTML = groups.map(group =>
+			`<section class="dataset-tree-group" role="group">`
+				+ `<button type="button" class="dataset-tree-branch" data-catalog-group-toggle aria-expanded="true" aria-controls="dataset-tree-${group.id}">`
+				+ `<span class="dataset-tree-caret" aria-hidden="true">▾</span>${group.label}<span class="dataset-tree-count">${group.items.length}</span>`
+				+ `</button>`
+				+ `<div class="dataset-tree-children" id="dataset-tree-${group.id}" role="group">`
+				+ group.items.map(item => {
+					const description = item.description || item.fileName || item.url || 'Imported in this browser';
+					const canRefresh = item.sourceType === 'preloaded'
+						|| typeof window._edaRefreshUserSource === 'function';
+					return `<div class="dataset-tree-entry" role="treeitem" data-catalog-dataset="${escHtml(item.id)}">`
+						+ `<div class="dataset-tree-node" title="${escHtml(description)}">`
+						+ `<i class="bi bi-table" aria-hidden="true"></i><span>${escHtml(item.title)}</span><span class="dataset-tree-loaded" hidden>Loaded</span>`
+						+ `</div>`
+						+ `<div class="dataset-tree-status" data-cache-status="${escHtml(item.id)}">Checking cache…</div>`
+						+ `<div class="dataset-tree-actions">`
+						+ `<button type="button" class="btn btn-outline-primary btn-sm" data-catalog-action="preview" data-dataset-id="${escHtml(item.id)}" title="Preview data and schema"><i class="bi bi-eye" aria-hidden="true"></i> Preview</button>`
+						+ `<button type="button" class="btn btn-primary btn-sm" data-catalog-action="analyze" data-dataset-id="${escHtml(item.id)}" title="Load this dataset into the visualization and table">Analyze</button>`
+						+ (canRefresh ? `<button type="button" class="btn btn-outline-secondary btn-sm" data-catalog-action="refresh" data-dataset-id="${escHtml(item.id)}" title="Download a fresh copy and update the browser cache">Refresh</button>` : '')
+						+ `</div></div>`;
+				}).join('')
+				+ `</div></section>`
+		).join('');
+		if (!items.some(item => item.id === selectedCatalogDatasetId)) {
+			selectedCatalogDatasetId = items.find(item => item.id === state.datasetId)?.id || items[0].id;
+		}
+		updateCatalogTreeState();
+		updateCatalogSummary(items);
+		updateCatalogCacheStatuses(items);
+	}
+
+	async function updateCatalogSummary(items) {
+		const summary = document.getElementById('catalogSummary');
+		if (!summary) return;
+		try {
+			const counts = await Promise.all(DATASETS.map(dataset => readCachedRecordCount(dataset.id)));
+			let cachedRows = counts.reduce((total, count) => total + (count || 0), 0);
+			items.filter(item => item.sourceType === 'user')
+				.forEach(item => { cachedRows += item.rows?.length || 0; });
+			const storageBytes = await estimatePartitionStorageBytes();
+			const preloadedCount = items.filter(item => item.sourceType === 'preloaded').length;
+			const importedCount = items.length - preloadedCount;
+			summary.textContent = `${preloadedCount} preloaded · ${importedCount} imported · ${formatNumber(cachedRows)} cached rows · ${storageBytes ? formatBytes(storageBytes) : 'no cache'}`;
+		} catch (error) {
+			console.error('Catalog cache summary failed:', error);
+			summary.textContent = 'Cache summary unavailable.';
+		}
+	}
+
+	function formatBytes(bytes) {
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+		if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+		return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+	}
+
+	function updateCatalogTreeState() {
+		document.querySelectorAll('#catalogDatasetList .dataset-tree-entry').forEach(entry => {
+			const isSelected = entry.dataset.catalogDataset === selectedCatalogDatasetId;
+			const isLoaded = entry.dataset.catalogDataset === state.datasetId;
+			entry.classList.toggle('selected', isSelected);
+			entry.classList.toggle('loaded', isLoaded);
+			entry.setAttribute('aria-current', isLoaded ? 'true' : 'false');
+			entry.querySelector('.dataset-tree-loaded').hidden = !isLoaded;
+			const analyzeButton = entry.querySelector('[data-catalog-action="analyze"]');
+			analyzeButton.disabled = isLoaded;
+			analyzeButton.textContent = isLoaded ? 'Active' : 'Analyze';
+		});
+	}
+
+	function selectCatalogDataset(datasetId) {
+		const dataset = buildCatalogItems().find(item => item.id === datasetId);
+		if (!dataset) return;
+		selectedCatalogDatasetId = dataset.id;
+		updateCatalogTreeState();
+		renderCatalogDatasetDetails(dataset);
+		bootstrap.Modal.getOrCreateInstance(document.getElementById('datasetPreviewModal')).show();
+	}
+
+	function renderCatalogDatasetDetails(dataset) {
+		const pane = document.getElementById('catalogDetailPane');
+		const description = dataset.description
+			? linkifyDesc(dataset.description)
+			: escHtml(dataset.fileName || dataset.url || 'Imported in this browser');
+		document.getElementById('datasetPreviewTitle').textContent = `Preview: ${dataset.title}`;
+		const analyzeButton = document.getElementById('datasetPreviewAnalyzeBtn');
+		analyzeButton.dataset.datasetId = dataset.id;
+		analyzeButton.disabled = state.datasetId === dataset.id;
+		analyzeButton.textContent = analyzeButton.disabled ? 'Already Active' : 'Analyze Dataset';
+		pane.innerHTML = `
+			<div class="catalog-detail-header">
+				<div>
+					<h4 class="catalog-detail-title">${escHtml(dataset.title)}</h4>
+					<div class="catalog-detail-description">${description}</div>
+					<div class="catalog-detail-id">${escHtml(dataset.id)}</div>
+				</div>
+			</div>
+			<div class="catalog-preview-tabs" role="tablist" aria-label="Dataset preview mode">
+				<button type="button" class="active" role="tab" aria-selected="true" data-preview-tab="data">Data</button>
+				<button type="button" role="tab" aria-selected="false" data-preview-tab="schema">Schema</button>
+			</div>
+			<div id="catalogDataPreview" role="tabpanel">
+				<div class="catalog-preview-heading">
+					<h6>First 10 rows</h6>
+				</div>
+				<div id="catalogPreviewStatus" class="catalog-preview-message">Loading preview…</div>
+				<div id="catalogPreviewTable"></div>
+			</div>
+			<div id="catalogSchemaPreview" class="catalog-schema-preview" role="tabpanel" hidden></div>
+		`;
+
+		const sequence = ++catalogPreviewSequence;
+		void loadCatalogPreview(dataset, sequence);
+	}
+
+	function setCatalogPreviewMode(mode) {
+		const showSchema = mode === 'schema';
+		document.querySelectorAll('#catalogDetailPane [data-preview-tab]').forEach(button => {
+			const selected = button.dataset.previewTab === mode;
+			button.classList.toggle('active', selected);
+			button.setAttribute('aria-selected', String(selected));
+		});
+		document.getElementById('catalogDataPreview').hidden = showSchema;
+		const schemaPane = document.getElementById('catalogSchemaPreview');
+		schemaPane.hidden = !showSchema;
+		if (!showSchema) return;
+		const dataset = buildCatalogItems().find(item => item.id === selectedCatalogDatasetId);
+		if (dataset) loadAndRenderCatalogSchema(dataset, schemaPane);
+	}
+
+	async function loadCatalogPreview(dataset, sequence) {
+		const status = document.getElementById('catalogPreviewStatus');
+		try {
+			let rows;
+			if (dataset.sourceType === 'user') {
+				rows = dataset.rows.slice(0, 10);
+			} else if (state.datasetId === dataset.id && state.allRows.length) {
+				rows = state.allRows.slice(0, 10);
+			} else {
+				try {
+					rows = await readCachedSample(dataset.id, 10);
+				} catch (error) {
+					console.warn(`Cached preview unavailable for "${dataset.id}":`, error);
+				}
+				if (!rows?.length) rows = await fetchRawCsvSample(dataset.id);
+				rows = rows?.slice(0, 10);
+			}
+			if (sequence !== catalogPreviewSequence) return;
+			if (!rows?.length) {
+				status.textContent = 'Preview unavailable. Try refreshing the dataset or check your connection.';
+				return;
+			}
+			status.textContent = `Showing ${formatNumber(rows.length)} preview rows.`;
+			document.getElementById('catalogPreviewTable').innerHTML = renderCatalogPreviewTable(rows);
+		} catch (error) {
+			if (sequence !== catalogPreviewSequence) return;
+			console.error(`Preview failed for "${dataset.id}":`, error);
+			status.textContent = `Preview failed: ${error.message}`;
+		}
+	}
+
+	function renderCatalogPreviewTable(rows) {
+		const columns = Object.keys(rows[0]);
+		const headers = columns.map(column => {
+			const type = inferColumnType(column, rows);
+			const icon = type === 'DATE'
+				? '<i class="bi bi-calendar3" aria-hidden="true"></i>'
+				: type === 'INTEGER' || type === 'DOUBLE'
+					? '<span aria-hidden="true">123</span>'
+					: '<span aria-hidden="true">Aa</span>';
+			return `<th scope="col"><span class="catalog-column-type" title="${type}" aria-label="${type}">${icon}</span><span>${escHtml(column)}</span></th>`;
+		}).join('');
+		const body = rows.map(row => `<tr>${columns.map(column => {
+			const value = row[column] === null || row[column] === undefined ? '' : String(row[column]);
+			return `<td title="${escHtml(value)}">${escHtml(value)}</td>`;
+		}).join('')}</tr>`).join('');
+		return `<div class="catalog-preview-table-wrap"><table class="table table-sm table-striped catalog-preview-table"><thead><tr>${headers}</tr></thead><tbody>${body}</tbody></table></div>`;
+	}
+
+	async function updateCatalogCacheStatuses(items) {
+		const statusElements = [...document.querySelectorAll('#catalogDatasetList [data-cache-status]')];
+		await Promise.all(items.map(async item => {
+			const status = statusElements.find(element => element.dataset.cacheStatus === item.id);
+			if (!status) return;
+			if (item.sourceType === 'user') {
+				status.textContent = `${formatNumber(item.rows.length)} rows available in browser`;
+				return;
+			}
+			try {
+				const [count, cachedAt] = await Promise.all([
+					readCachedRecordCount(item.id),
+					readDatasetCachedAt(item.id)
+				]);
+				const suffix = cachedAt ? ` · refreshed ${formatTimestamp(new Date(cachedAt))}` : '';
+				status.textContent = count === null
+					? 'Not cached · loads from hosted files'
+					: `${formatNumber(count)} rows cached${suffix}`;
+			} catch (error) {
+				console.error(`Cache status failed for "${item.id}":`, error);
+				status.textContent = 'Cache status unavailable';
+			}
+		}));
+	}
+
+	async function handleCatalogAction(event) {
+		const button = event.target.closest('[data-catalog-action]');
+		if (!button) return;
+		const dataset = buildCatalogItems().find(item => item.id === button.dataset.datasetId);
+		if (!dataset) return;
+		if (button.dataset.catalogAction === 'preview') {
+			selectCatalogDataset(dataset.id);
+			return;
+		}
+		if (button.dataset.catalogAction === 'analyze') {
+			const modal = document.getElementById('datasetPreviewModal');
+			if (modal.classList.contains('show')) {
+				bootstrap.Modal.getOrCreateInstance(modal).hide();
+			}
+			await selectDataset(dataset.id);
+			return;
+		}
+		if (button.dataset.catalogAction === 'refresh') {
+			await refreshCatalogDataset(dataset);
+		}
+	}
+
+	async function refreshCatalogDataset(dataset) {
+		const entry = [...document.querySelectorAll('#catalogDatasetList .dataset-tree-entry')]
+			.find(item => item.querySelector('[data-catalog-dataset]')?.dataset.catalogDataset === dataset.id);
+		const status = entry?.querySelector('[data-cache-status]');
+		const buttons = entry?.querySelectorAll('[data-catalog-action]');
+		if (!entry || !status || !buttons) return;
+		buttons.forEach(button => { button.disabled = true; });
+		status.textContent = 'Refreshing dataset…';
+		try {
+			if (dataset.sourceType === 'user') {
+				const rows = await window._edaRefreshUserSource(dataset.id);
+				if (!rows) throw new Error('The imported source could not be refreshed.');
+			} else {
+				await refreshPartitionCache(dataset.id, (completed, total) => {
+					status.textContent = `Refreshing partitions ${completed}/${total}…`;
+				});
+			}
+
+			catalogSchemaCache.delete(dataset.id);
+			if (state.datasetId === dataset.id) {
+				if (dataset.sourceType === 'user') {
+					await selectDataset(dataset.id);
+				} else {
+					await loadDataset(dataset.id);
+				}
+				updateCatalogTreeState();
+				await updateCatalogCacheStatuses(buildCatalogItems());
+				return;
+			}
+
+			renderCatalog();
+		} catch (error) {
+			console.error(`Refresh failed for "${dataset.id}":`, error);
+			status.textContent = `Refresh failed: ${error.message}`;
+			buttons.forEach(button => { button.disabled = false; });
+		}
+	}
+
+	async function loadAndRenderCatalogSchema(ds, schemaEl) {
+		// Only serve from cache when the schema is complete (not partial)
+		if (catalogSchemaCache.has(ds.id) && !catalogSchemaCache.get(ds.id).partial) {
+			renderCatalogSchemaView(schemaEl, catalogSchemaCache.get(ds.id));
+			return;
+		}
+		// Clear any stale partial entry so we always try to get the full schema
+		catalogSchemaCache.delete(ds.id);
+
+		schemaEl.innerHTML = `<div style="color:#adb5bd;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">Loading schema&hellip;</div>`;
+
+		if (ds.sourceType === 'user') {
+			const sample = ds.rows.slice(0, 200);
+			const cols   = sample.length ? Object.keys(sample[0]) : [];
+			const columns = cols.map(name => ({ name, kind: 'column', type: inferColumnType(name, sample) }));
+			const schema = { columns, recordCount: ds.rows.length, partial: false };
+			catalogSchemaCache.set(ds.id, schema);
+			renderCatalogSchemaView(schemaEl, schema);
+			return;
+		}
+
+		try {
+			const [settingsResp, indexResp] = await Promise.all([
+				fetch(ds.settingsUrl, { cache: 'no-cache' }).catch(() => null),
+				fetch(ds.indexUrl,    { cache: 'no-cache' }).catch(() => null)
+			]);
+			const settings  = settingsResp?.ok ? await settingsResp.json() : null;
+			const indexData = indexResp?.ok    ? await indexResp.json()    : null;
+
+			/** Classify a column name using BI settings */
+			const classify = name =>
+				(settings?.dimensions || []).includes(name) ? 'dimension'
+				: (settings?.metrics  || []).includes(name) ? 'metric'
+				: 'column';
+
+			let columns = [];
+			let partial = false;
+			const activeDataset = state.datasetId === ds.id && state.allRows.length;
+			const cachedSample = activeDataset ? null : await readCachedSample(ds.id);
+
+			// Priority 1: active loaded dataset — already in memory, free
+			if (activeDataset) {
+				const sample = state.allRows.slice(0, 200);
+				columns = Object.keys(state.allRows[0]).map(name => ({
+					name, kind: classify(name), type: inferColumnType(name, sample)
+				}));
+
+			// Priority 2: IDB partition cache
+			} else if (cachedSample?.length) {
+				columns = Object.keys(cachedSample[0]).map(name => ({
+					name, kind: classify(name), type: inferColumnType(name, cachedSample)
+				}));
+
+			// Priority 3: DuckDB DESCRIBE — same source & same types as the SQL panel.
+			// Triggers lazy DuckDB init if the SQL tab hasn't been visited yet.
+			} else if (typeof window._edaDescribeTable === 'function') {
+				const duckCols = await window._edaDescribeTable(ds.id).catch(() => null);
+				if (duckCols && duckCols.length) {
+					columns = duckCols.map(c => ({
+						name: c.name, kind: classify(c.name), type: c.type
+					}));
+				} else {
+					// Priority 4: raw CSV header parse (no DuckDB, offline fallback)
+					const sample = await fetchRawCsvSample(ds.id);
+					if (sample && sample.length) {
+						columns = Object.keys(sample[0]).map(name => ({
+							name, kind: classify(name), type: inferColumnType(name, sample)
+						}));
+					}
+				}
+			} else {
+				// Priority 3b: SQL module not yet evaluated — raw CSV parse
+				const sample = await fetchRawCsvSample(ds.id);
+				if (sample && sample.length) {
+					columns = Object.keys(sample[0]).map(name => ({
+						name, kind: classify(name), type: inferColumnType(name, sample)
+					}));
+				}
+			}
+			if (!columns.length && settings) {
+				// Last resort: BI-configured fields only (raw CSV unreachable)
+				partial = true;
+				const seen = new Set();
+				(settings.dimensions || []).forEach(name => {
+					if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'dimension' }); }
+				});
+				(settings.metrics || []).forEach(name => {
+					if (name === 'Record Count') return;
+					if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'metric' }); }
+				});
+			}
+
+			const recordCount = indexData?.totalRecords ?? null;
+			const rcEl = document.getElementById(`catalog-rc-${ds.id}`);
+			if (rcEl && recordCount !== null) rcEl.textContent = `${formatNumber(recordCount)}\u00a0records`;
+
+			const schema = { columns, recordCount, partial };
+			catalogSchemaCache.set(ds.id, schema);
+			renderCatalogSchemaView(schemaEl, schema);
+		} catch (e) {
+			schemaEl.innerHTML = `<div style="color:#dc3545;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">Failed to load schema.</div>`;
+		}
+	}
+
+	function renderCatalogSchemaView(schemaEl, schema) {
+		const { columns, recordCount, partial } = schema;
+		if (!columns || !columns.length) {
+			schemaEl.innerHTML = `<div style="color:#adb5bd;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">No field information available.</div>`;
+			return;
+		}
+		const kindIcon  = k => k === 'dimension' ? '&#9783;' : (k === 'metric' ? '#' : '&ndash;');
+		const kindLabel = k => k === 'dimension' ? 'dim' : (k === 'metric' ? 'num' : '');
+		let subtitle = `${columns.length} field${columns.length !== 1 ? 's' : ''}`;
+		if (recordCount != null) subtitle = `${formatNumber(recordCount)}\u00a0records &middot; ${subtitle}`;
+		if (partial) subtitle += ' <span style="color:#f0a500;font-size:9px">(BI-configured fields only &mdash; load dataset for full schema)</span>';
+		const rows = columns.map(col => {
+			const name  = typeof col === 'string' ? col : col.name;
+			const kind  = typeof col === 'object' ? (col.kind || 'column') : 'column';
+			const type  = typeof col === 'object' ? (col.type || '') : '';
+			return `<div class="catalog-field-row">`
+				+ `<span class="catalog-field-icon">${kindIcon(kind)}</span>`
+				+ `<span class="catalog-field-name" title="${escHtml(name)}">${escHtml(name)}</span>`
+				+ (type ? `<span class="catalog-field-type">${escHtml(type)}</span>` : '')
+				+ (kindLabel(kind) ? `<span class="catalog-field-kind">${kindLabel(kind)}</span>` : '')
+				+ `</div>`;
+		}).join('');
+		schemaEl.innerHTML =
+			`<div class="catalog-schema-body"><div class="catalog-schema-subtitle">${subtitle}</div>${rows}</div>`;
+	}
+
+})();
