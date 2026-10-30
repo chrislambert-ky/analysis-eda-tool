@@ -10,7 +10,10 @@ import {
 	getDatabase,
 	readCachedRecordCount,
 	readCachedSample,
-	readDatasetCachedAt
+	readDatasetCachedAt,
+	deleteSavedQuery,
+	readSavedQueries,
+	saveSavedQuery
 } from './data-store.mjs';
 import {
 	DATA_ROOT,
@@ -27,6 +30,10 @@ import {
 	prepareSeries,
 	sortSeries
 } from './chart-engine.mjs';
+import {
+	readWorkspacePreferences,
+	writeWorkspacePreferences
+} from './workspace-preferences.mjs';
 
 (function () {
 	'use strict';
@@ -35,10 +42,10 @@ import {
 	// ECharts 5 default palette — used for both charts and map markers so colors stay consistent
 	const CHART_PALETTE = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
 	const DATASETS = [
-		{ id: 'eda_assets_bridge_condition_owner_area',    title: 'Bridge Condition & Owner Area',              description: 'Bridge inventory and condition ratings. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
-		{ id: 'eda_construction_procurement',              title: 'Construction Procurement',                   description: 'Awarded construction contracts. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
-		{ id: 'eda_current_enact_plan_data_set',           title: 'Current Enacted Plan',                       description: 'Current enacted highway plan, including funding allocations. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' },
-		{ id: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',   description: 'Details of authorized dollars including project phases, costs, and schedule data. Data supplied by Kentucky Transportation Cabinet. See https://trak.kytc.ky.gov/ for more details.' }
+		{ id: 'eda_assets_bridge_condition_owner_area',    title: 'Bridge Condition & Owner Area',              description: 'Bridge inventory and condition ratings. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_construction_procurement',              title: 'Construction Procurement',                   description: 'Awarded construction contracts. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_current_enact_plan_data_set',           title: 'Current Enacted Plan',                       description: 'Current enacted highway plan, including funding allocations. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',   description: 'Details of authorized dollars including project phases, costs, and schedule data. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' }
 	];
 	const APP_VERSION = '1.5.0';
 	const PRESET_DATASET_SLUGS = {
@@ -78,6 +85,8 @@ import {
 	};
 
 	let startupShareState = null;
+	let startupWorkspacePreferences = null;
+	let savedQueries = [];
 	let tableControlsResizeObserver = null;
 
 	document.addEventListener('DOMContentLoaded', init);
@@ -86,19 +95,35 @@ import {
 		const verEl = document.getElementById('appVersion');
 		if (verEl) verEl.textContent = `v${APP_VERSION}`;
 		startupShareState = parseSharedState(window.location.search, DATASETS, PRESET_DATASET_SLUGS);
+		try {
+			startupWorkspacePreferences = readWorkspacePreferences();
+		} catch (error) {
+			console.warn('Could not restore workspace preferences:', error);
+		}
 		bindUIEvents();
 		initializeTableControlsSizing();
 		// Restore any user-added datasets from IndexedDB before the first
 		// dataset selection so they appear in the docked tree immediately.
 		await loadPersistedUserDatasets();
+		await loadSavedQueries();
 		renderCatalog();
 		if (DATASETS.length) {
-			const initialDatasetId = startupShareState?.datasetId || DATASETS[0].id;
+			const availableDatasetIds = new Set([
+				...DATASETS.map(dataset => dataset.id),
+				...(window._edaUserDatasets?.keys() || [])
+			]);
+			const initialDatasetId = [
+				startupShareState?.datasetId,
+				startupWorkspacePreferences?.datasetId,
+				DATASETS[0].id
+			].find(datasetId => datasetId && availableDatasetIds.has(datasetId));
 			await selectDataset(initialDatasetId);
 			if (startupShareState) {
 				applySharedStateToDashboard(startupShareState);
 				window.history.replaceState(null, '', `${window.location.origin}${window.location.pathname}`);
 				startupShareState = null;
+			} else if (startupWorkspacePreferences?.datasetId === initialDatasetId) {
+				restoreWorkspacePreferences(startupWorkspacePreferences);
 			}
 		}
 	}
@@ -138,6 +163,7 @@ import {
 		if (state.chartType !== 'sql' && state.chartType !== 'catalog') {
 			renderTable();
 		}
+		saveCurrentWorkspacePreferences();
 	}
 
 	function buildShareUrlFromCurrentState() {
@@ -230,6 +256,124 @@ import {
 		}
 	}
 
+	async function loadSavedQueries() {
+		try {
+			savedQueries = await readSavedQueries();
+		} catch (error) {
+			console.error('Could not load saved queries:', error);
+			updateProgress(`Could not load saved queries: ${error.message}`);
+			savedQueries = [];
+		}
+		renderSavedQueries();
+	}
+
+	function renderSavedQueries() {
+		const list = document.getElementById('savedQueryList');
+		if (!list) return;
+		list.replaceChildren();
+		if (!savedQueries.length) {
+			const empty = document.createElement('div');
+			empty.className = 'saved-query-empty';
+			empty.textContent = 'No saved queries yet.';
+			list.appendChild(empty);
+			return;
+		}
+		savedQueries.forEach(query => {
+			const item = document.createElement('div');
+			item.className = 'saved-query-item';
+			const open = document.createElement('button');
+			open.type = 'button';
+			open.className = 'saved-query-open';
+			open.dataset.savedQueryOpen = query.id;
+			open.textContent = query.title;
+			open.title = query.title;
+			const remove = document.createElement('button');
+			remove.type = 'button';
+			remove.className = 'saved-query-delete';
+			remove.dataset.savedQueryDelete = query.id;
+			remove.setAttribute('aria-label', `Delete saved query ${query.title}`);
+			remove.title = 'Delete saved query';
+			remove.textContent = '×';
+			item.append(open, remove);
+			list.appendChild(item);
+		});
+	}
+
+	function openSaveQueryForm() {
+		const form = document.getElementById('saveQueryForm');
+		const titleInput = document.getElementById('savedQueryTitle');
+		const sql = document.getElementById('sqlEditorTA')?.value.trim();
+		if (!sql) {
+			document.getElementById('btnSQL')?.click();
+			updateProgress('Write a SQL query before saving it.');
+			return;
+		}
+		form.hidden = false;
+		titleInput.focus();
+	}
+
+	function closeSaveQueryForm() {
+		const form = document.getElementById('saveQueryForm');
+		form.hidden = true;
+		document.getElementById('savedQueryTitle').value = '';
+	}
+
+	async function saveCurrentQuery(event) {
+		event?.preventDefault();
+		const sql = document.getElementById('sqlEditorTA')?.value.trim();
+		if (!sql) {
+			updateProgress('Enter a SQL query before saving it.');
+			return;
+		}
+		const title = document.getElementById('savedQueryTitle').value.trim();
+		if (!title) {
+			updateProgress('Enter a name for this saved query.');
+			document.getElementById('savedQueryTitle').focus();
+			return;
+		}
+		const id = globalThis.crypto?.randomUUID?.()
+			|| `query-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+		try {
+			await saveSavedQuery({ id, title, sql });
+			savedQueries = await readSavedQueries();
+			renderSavedQueries();
+			closeSaveQueryForm();
+			updateProgress(`Saved query "${title.trim()}".`);
+		} catch (error) {
+			console.error('Could not save query:', error);
+			updateProgress(`Could not save query: ${error.message}`);
+		}
+	}
+
+	async function handleSavedQueryAction(event) {
+		const deleteButton = event.target.closest('[data-saved-query-delete]');
+		if (deleteButton) {
+			const query = savedQueries.find(item => item.id === deleteButton.dataset.savedQueryDelete);
+			if (!query) return;
+			try {
+				await deleteSavedQuery(query.id);
+				savedQueries = await readSavedQueries();
+				renderSavedQueries();
+				updateProgress(`Deleted saved query "${query.title}".`);
+			} catch (error) {
+				console.error(`Could not delete saved query "${query.title}":`, error);
+				updateProgress(`Could not delete saved query: ${error.message}`);
+			}
+			return;
+		}
+		const openButton = event.target.closest('[data-saved-query-open]');
+		if (!openButton) return;
+		const query = savedQueries.find(item => item.id === openButton.dataset.savedQueryOpen);
+		if (!query) return;
+		const editor = document.getElementById('sqlEditorTA');
+		if (!editor) return;
+		document.getElementById('btnSQL')?.click();
+		editor.value = query.sql;
+		editor.dispatchEvent(new Event('input', { bubbles: true }));
+		editor.focus();
+		updateProgress(`Opened saved query "${query.title}".`);
+	}
+
 	function bindUIEvents() {
 		document.getElementById('catalogDatasetList').addEventListener('click', async event => {
 			const groupToggle = event.target.closest('[data-catalog-group-toggle]');
@@ -244,6 +388,13 @@ import {
 				await handleCatalogAction(event);
 			}
 		});
+		document.getElementById('saveCurrentQueryBtn').addEventListener('click', openSaveQueryForm);
+		document.getElementById('saveQueryForm').addEventListener('submit', saveCurrentQuery);
+		document.getElementById('cancelSaveQueryBtn').addEventListener('click', closeSaveQueryForm);
+		document.getElementById('savedQueryTitle').addEventListener('keydown', event => {
+			if (event.key === 'Escape') closeSaveQueryForm();
+		});
+		document.getElementById('savedQueryList').addEventListener('click', handleSavedQueryAction);
 		document.getElementById('datasetPreviewModal').addEventListener('click', event => {
 			const previewTab = event.target.closest('[data-preview-tab]');
 			if (previewTab) {
@@ -263,6 +414,7 @@ import {
 				if (chartType === 'map' && !state.allRows.length) return;
 				state.chartType = chartType;
 				updateChartButtons();
+				saveCurrentWorkspacePreferences();
 				if (chartType === 'sql') {
 					// Signal the SQL workbench module to initialize (lazy)
 					document.dispatchEvent(new CustomEvent('eda:sql-activate'));
@@ -276,6 +428,7 @@ import {
 			.forEach(id => {
 				document.getElementById(id).addEventListener('change', () => {
 					renderVisual();
+					saveCurrentWorkspacePreferences();
 				});
 			});
 
@@ -441,13 +594,43 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			renderTable();
 			updateProgress(`User source "${userDs.title}" loaded: ${userDs.rows.length.toLocaleString()} rows.`);
 			updateActiveDatasetIndicator(datasetId, userDs.title);
-			return;
+			saveCurrentWorkspacePreferences();
+			return true;
 		}
+		const previous = {
+			datasetId: state.datasetId,
+			settings: state.settings,
+			index: state.index,
+			allRows: state.allRows,
+			hiddenColumns: state.hiddenColumns,
+			lastLoadedAt: state.lastLoadedAt,
+			chartType: state.chartType,
+			mapConfig: state.mapConfig,
+			mapOptions: state.mapOptions
+		};
 		selectedCatalogDatasetId = datasetId;
 		state.datasetId = datasetId;
 		updateCatalogTreeState();
 		state.hiddenColumns = new Set();
-		await loadDataset(datasetId);
+		const loaded = await loadDataset(datasetId);
+		if (loaded) return true;
+
+		Object.assign(state, previous);
+		selectedCatalogDatasetId = previous.datasetId;
+		if (state.settings) {
+			populateControls();
+		} else {
+			['dimensionSelect', 'metricSelect', 'aggregationSelect', 'splitSelect', 'orderBySelect', 'orderDirectionSelect']
+				.forEach(id => fillSelect(id, []));
+		}
+		updateDatasetInfo();
+		updateCatalogTreeState();
+		updateChartButtons();
+		renderSummary();
+		renderVisual();
+		renderTable();
+		updateActiveDatasetIndicator(state.datasetId);
+		return false;
 	}
 
 	async function loadDataset(datasetId) {
@@ -503,12 +686,15 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			renderTable();
 			updateActiveDatasetIndicator(datasetId);
 			updateProgress('All partitions loaded.');
+			saveCurrentWorkspacePreferences();
 			const catalogItems = buildCatalogItems();
 			updateCatalogCacheStatuses(catalogItems);
 			updateCatalogSummary(catalogItems);
+			return true;
 		} catch (error) {
 			console.error(error);
-			updateProgress('Failed to load dataset. Check console for details.');
+			updateProgress(`Failed to load "${DATASETS.find(dataset => dataset.id === datasetId)?.title || datasetId}": ${error.message}`);
+			return false;
 		}
 	}
 
@@ -518,6 +704,41 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const dataset = DATASETS.find(item => item.id === datasetId);
 		const userSource = window._edaUserDatasets?.get(datasetId);
 		indicator.textContent = `Now working with: ${title || userSource?.title || dataset?.title || datasetId || 'No dataset loaded'}`;
+	}
+
+	function restoreWorkspacePreferences(preferences) {
+		const chartTypes = ['bar-horizontal', 'bar-vertical', 'pie'];
+		if (chartTypes.includes(preferences.chartType)) state.chartType = preferences.chartType;
+		Object.entries(preferences.controls || {}).forEach(([id, value]) => {
+			const select = document.getElementById(id);
+			if (select && [...select.options].some(option => option.value === value)) {
+				select.value = value;
+			}
+		});
+		updateChartButtons();
+		renderVisual();
+		renderTable();
+		saveCurrentWorkspacePreferences();
+	}
+
+	function saveCurrentWorkspacePreferences() {
+		if (!state.datasetId) return;
+		const controls = {};
+		['dimensionSelect', 'metricSelect', 'aggregationSelect', 'splitSelect', 'orderBySelect', 'orderDirectionSelect']
+			.forEach(id => {
+				const value = document.getElementById(id)?.value;
+				if (value) controls[id] = value;
+			});
+		const chartTypes = ['bar-horizontal', 'bar-vertical', 'pie'];
+		try {
+			writeWorkspacePreferences({
+				datasetId: state.datasetId,
+				chartType: chartTypes.includes(state.chartType) ? state.chartType : 'bar-horizontal',
+				controls
+			});
+		} catch (error) {
+			console.warn('Could not save workspace preferences:', error);
+		}
 	}
 
 	function enrichSettings(settings) {
@@ -1327,10 +1548,12 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	function populateColumnPicker() {
 		const list  = document.getElementById('colPickerList');
 		const badge = document.getElementById('colPickerBadge');
+		const visibleCount = document.getElementById('colPickerVisibleCount');
 		if (!list) return;
 		if (!state.allRows.length) {
 			list.innerHTML = '<div class="col-picker-empty">No dataset loaded.</div>';
 			if (badge) badge.style.display = 'none';
+			if (visibleCount) visibleCount.textContent = '';
 			return;
 		}
 		const allCols   = Object.keys(state.allRows[0]);
@@ -1391,6 +1614,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		});
 
 		const hiddenCount = state.hiddenColumns.size;
+		if (visibleCount) visibleCount.textContent = `${allCols.length - hiddenCount} / ${allCols.length} visible`;
 		if (badge) {
 			badge.style.display = hiddenCount > 0 ? '' : 'none';
 			badge.textContent   = hiddenCount > 0 ? `${hiddenCount} hidden` : '';
@@ -1834,7 +2058,22 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			if (modal.classList.contains('show')) {
 				bootstrap.Modal.getOrCreateInstance(modal).hide();
 			}
-			await selectDataset(dataset.id);
+			const entry = button.closest('.dataset-tree-entry');
+			const status = entry?.querySelector('[data-cache-status]');
+			const analyzeButton = entry?.querySelector('[data-catalog-action="analyze"]');
+			if (status) status.textContent = 'Loading dataset…';
+			if (analyzeButton) {
+				analyzeButton.disabled = true;
+				analyzeButton.textContent = 'Loading…';
+			}
+			const loaded = await selectDataset(dataset.id);
+			if (!loaded) {
+				if (status) status.textContent = 'Load failed. Check the connection and try again.';
+				updateCatalogTreeState();
+				return;
+			}
+			updateCatalogTreeState();
+			await updateCatalogCacheStatuses(buildCatalogItems());
 			return;
 		}
 		if (button.dataset.catalogAction === 'refresh') {
@@ -1876,10 +2115,12 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 			catalogSchemaCache.delete(dataset.id);
 			if (state.datasetId === dataset.id) {
-				if (dataset.sourceType === 'user') {
-					await selectDataset(dataset.id);
-				} else {
-					await loadDataset(dataset.id);
+				const loaded = await selectDataset(dataset.id);
+				if (!loaded) {
+					status.textContent = 'Refresh downloaded, but reloading failed. Use Analyze to retry.';
+					buttons.forEach(button => { button.disabled = false; });
+					updateCatalogTreeState();
+					return;
 				}
 				updateCatalogTreeState();
 				await updateCatalogCacheStatuses(buildCatalogItems());

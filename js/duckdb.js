@@ -146,6 +146,7 @@ async function initDuckDB() {
 			const cached = await idbUserDataGet(src.alias);
 			if (cached && cached.length) injectUserDatasetIntoEDA(src, cached);
 		}
+		await filterSchemaExplorer();
 		initialized  = true;
 		initializing = false;
 		setStatus('ready', 'ready');
@@ -218,6 +219,7 @@ function makeTableItem(src) {
 	const wrapper = document.createElement('div');
 	wrapper.className = 'sql-table-item-wrapper';
 	wrapper.id = `sql-tiw-${src.alias}`;
+	wrapper.dataset.sqlAlias = src.alias;
 
 	const item = document.createElement('div');
 	item.className = 'sql-table-item';
@@ -266,6 +268,61 @@ function renderSidebar() {
 		list.appendChild(userLabel);
 		userSources.forEach(src => list.appendChild(makeTableItem(src)));
 	}
+	filterSchemaExplorer().catch(error => {
+		console.error('Could not refresh schema explorer:', error);
+	});
+}
+
+async function filterSchemaExplorer() {
+	const search = $('sqlSchemaSearch');
+	const list = $('sqlTableList');
+	const empty = $('sqlSchemaEmpty');
+	if (!search || !list) return;
+	const query = search.value.trim().toLocaleLowerCase();
+	let visibleCount = 0;
+	const wrappers = [...list.querySelectorAll('.sql-table-item-wrapper')];
+
+	for (const wrapper of wrappers) {
+		const alias = wrapper.dataset.sqlAlias;
+		const title = wrapper.querySelector('.sql-table-name')?.textContent || alias;
+		const nameMatch = !query || `${title} ${alias}`.toLocaleLowerCase().includes(query);
+		const columns = tableColumns.get(alias) || [];
+		const matchingColumns = query
+			? columns.filter(column => `${column.name} ${column.type}`.toLocaleLowerCase().includes(query))
+			: columns;
+		const matches = !query || nameMatch || matchingColumns.length > 0;
+		wrapper.hidden = !matches;
+		if (!matches) continue;
+		visibleCount += 1;
+
+		const fieldList = wrapper.querySelector('.sql-field-list');
+		const expandButton = wrapper.querySelector('.sql-expand-btn');
+		if (query && !nameMatch && matchingColumns.length && fieldList && !fieldList.children.length) {
+			await renderFields(alias, fieldList);
+		}
+		if (query && !nameMatch && matchingColumns.length && fieldList) {
+			if (fieldList.style.display === 'none') {
+				fieldList.style.display = 'block';
+				fieldList.dataset.searchExpanded = 'true';
+				expandButton?.classList.add('expanded');
+			}
+			const matchNames = new Set(matchingColumns.map(column => column.name));
+			fieldList.querySelectorAll('.sql-field-item').forEach(row => {
+				row.hidden = !matchNames.has(row.dataset.columnName);
+			});
+		} else if (!query && fieldList) {
+			if (fieldList.dataset.searchExpanded === 'true') {
+				fieldList.style.display = 'none';
+				delete fieldList.dataset.searchExpanded;
+				expandButton?.classList.remove('expanded');
+			}
+			fieldList.querySelectorAll('.sql-field-item').forEach(row => { row.hidden = false; });
+		} else if (query && nameMatch && fieldList) {
+			fieldList.querySelectorAll('.sql-field-item').forEach(row => { row.hidden = false; });
+		}
+	}
+
+	if (empty) empty.hidden = !query || visibleCount > 0;
 }
 
 function updateBadge(alias, st) {
@@ -691,6 +748,9 @@ async function renderFields(alias, container) {
 		           : 'column';
 		const row = document.createElement('div');
 		row.className = 'catalog-field-row';
+		row.classList.add('sql-field-item');
+		row.dataset.columnName = c.name;
+		row.dataset.columnType = c.type;
 		row.style.cssText = 'cursor:pointer';
 		row.title = `Insert "${alias}"."${c.name}"`;
 		row.innerHTML = `<span class="catalog-field-icon">${kindIcon(kind)}</span>`
@@ -990,6 +1050,16 @@ function initResizer() {
 // ── Wire up all DOM events after page load ─────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 	$('sqlRunBtn')?.addEventListener('click', runQuery);
+	$('sqlSchemaSearch')?.addEventListener('input', () => {
+		filterSchemaExplorer().catch(error => {
+			console.error('Schema search failed:', error);
+			const empty = $('sqlSchemaEmpty');
+			if (empty) {
+				empty.hidden = false;
+				empty.textContent = `Schema search failed: ${error.message}`;
+			}
+		});
+	});
 
 	$('sqlClearBtn')?.addEventListener('click', () => {
 		const ta = $('sqlEditorTA');

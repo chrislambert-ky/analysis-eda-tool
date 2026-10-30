@@ -18,6 +18,7 @@ A single-page, fully in-browser exploratory data analysis tool built with vanill
 - **Share state:** The **Share** button copies a URL containing the current dashboard selections for preloaded datasets. Opening that link restores the same state, while normal use of the app continues on the clean base URL.
 - **Data Table:** Tabulator-powered table with per-column header filters, horizontal scroll, and consistent column widths.
 - **Contextual controls:** Chart settings sit beside the graph, while table-column visibility controls sit beside the data table.
+- **Session continuity:** The browser remembers the last active dataset and basic chart settings; share links take precedence when opened.
 - **Download:** Export the full dataset or the currently filtered rows to CSV.
 - **Chart filter:** Clicking a chart series/segment filters the table to matching rows; a badge shows the active filter with a one-click clear.
 - **Map options:** Clustering (on by default), district/county filter, and color-by-field controls appear automatically when a dataset has map configuration. Selecting a specific district or county temporarily disables clustering.
@@ -35,6 +36,8 @@ The docked **Datasets** pane provides a tree of preloaded and imported datasets:
 - **In-browser SQL** powered by [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview.html) — no backend required.
 - Write and run arbitrary SQL against any combination of managed and user-added datasets.
 - Editor with line numbers, resizable panes, and `Ctrl+Enter` to run.
+- Search the SQL schema explorer by dataset or column name/type; click a column to insert its qualified name into the editor.
+- Save, reopen, and delete SQL snippets from the left-pane **Saved Queries** section. Saved queries are stored in browser IndexedDB.
 - Results render in a scrollable table with row count and execution time.
 - The SQL-side panel is a schema explorer for datasets managed in the left pane; expand a source to inspect its columns or select its name to insert a table reference into the editor.
 - Export query results to CSV with the **↓ CSV** button.
@@ -79,6 +82,7 @@ analysis-eda-tool/
 │   ├── data-store.mjs                  # Shared IndexedDB database and partition-cache API
 │   ├── dataset-loader.mjs              # CSV parsing, partition fetching, and cache coordination
 │   ├── share.mjs                       # Pure share-link parsing and serialization
+│   ├── workspace-preferences.mjs       # Last active dataset and chart controls
 │   └── duckdb.js                       # DuckDB-WASM SQL workbench
 ├── etl.js                              # Node ETL: downloads CSVs, partitions by district
 ├── data/

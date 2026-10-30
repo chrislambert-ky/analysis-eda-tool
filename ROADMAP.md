@@ -12,8 +12,11 @@ This document describes a staged path from the current GitHub Pages tool to a mo
 - The app has a full-height dataset tree with Preview / Analyze / Refresh, a 10-row preview and separate schema view, chart and SQL surfaces, a chart view, a paged data table, and the existing Leaflet map/options.
 - Chart aggregation uses DuckDB-WASM when available with a tested JavaScript fallback. Managed CSV partitions and imported user sources are cached in the shared IndexedDB database.
 - The left catalog drives dataset selection; the header indicates the active dataset. Chart controls sit beside the chart; table-column controls sit beside the table.
-- **Not yet implemented:** multiple independent canvas tabs, persisted workspace/canvas state, OPFS-backed DuckDB database, service worker/offline app shell, PWA manifest/install flow, file conversion, and desktop packaging.
-- Current test suite covers ETL, chart engine, dataset loader, IndexedDB initialization, and share-link helpers.
+- SQL schema explorer supports dataset/column search, qualified-column insertion, and saved queries in IndexedDB.
+- The last active dataset and basic chart selections restore from browser local storage; share links override saved preferences. This is not yet independent per-canvas workspace persistence.
+- Dataset loads and refreshes report progress/errors, and failed Analyze attempts retain the previously active dataset. The table controls show visible/total column counts and scroll within the table-height panel.
+- **Not yet implemented:** multiple independent canvas tabs, OPFS-backed DuckDB database, service worker/offline app shell, PWA manifest/install flow, file conversion, and desktop packaging.
+- Current test suite covers ETL, chart engine, dataset loader, IndexedDB initialization/saved queries, share links, and workspace-preference serialization.
 
 ---
 
@@ -47,10 +50,11 @@ This document describes a staged path from the current GitHub Pages tool to a mo
 - ✅ App versioned at `v1.4.0`
 
 ### 1.4 Unify the IDB stores ✅
-- ✅ `analysis_eda_tool_db` bumped to version 2; `onupgradeneeded` adds `sources`, `user_source_data`, `user_source_bytes` stores alongside the existing `partitions` store
-- ✅ `eda_sql_user_sources` database eliminated; dashboard and SQL workbench share `analysis_eda_tool_db` v2
+- ✅ `analysis_eda_tool_db` version 3 contains `partitions`, `sources`, `user_source_data`, `user_source_bytes`, and `saved_queries`
+- ✅ `eda_sql_user_sources` database eliminated; dashboard and SQL workbench share `analysis_eda_tool_db`
 - ✅ Shared `getDatabase()` connection/schema initialization extracted to `js/data-store.mjs`
-- ✅ Dashboard and SQL workbench use the same opener and preserve all four existing stores
+- ✅ Dashboard and SQL workbench use the same opener and preserve the existing stores during upgrades
+- ✅ SQL snippets persist in the `saved_queries` object store
 - ✅ App versioned at `v1.5.0`
 
 ### 1.5 Catalog schema via DuckDB only (Deferred)

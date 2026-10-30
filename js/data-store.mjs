@@ -1,7 +1,8 @@
 const DB_NAME = 'analysis_eda_tool_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const PARTITION_STORE = 'partitions';
 const USER_STORES = ['sources', 'user_source_data', 'user_source_bytes'];
+const SAVED_QUERY_STORE = 'saved_queries';
 
 let dbPromise;
 
@@ -9,6 +10,13 @@ export function getDatabase() {
 	if (!dbPromise) {
 		dbPromise = new Promise((resolve, reject) => {
 			const request = indexedDB.open(DB_NAME, DB_VERSION);
+			let settled = false;
+			const fail = error => {
+				if (settled) return;
+				settled = true;
+				dbPromise = null;
+				reject(error);
+			};
 			request.onupgradeneeded = event => {
 				const db = event.target.result;
 				if (!db.objectStoreNames.contains(PARTITION_STORE)) {
@@ -19,12 +27,63 @@ export function getDatabase() {
 						db.createObjectStore(storeName, { keyPath: 'alias' });
 					}
 				}
+				if (!db.objectStoreNames.contains(SAVED_QUERY_STORE)) {
+					db.createObjectStore(SAVED_QUERY_STORE, { keyPath: 'id' });
+				}
 			};
-			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
+			request.onsuccess = () => {
+				if (settled) {
+					request.result.close();
+					return;
+				}
+				settled = true;
+				request.result.onversionchange = () => {
+					request.result.close();
+					dbPromise = null;
+				};
+				resolve(request.result);
+			};
+			request.onerror = () => fail(request.error);
+			request.onblocked = () => fail(new Error('IndexedDB upgrade is blocked by another open app tab. Close older tabs and retry.'));
 		});
 	}
 	return dbPromise;
+}
+
+export async function readSavedQueries() {
+	const db = await getDatabase();
+	return new Promise((resolve, reject) => {
+		const request = db.transaction(SAVED_QUERY_STORE, 'readonly')
+			.objectStore(SAVED_QUERY_STORE).getAll();
+		request.onsuccess = () => resolve((request.result || []).sort((a, b) =>
+			(b.updatedAt || 0) - (a.updatedAt || 0) || b.id.localeCompare(a.id)
+		));
+		request.onerror = () => reject(request.error);
+	});
+}
+
+export async function saveSavedQuery(query) {
+	if (!query?.id || !query?.title?.trim() || !query?.sql?.trim()) {
+		throw new TypeError('A saved query requires an ID, title, and SQL statement.');
+	}
+	const db = await getDatabase();
+	return new Promise((resolve, reject) => {
+		const request = db.transaction(SAVED_QUERY_STORE, 'readwrite')
+			.objectStore(SAVED_QUERY_STORE)
+			.put({ ...query, title: query.title.trim(), sql: query.sql.trim(), updatedAt: Date.now() });
+		request.onsuccess = () => resolve();
+		request.onerror = () => reject(request.error);
+	});
+}
+
+export async function deleteSavedQuery(queryId) {
+	const db = await getDatabase();
+	return new Promise((resolve, reject) => {
+		const request = db.transaction(SAVED_QUERY_STORE, 'readwrite')
+			.objectStore(SAVED_QUERY_STORE).delete(queryId);
+		request.onsuccess = () => resolve();
+		request.onerror = () => reject(request.error);
+	});
 }
 
 export async function readPartitionFromCache(datasetId, district) {
