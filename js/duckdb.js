@@ -1152,6 +1152,26 @@ document.addEventListener('DOMContentLoaded', () => {
 	updateLineNums();
 });
 
+function clearQueryResults() {
+	if (sqlTabulator) {
+		sqlTabulator.destroy();
+		sqlTabulator = null;
+	}
+	lastResult = null;
+	const rowCount = $('sqlRowCount');
+	const execTime = $('sqlExecTime');
+	const exportBtn = $('sqlExportBtn');
+	const results = $('sqlResultsContainer');
+	if (rowCount) rowCount.textContent = '';
+	if (execTime) execTime.textContent = '';
+	if (exportBtn) exportBtn.style.display = 'none';
+	if (results) {
+		results.innerHTML = '<div class="sql-state-msg"><span style="font-size:22px">&#x29C1;</span><span>Run a query to see results</span></div>';
+	}
+}
+
+window._sqlWBClearResults = clearQueryResults;
+
 // ── Exposed for the main module's Refresh button ──────────────────────────────────────
 // Re-fetches a user-added source from its original URL, updates IDB, and
 // refreshes window._edaUserDatasets so the calling code can reload the table.

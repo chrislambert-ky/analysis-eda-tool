@@ -1,6 +1,11 @@
 	body { background-color: #f5f6f8; }
 	.chart-card { height: 100%; min-height: 420px; }
 	.chart-surface { height: 360px; }
+	.canvas-empty-state { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; max-width: 470px; min-height: 100%; margin: 0 auto; padding: 28px; color: #495057; }
+	.canvas-empty-state > i { margin-bottom: 10px; color: #0d6efd; font-size: 24px; }
+	.canvas-empty-state h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+	.canvas-empty-state ol { margin: 0; padding-left: 20px; color: #6c757d; font-size: 12px; line-height: 1.8; }
+	.canvas-table-empty { padding: 24px; color: #868e96; font-size: 12px; text-align: center; }
 	.table-card { min-height: 420px; }
 	.controls-card .card-body { padding: 0.9rem; }
 	.controls-card select { font-size: 0.82rem; padding: 0.35rem 0.55rem; }
@@ -95,6 +100,29 @@
 	.workspace-main { min-width: 0; padding: 1rem 1.25rem; }
 	.app-title { font-size: 1.55rem; }
 	.active-dataset-indicator { margin: .25rem 0 0; color: #6c757d; font-size: 8pt; font-style: italic; }
+	.canvas-tabs-bar { display: flex; align-items: end; gap: 8px; min-height: 38px; margin: 0 0 0; border-bottom: 1px solid #dfe3e8; }
+	.canvas-tabs { display: flex; flex: 0 1 auto; min-width: 0; max-width: calc(100% - 38px); gap: 3px; overflow-x: auto; overflow-y: hidden; }
+	.canvas-tab-item { display: flex; align-items: center; gap: 2px; min-width: 120px; max-width: 245px; padding: 2px 3px 0; border: 1px solid #dfe3e8; border-bottom: 0; border-radius: 6px 6px 0 0; background: #f4f6f8; }
+	.canvas-tab-item.active { position: relative; top: 1px; border-color: #dfe3e8; background: #fff; }
+	.canvas-tab { display: flex; flex: 1; align-items: center; gap: 7px; min-width: 0; padding: 4px 5px; border: 0; border-radius: 4px 4px 0 0; background: transparent; color: #59636e; font-size: 11px; }
+	.canvas-tab.active { color: #212529; font-weight: 600; }
+	.canvas-tab-title { min-width: 0; flex: 1; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+	.canvas-tab-icon { color: #7b8794; font-size: 11px; }
+	.canvas-tab-close, .canvas-tab-rename { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #7b8794; }
+	.canvas-tab-close:hover { background: #fce8e6; color: #c5221f; }
+	.canvas-tab-rename:hover { background: #e8f0fe; color: #0d6efd; }
+	.canvas-tab-name-input { width: 105px; min-width: 0; border: 1px solid #86b7fe; border-radius: 3px; font-size: 11px; }
+	.canvas-add-menu { position: relative; padding-bottom: 4px; }
+	.canvas-add-menu > button { width: 30px; height: 28px; padding: 0; font-size: 18px; line-height: 1; }
+	.canvas-type-menu { position: absolute; z-index: 20; top: 32px; right: 0; width: 150px; padding: 4px; border: 1px solid #dfe3e8; border-radius: 6px; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.14); }
+	.canvas-type-menu[hidden] { display: none; }
+	.canvas-type-menu button { display: block; width: 100%; padding: 7px 9px; border: 0; border-radius: 4px; background: transparent; color: #343a40; text-align: left; font-size: 11px; }
+	.canvas-type-menu button:hover { background: #f0f4ff; color: #0d6efd; }
+	.canvas-context-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; margin: 0 0 12px; padding: 5px 9px; border: 1px solid #e1e5ea; border-top: 0; border-radius: 0 0 6px 6px; background: #fff; }
+	.canvas-context-label { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+	.canvas-context-label strong { overflow: hidden; color: #495057; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+	.canvas-context-label span { overflow: hidden; color: #868e96; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+	.canvas-context-toolbar .btn-group .btn { padding: 3px 8px; font-size: 10px; }
 	.dataset-browser-pane { position: sticky; top: 0; display: flex; flex-direction: column; min-width: 0; height: 100vh; min-height: 100vh; overflow: hidden; border: 0; border-right: 1px solid #dee2e6; border-radius: 0; background: #fff; box-shadow: 1px 0 6px rgba(0,0,0,.04); }
 	.dataset-browser-header { padding: 14px 14px 8px; }
 	.dataset-browser-header h2 { margin: 0; font-size: 15px; font-weight: 600; }
@@ -167,6 +195,7 @@
 		.workspace-layout { grid-template-columns: 230px minmax(0, 1fr); }
 		.workspace-main { padding: .875rem; }
 		#colPickerList { max-height: 280px; }
+		.canvas-context-toolbar { align-items: flex-start; flex-direction: column; }
 	}
 	@media (max-width: 767.98px) {
 		.workspace-layout { grid-template-columns: minmax(0, 1fr); }

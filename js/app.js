@@ -13,7 +13,9 @@ import {
 	readDatasetCachedAt,
 	deleteSavedQuery,
 	readSavedQueries,
-	saveSavedQuery
+	saveSavedQuery,
+	readWorkspaceCanvases,
+	writeWorkspaceCanvases
 } from './data-store.mjs';
 import {
 	DATA_ROOT,
@@ -34,6 +36,7 @@ import {
 	readWorkspacePreferences,
 	writeWorkspacePreferences
 } from './workspace-preferences.mjs';
+import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs';
 
 (function () {
 	'use strict';
@@ -87,6 +90,14 @@ import {
 	let startupShareState = null;
 	let startupWorkspacePreferences = null;
 	let savedQueries = [];
+	let canvases = [];
+	let activeCanvasId = null;
+	let canvasSaveChain = Promise.resolve();
+	let workspaceSaveTimer = null;
+	let canvasActivationSequence = 0;
+	let datasetLoadSequence = 0;
+	let datasetLoadPending = false;
+	let chartResizeObserver = null;
 	let tableControlsResizeObserver = null;
 
 	document.addEventListener('DOMContentLoaded', init);
@@ -101,30 +112,427 @@ import {
 			console.warn('Could not restore workspace preferences:', error);
 		}
 		bindUIEvents();
+		initializeChartSizing();
 		initializeTableControlsSizing();
 		// Restore any user-added datasets from IndexedDB before the first
 		// dataset selection so they appear in the docked tree immediately.
 		await loadPersistedUserDatasets();
 		await loadSavedQueries();
 		renderCatalog();
-		if (DATASETS.length) {
+		const restoredWorkspace = await loadWorkspace();
+		if (canvases.length) {
 			const availableDatasetIds = new Set([
 				...DATASETS.map(dataset => dataset.id),
 				...(window._edaUserDatasets?.keys() || [])
 			]);
-			const initialDatasetId = [
-				startupShareState?.datasetId,
-				startupWorkspacePreferences?.datasetId,
-				DATASETS[0].id
-			].find(datasetId => datasetId && availableDatasetIds.has(datasetId));
-			await selectDataset(initialDatasetId);
+			const canvas = activeCanvas();
+			if (startupShareState?.datasetId && availableDatasetIds.has(startupShareState.datasetId)) {
+				canvas.datasetId = startupShareState.datasetId;
+				if (startupShareState.chartType === 'map') canvas.type = 'map-all-in-one';
+				if (startupShareState.chartType === 'sql') canvas.type = 'sql';
+			} else if (canvas.datasetId && !availableDatasetIds.has(canvas.datasetId)) {
+				canvas.datasetId = null;
+			} else if (!restoredWorkspace && !canvas.datasetId) {
+				canvas.datasetId = [
+					startupWorkspacePreferences?.datasetId,
+					DATASETS[0]?.id
+				].find(datasetId => datasetId && availableDatasetIds.has(datasetId)) || null;
+			}
+			renderCanvasTabs();
+			updateCanvasContextToolbar();
+			updateCanvasLayout();
+			await activateCanvas(canvas.id, { initial: true });
 			if (startupShareState) {
 				applySharedStateToDashboard(startupShareState);
 				window.history.replaceState(null, '', `${window.location.origin}${window.location.pathname}`);
 				startupShareState = null;
-			} else if (startupWorkspacePreferences?.datasetId === initialDatasetId) {
-				restoreWorkspacePreferences(startupWorkspacePreferences);
 			}
+			await persistWorkspace();
+		}
+	}
+
+	async function loadWorkspace() {
+		let saved;
+		try {
+			saved = await readWorkspaceCanvases();
+		} catch (error) {
+			console.error('Could not restore canvas workspace:', error);
+			updateProgress(`Could not restore saved canvases: ${error.message}`);
+		}
+		canvases = (saved?.canvases || []).map(normalizeCanvas).filter(Boolean);
+		if (!canvases.length) {
+			const initial = createCanvas('all-in-one', 1, {
+				datasetId: startupShareState?.datasetId
+					|| startupWorkspacePreferences?.datasetId
+					|| DATASETS[0]?.id
+					|| null
+			});
+			if (startupWorkspacePreferences) {
+				initial.chartType = startupWorkspacePreferences.chartType;
+				initial.controls = { ...startupWorkspacePreferences.controls };
+			}
+			canvases = [initial];
+		}
+		activeCanvasId = canvases.some(canvas => canvas.id === saved?.activeCanvasId)
+			? saved.activeCanvasId
+			: canvases[0].id;
+		return Boolean(saved?.canvases?.length);
+	}
+
+	function activeCanvas() {
+		return canvases.find(canvas => canvas.id === activeCanvasId) || null;
+	}
+
+	function canvasTypeLabel(type) {
+		return {
+			'all-in-one': 'All in One',
+			'graph-only': 'Graph Only',
+			'table-only': 'Table Only',
+			'map-all-in-one': 'Map + Table',
+			'map-only': 'Map Only',
+			sql: 'SQL'
+		}[type] || 'Canvas';
+	}
+
+	function captureActiveCanvas() {
+		const canvas = activeCanvas();
+		if (!canvas || datasetLoadPending) return;
+		canvas.datasetId = state.datasetId;
+		canvas.chartType = state.chartType;
+		canvas.controls = {};
+		['dimensionSelect', 'metricSelect', 'aggregationSelect', 'splitSelect', 'orderBySelect', 'orderDirectionSelect']
+			.forEach(id => {
+				const value = document.getElementById(id)?.value;
+				if (value) canvas.controls[id] = value;
+			});
+		canvas.hiddenColumns = [...state.hiddenColumns];
+		canvas.sql = document.getElementById('sqlEditorTA')?.value || '';
+		canvas.mapConfig = {
+			...state.mapConfig,
+			filterFields: [...state.mapConfig.filterFields]
+		};
+		canvas.mapOptions = {
+			...state.mapOptions,
+			filterValues: [...state.mapOptions.filterValues],
+			popupHidden: [...state.mapOptions.popupHidden],
+			tableHidden: [...state.mapOptions.tableHidden]
+		};
+	}
+
+	function persistWorkspace() {
+		if (!canvases.length || !activeCanvasId) return Promise.resolve();
+		captureActiveCanvas();
+		const snapshot = canvases.map(canvas => ({
+			...canvas,
+			controls: { ...canvas.controls },
+			hiddenColumns: [...canvas.hiddenColumns],
+			mapConfig: canvas.mapConfig
+				? { ...canvas.mapConfig, filterFields: [...canvas.mapConfig.filterFields] }
+				: null,
+			mapOptions: canvas.mapOptions
+				? {
+					...canvas.mapOptions,
+					filterValues: [...canvas.mapOptions.filterValues],
+					popupHidden: [...canvas.mapOptions.popupHidden],
+					tableHidden: [...canvas.mapOptions.tableHidden]
+				}
+				: null
+		}));
+		const activeId = activeCanvasId;
+		canvasSaveChain = canvasSaveChain
+			.catch(() => {})
+			.then(() => writeWorkspaceCanvases(snapshot, activeId))
+			.catch(error => {
+				console.error('Could not save canvas workspace:', error);
+				updateProgress(`Could not save workspace: ${error.message}`);
+			});
+		return canvasSaveChain;
+	}
+
+	function scheduleWorkspaceSave() {
+		window.clearTimeout(workspaceSaveTimer);
+		workspaceSaveTimer = window.setTimeout(() => { void persistWorkspace(); }, 500);
+	}
+
+	function renderCanvasTabs() {
+		const list = document.getElementById('canvasTabs');
+		if (!list) return;
+		list.replaceChildren();
+		canvases.forEach(canvas => {
+			const item = document.createElement('div');
+			item.className = `canvas-tab-item${canvas.id === activeCanvasId ? ' active' : ''}`;
+			const tab = document.createElement('button');
+			tab.type = 'button';
+			tab.className = `canvas-tab${canvas.id === activeCanvasId ? ' active' : ''}`;
+			tab.dataset.canvasActivate = canvas.id;
+			tab.setAttribute('role', 'tab');
+			tab.setAttribute('aria-selected', String(canvas.id === activeCanvasId));
+			const icon = document.createElement('i');
+			icon.className = `canvas-tab-icon bi ${canvas.type === 'sql' ? 'bi-code-slash' : canvas.type === 'table-only' ? 'bi-table' : canvas.type === 'graph-only' ? 'bi-bar-chart' : canvas.type.startsWith('map-') ? 'bi-geo-alt' : 'bi-columns-gap'}`;
+			icon.setAttribute('aria-hidden', 'true');
+			const title = document.createElement('span');
+			title.className = 'canvas-tab-title';
+			title.textContent = canvas.name;
+			tab.append(icon, title);
+			item.appendChild(tab);
+
+			const rename = document.createElement('button');
+			rename.type = 'button';
+			rename.className = 'canvas-tab-rename';
+			rename.dataset.canvasRename = canvas.id;
+			rename.setAttribute('aria-label', `Rename ${canvas.name}`);
+			rename.title = 'Rename canvas';
+			rename.innerHTML = '<i class="bi bi-pencil" aria-hidden="true"></i>';
+			item.appendChild(rename);
+
+			const close = document.createElement('button');
+			close.type = 'button';
+			close.className = 'canvas-tab-close';
+			close.dataset.canvasClose = canvas.id;
+			close.disabled = canvases.length === 1;
+			close.setAttribute('aria-label', `Close ${canvas.name}`);
+			close.title = close.disabled ? 'At least one canvas must remain open' : 'Close canvas';
+			close.textContent = '×';
+			item.appendChild(close);
+			list.appendChild(item);
+		});
+		updateCanvasContextToolbar();
+	}
+
+	function updateCanvasContextToolbar() {
+		const canvas = activeCanvas();
+		if (!canvas) return;
+		document.getElementById('canvasContextTitle').textContent = canvasTypeLabel(canvas.type);
+		const dataset = buildCatalogItems().find(item => item.id === state.datasetId);
+		document.getElementById('canvasContextDataset').textContent =
+			dataset?.title || 'No dataset loaded';
+		document.getElementById('canvasViewButtons').hidden =
+			canvas.type !== 'all-in-one' && canvas.type !== 'graph-only';
+	}
+
+	function updateCanvasLayout() {
+		const canvas = activeCanvas();
+		if (!canvas) return;
+		const chartRow = document.getElementById('chartWorkspaceRow');
+		const tableRow = document.getElementById('tableWorkspaceRow');
+		const chartColumn = document.getElementById('chartControlsColumn');
+		const tableColumn = document.getElementById('tableControlsColumn');
+		const controlsCard = document.getElementById('controlsCard');
+		const tableControlsCard = document.getElementById('tableControlsCard');
+		const sqlActive = state.chartType === 'sql' || canvas.type === 'sql';
+		const tableOnly = canvas.type === 'table-only' && !sqlActive;
+		const showTable = !sqlActive && ['all-in-one', 'table-only', 'map-all-in-one'].includes(canvas.type);
+		const showChart = !tableOnly;
+
+		chartRow.style.display = showChart ? '' : 'none';
+		tableRow.style.display = showTable ? '' : 'none';
+		chartColumn.appendChild(controlsCard);
+		tableColumn.appendChild(tableControlsCard);
+		tableControlsCard.style.display =
+			['all-in-one', 'table-only', 'map-all-in-one'].includes(canvas.type) && !sqlActive ? '' : 'none';
+		updateControlVisibility();
+		updateCanvasContextToolbar();
+	}
+
+	function restoreCanvasSettings(canvas) {
+		const validChartTypes = ['bar-horizontal', 'bar-vertical', 'pie', 'map', 'sql'];
+		state.chartType = canvas.type === 'sql'
+			? 'sql'
+			: canvas.type.startsWith('map-')
+				? 'map'
+				: validChartTypes.includes(canvas.chartType) ? canvas.chartType : 'bar-horizontal';
+		Object.entries(canvas.controls || {}).forEach(([id, value]) => {
+			const select = document.getElementById(id);
+			if (select && [...select.options].some(option => option.value === value)) select.value = value;
+		});
+		state.hiddenColumns = new Set((canvas.hiddenColumns || []).filter(column =>
+			state.allRows[0] && Object.hasOwn(state.allRows[0], column)
+		));
+		if (canvas.mapConfig) {
+			state.mapConfig = {
+				...canvas.mapConfig,
+				filterFields: [...(canvas.mapConfig.filterFields || [null, null, null])]
+			};
+		}
+		if (canvas.mapOptions) {
+			state.mapOptions = {
+				...canvas.mapOptions,
+				filterValues: [...(canvas.mapOptions.filterValues || [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION])],
+				popupHidden: new Set(canvas.mapOptions.popupHidden || []),
+				tableHidden: new Set(canvas.mapOptions.tableHidden || [])
+			};
+		}
+		if (state.allRows.length) {
+			const columns = Object.keys(state.allRows[0]);
+			const clusterToggle = document.getElementById('mapClusterToggle');
+			if (clusterToggle) clusterToggle.checked = state.mapOptions.cluster;
+			populateMapConfigForm(columns);
+			if (state.mapConfig.saved) {
+				renderMapConfigSummary();
+				populateMapOptionsSection();
+				document.getElementById('mapConfigForm').style.display = 'none';
+				document.getElementById('mapConfigSummary').style.display = '';
+				document.getElementById('mapOptionsSection').style.display = '';
+			} else {
+				document.getElementById('mapConfigForm').style.display = '';
+				document.getElementById('mapConfigSummary').style.display = 'none';
+				document.getElementById('mapOptionsSection').style.display = 'none';
+			}
+		}
+		const editor = document.getElementById('sqlEditorTA');
+		if (editor) {
+			editor.value = canvas.sql || '';
+			editor.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+		updateChartButtons();
+		updateCanvasLayout();
+		if (state.chartType === 'sql') {
+			window._sqlWBClearResults?.();
+			document.dispatchEvent(new CustomEvent('eda:sql-activate'));
+		} else {
+			renderVisual();
+		}
+		renderTable();
+		updateActiveDatasetIndicator(state.datasetId);
+		saveCurrentWorkspacePreferences();
+	}
+
+	async function activateCanvas(canvasId, { initial = false } = {}) {
+		const canvas = canvases.find(item => item.id === canvasId);
+		if (!canvas) return false;
+		if (canvasId === activeCanvasId && !initial) return true;
+		const activationSequence = ++canvasActivationSequence;
+		const previousCanvasId = activeCanvasId;
+		if (!initial && previousCanvasId !== canvasId) void persistWorkspace();
+		datasetLoadSequence += 1;
+		datasetLoadPending = false;
+		activeCanvasId = canvasId;
+		state.chartType = canvas.type === 'sql' ? 'sql' : canvas.chartType || 'bar-horizontal';
+		renderCanvasTabs();
+		updateCanvasLayout();
+
+		if (canvas.datasetId) {
+			const loaded = await selectDataset(canvas.datasetId, { activationSequence });
+			if (activationSequence !== canvasActivationSequence || loaded === null) return false;
+			if (!loaded) {
+				if (canvases.some(item => item.id === previousCanvasId)) {
+					activeCanvasId = previousCanvasId;
+					renderCanvasTabs();
+					updateCanvasLayout();
+				} else {
+					canvas.datasetId = null;
+					activeCanvasId = canvas.id;
+					clearCanvasDataset(canvas);
+					renderCanvasTabs();
+					await persistWorkspace();
+				}
+				return false;
+			}
+		} else {
+			clearCanvasDataset(canvas);
+		}
+		restoreCanvasSettings(canvas);
+		await persistWorkspace();
+		return true;
+	}
+
+	function clearCanvasDataset(canvas) {
+		state.datasetId = null;
+		state.settings = null;
+		state.index = null;
+		state.allRows = [];
+		state.hiddenColumns.clear();
+		state.chartFilter = null;
+		state.tableDuckDB = false;
+		state.chartType = canvas.type === 'sql' ? 'sql' : canvas.type.startsWith('map-') ? 'map' : 'bar-horizontal';
+		state.mapConfig = {
+			saved: false,
+			latField: null,
+			lonField: null,
+			filterFields: [null, null, null],
+			colorField: null
+		};
+		state.mapOptions = {
+			cluster: true,
+			filterValues: [MAP_ALL_OPTION, MAP_ALL_OPTION, MAP_ALL_OPTION],
+			popupHidden: new Set(),
+			tableHidden: new Set()
+		};
+		['dimensionSelect', 'metricSelect', 'aggregationSelect', 'splitSelect', 'orderBySelect', 'orderDirectionSelect']
+			.forEach(id => fillSelect(id, []));
+		const editor = document.getElementById('sqlEditorTA');
+		if (editor) {
+			editor.value = canvas.sql || '';
+			editor.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+		updateDatasetInfo();
+		updateChartButtons();
+		updateCanvasLayout();
+		updateCatalogTreeState();
+		updateActiveDatasetIndicator(null);
+		renderSummary();
+		renderVisual();
+		renderTable();
+		updateProgress('Choose a dataset from the left pane and select Analyze to load it into this canvas.');
+		if (canvas.type === 'sql') {
+			window._sqlWBClearResults?.();
+			document.dispatchEvent(new CustomEvent('eda:sql-activate'));
+		}
+	}
+
+	async function createCanvasTab(type) {
+		if (!CANVAS_TYPES.includes(type)) return;
+		const number = canvases.filter(canvas => canvas.type === type).length + 1;
+		const canvas = createCanvas(type, number);
+		canvases.push(canvas);
+		document.getElementById('canvasTypeMenu').hidden = true;
+		document.getElementById('addCanvasBtn').setAttribute('aria-expanded', 'false');
+		await activateCanvas(canvas.id);
+	}
+
+	function beginCanvasRename(canvasId, tab) {
+		const canvas = canvases.find(item => item.id === canvasId);
+		const title = tab?.querySelector('.canvas-tab-title');
+		if (!canvas || !title) return;
+		const input = document.createElement('input');
+		input.className = 'canvas-tab-name-input';
+		input.value = canvas.name;
+		title.replaceWith(input);
+		input.focus();
+		input.select();
+		let finished = false;
+		const finish = save => {
+			if (finished) return;
+			finished = true;
+			const name = input.value.trim();
+			if (save && name) canvas.name = name;
+			renderCanvasTabs();
+			void persistWorkspace();
+		};
+		input.addEventListener('blur', () => finish(true));
+		input.addEventListener('keydown', event => {
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				input.blur();
+			} else if (event.key === 'Escape') {
+				event.preventDefault();
+				finish(false);
+			}
+		});
+	}
+
+	async function closeCanvasTab(canvasId) {
+		if (canvases.length <= 1) return;
+		captureActiveCanvas();
+		const closedIndex = canvases.findIndex(canvas => canvas.id === canvasId);
+		canvases = canvases.filter(canvas => canvas.id !== canvasId);
+		if (activeCanvasId === canvasId) {
+			const nextCanvasId = canvases[Math.min(closedIndex, canvases.length - 1)].id;
+			renderCanvasTabs();
+			await activateCanvas(nextCanvasId, { initial: true });
+		} else {
+			renderCanvasTabs();
+			await persistWorkspace();
 		}
 	}
 
@@ -365,16 +773,47 @@ import {
 		if (!openButton) return;
 		const query = savedQueries.find(item => item.id === openButton.dataset.savedQueryOpen);
 		if (!query) return;
+		if (activeCanvas()?.type !== 'sql') {
+			await createCanvasTab('sql');
+		}
 		const editor = document.getElementById('sqlEditorTA');
 		if (!editor) return;
-		document.getElementById('btnSQL')?.click();
 		editor.value = query.sql;
 		editor.dispatchEvent(new Event('input', { bubbles: true }));
 		editor.focus();
+		await persistWorkspace();
 		updateProgress(`Opened saved query "${query.title}".`);
 	}
 
 	function bindUIEvents() {
+		document.getElementById('canvasTabs').addEventListener('click', event => {
+			const close = event.target.closest('[data-canvas-close]');
+			if (close) {
+				void closeCanvasTab(close.dataset.canvasClose);
+				return;
+			}
+			const rename = event.target.closest('[data-canvas-rename]');
+			if (rename) {
+				beginCanvasRename(rename.dataset.canvasRename, rename.closest('.canvas-tab-item').querySelector('[data-canvas-activate]'));
+				return;
+			}
+			const tab = event.target.closest('[data-canvas-activate]');
+			if (tab) void activateCanvas(tab.dataset.canvasActivate);
+		});
+		document.getElementById('addCanvasBtn').addEventListener('click', () => {
+			const menu = document.getElementById('canvasTypeMenu');
+			menu.hidden = !menu.hidden;
+			document.getElementById('addCanvasBtn').setAttribute('aria-expanded', String(!menu.hidden));
+		});
+		document.getElementById('canvasTypeMenu').addEventListener('click', event => {
+			const option = event.target.closest('[data-canvas-type]');
+			if (option) void createCanvasTab(option.dataset.canvasType);
+		});
+		document.addEventListener('click', event => {
+			if (event.target.closest('.canvas-add-menu')) return;
+			document.getElementById('canvasTypeMenu').hidden = true;
+			document.getElementById('addCanvasBtn').setAttribute('aria-expanded', 'false');
+		});
 		document.getElementById('catalogDatasetList').addEventListener('click', async event => {
 			const groupToggle = event.target.closest('[data-catalog-group-toggle]');
 			if (groupToggle) {
@@ -393,6 +832,13 @@ import {
 		document.getElementById('cancelSaveQueryBtn').addEventListener('click', closeSaveQueryForm);
 		document.getElementById('savedQueryTitle').addEventListener('keydown', event => {
 			if (event.key === 'Escape') closeSaveQueryForm();
+		});
+		document.getElementById('sqlEditorTA').addEventListener('input', () => {
+			const canvas = activeCanvas();
+			if (canvas) {
+				canvas.sql = document.getElementById('sqlEditorTA').value;
+				scheduleWorkspaceSave();
+			}
 		});
 		document.getElementById('savedQueryList').addEventListener('click', handleSavedQueryAction);
 		document.getElementById('datasetPreviewModal').addEventListener('click', event => {
@@ -414,7 +860,9 @@ import {
 				if (chartType === 'map' && !state.allRows.length) return;
 				state.chartType = chartType;
 				updateChartButtons();
+				updateCanvasLayout();
 				saveCurrentWorkspacePreferences();
+				void persistWorkspace();
 				if (chartType === 'sql') {
 					// Signal the SQL workbench module to initialize (lazy)
 					document.dispatchEvent(new CustomEvent('eda:sql-activate'));
@@ -429,6 +877,7 @@ import {
 				document.getElementById(id).addEventListener('change', () => {
 					renderVisual();
 					saveCurrentWorkspacePreferences();
+					void persistWorkspace();
 				});
 			});
 
@@ -447,6 +896,7 @@ import {
 		document.getElementById('colPickerShowAll').addEventListener('click', () => {
 			state.hiddenColumns.clear();
 			renderTable();
+			void persistWorkspace();
 		});
 
 		document.getElementById('colPickerClearAll').addEventListener('click', () => {
@@ -456,6 +906,7 @@ import {
 				if (!locked.has(col)) state.hiddenColumns.add(col);
 			});
 			renderTable();
+			void persistWorkspace();
 		});
 
 		document.getElementById('chartFilterClear').addEventListener('click', () => {
@@ -495,6 +946,7 @@ import {
 			clusterToggle.addEventListener('change', (event) => {
 				state.mapOptions.cluster = event.target.checked;
 				if (state.chartType === 'map') renderVisual();
+				void persistWorkspace();
 			});
 		}
 
@@ -503,6 +955,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				state.mapOptions.popupHidden.clear();
 				const cols = Object.keys(state.allRows[0]);
 				buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
+				void persistWorkspace();
 			});
 
 			document.getElementById('mapPopupClearAll').addEventListener('click', () => {
@@ -510,14 +963,21 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				const cols = Object.keys(state.allRows[0]);
 				cols.forEach(col => state.mapOptions.popupHidden.add(col));
 				buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
+				void persistWorkspace();
 			});
 
 			document.getElementById('mapPopupRefresh').addEventListener('click', () => {
 				if (state.chartType === 'map') renderVisual();
 			});
 
-			document.getElementById('mapSaveConfigBtn').addEventListener('click', saveMapConfig);
-		document.getElementById('mapEditConfigBtn').addEventListener('click', editMapConfig);
+			document.getElementById('mapSaveConfigBtn').addEventListener('click', () => {
+				saveMapConfig();
+				void persistWorkspace();
+			});
+		document.getElementById('mapEditConfigBtn').addEventListener('click', () => {
+			editMapConfig();
+			void persistWorkspace();
+		});
 
 		// Delegate filter-value changes inside #mapOptFiltersSection
 		document.getElementById('mapOptFiltersSection').addEventListener('change', e => {
@@ -531,6 +991,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				renderVisual();
 				applyMapTableFilters();
 			}
+			void persistWorkspace();
 		});
 
 		// When DuckDB becomes ready, subsequent dataset switches will automatically
@@ -564,8 +1025,18 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		window.addEventListener('resize', syncHeight);
 	}
 
-	async function selectDataset(datasetId) {
+	function initializeChartSizing() {
+		const chartArea = document.getElementById('chartArea');
+		if (!chartArea || typeof ResizeObserver === 'undefined') return;
+		chartResizeObserver = new ResizeObserver(() => state.chartInstance?.resize());
+		chartResizeObserver.observe(chartArea);
+	}
+
+	async function selectDataset(datasetId, { activationSequence = null } = {}) {
 		if (!datasetId) return;
+		if (activationSequence === null) canvasActivationSequence += 1;
+		const loadSequence = ++datasetLoadSequence;
+		datasetLoadPending = false;
 		// Check if this is a user-added source injected by the SQL module
 		const userDs = window._edaUserDatasets?.get(datasetId);
 		if (userDs) {
@@ -595,8 +1066,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			updateProgress(`User source "${userDs.title}" loaded: ${userDs.rows.length.toLocaleString()} rows.`);
 			updateActiveDatasetIndicator(datasetId, userDs.title);
 			saveCurrentWorkspacePreferences();
+			if (activeCanvas()) activeCanvas().datasetId = datasetId;
 			return true;
 		}
+		datasetLoadPending = true;
 		const previous = {
 			datasetId: state.datasetId,
 			settings: state.settings,
@@ -612,8 +1085,13 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		state.datasetId = datasetId;
 		updateCatalogTreeState();
 		state.hiddenColumns = new Set();
-		const loaded = await loadDataset(datasetId);
-		if (loaded) return true;
+		const loaded = await loadDataset(datasetId, loadSequence);
+		if (loadSequence !== datasetLoadSequence) return null;
+		datasetLoadPending = false;
+		if (loaded) {
+			if (activeCanvas()) activeCanvas().datasetId = datasetId;
+			return true;
+		}
 
 		Object.assign(state, previous);
 		selectedCatalogDatasetId = previous.datasetId;
@@ -633,7 +1111,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		return false;
 	}
 
-	async function loadDataset(datasetId) {
+	async function loadDataset(datasetId, loadSequence) {
 		try {
 			updateProgress('Loading dataset configuration…');
 			const settingsPath = `${DATA_ROOT}/${datasetId}/${datasetId}-bi-settings.json`;
@@ -642,12 +1120,16 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				fetchJSON(settingsPath),
 				fetchJSON(indexPath)
 			]);
-			state.settings = enrichSettings(settings);
+			if (loadSequence !== datasetLoadSequence) return null;
+			const datasetSettings = enrichSettings(settings);
+			const datasetRows = await loadPartitionsIntoState(datasetId, indexData, loadSequence);
+			if (!datasetRows || loadSequence !== datasetLoadSequence) return null;
+			state.settings = datasetSettings;
 			state.index = indexData;
+			state.allRows = datasetRows;
 			populateControls();
 			updateDatasetInfo();
 			updateChartButtons();
-			await loadPartitionsIntoState();
 			// After rows load, merge any field not already in dimensions so numeric
 			// columns (e.g. DISTRICT stored as 1–12) are selectable as grouping keys.
 			// Also expand metrics to include all numeric columns so users can freely
@@ -692,6 +1174,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			updateCatalogSummary(catalogItems);
 			return true;
 		} catch (error) {
+			if (loadSequence !== datasetLoadSequence) return null;
 			console.error(error);
 			updateProgress(`Failed to load "${DATASETS.find(dataset => dataset.id === datasetId)?.title || datasetId}": ${error.message}`);
 			return false;
@@ -704,21 +1187,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const dataset = DATASETS.find(item => item.id === datasetId);
 		const userSource = window._edaUserDatasets?.get(datasetId);
 		indicator.textContent = `Now working with: ${title || userSource?.title || dataset?.title || datasetId || 'No dataset loaded'}`;
-	}
-
-	function restoreWorkspacePreferences(preferences) {
-		const chartTypes = ['bar-horizontal', 'bar-vertical', 'pie'];
-		if (chartTypes.includes(preferences.chartType)) state.chartType = preferences.chartType;
-		Object.entries(preferences.controls || {}).forEach(([id, value]) => {
-			const select = document.getElementById(id);
-			if (select && [...select.options].some(option => option.value === value)) {
-				select.value = value;
-			}
-		});
-		updateChartButtons();
-		renderVisual();
-		renderTable();
-		saveCurrentWorkspacePreferences();
 	}
 
 	function saveCurrentWorkspacePreferences() {
@@ -778,7 +1246,13 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			value: option.toLowerCase().includes('dimension') ? 'dimension' : 'metric'
 		}));
 		fillSelect('orderBySelect', orderValues, true);
-		document.getElementById('orderDirectionSelect').value = 'asc';
+		const orderDirectionSelect = document.getElementById('orderDirectionSelect');
+		const previousOrderDirection = orderDirectionSelect.value;
+		fillSelect('orderDirectionSelect', [
+			{ label: 'Descending', value: 'desc' },
+			{ label: 'Ascending', value: 'asc' }
+		], true);
+		orderDirectionSelect.value = previousOrderDirection || 'asc';
 	}
 
 	function fillSelect(selectId, values, isObjectList = false) {
@@ -812,20 +1286,21 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		`;
 	}
 
-	async function loadPartitionsIntoState() {
-		if (!state.datasetId || !state.index) return;
+	async function loadPartitionsIntoState(datasetId, index, loadSequence) {
 		const combined = [];
 		let processed = 0;
 		updateProgress('Loading partitions…');
 		for (const district of DISTRICTS) {
-			const key = `${state.datasetId}-District-${district}.csv`;
-			const expected = state.index[key]?.records ?? 0;
-			const partitionRows = await loadPartition(state.datasetId, district, expected);
+			if (loadSequence !== datasetLoadSequence) return null;
+			const key = `${datasetId}-District-${district}.csv`;
+			const expected = index[key]?.records ?? 0;
+			const partitionRows = await loadPartition(datasetId, district, expected);
+			if (loadSequence !== datasetLoadSequence) return null;
 			combined.push(...partitionRows);
 			processed += 1;
 			updateProgress(`Loaded ${processed}/${DISTRICTS.length} partitions…`);
 		}
-		state.allRows = combined;
+		return combined;
 	}
 
 	function initializeMapControls() {
@@ -976,7 +1451,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		// Checklist helpers
 		buildFieldChecklist(
 			document.getElementById('mapPopupFieldList'),
-			state.mapOptions.popupHidden, cols
+			state.mapOptions.popupHidden, cols, () => { void persistWorkspace(); }
 		);
 	}
 
@@ -1102,7 +1577,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		state._renderSeq += 1;
 		const seq = state._renderSeq;
 		if (!state.allRows.length) {
-			document.getElementById('chartArea').innerHTML = '<div class="text-muted">No data available for the current selection.</div>';
+			renderCanvasEmptyState(document.getElementById('chartArea'));
 			return;
 		}
 		if (state.chartType === 'map') {
@@ -1112,6 +1587,53 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		}
 		// Refresh lock indicators whenever BI selects change
 		populateColumnPicker();
+	}
+
+	function renderCanvasEmptyState(container) {
+		if (!container) return;
+		const canvas = activeCanvas();
+		const mapCanvas = canvas?.type.startsWith('map-') || state.chartType === 'map';
+		const title = mapCanvas ? 'Prepare a map'
+			: canvas?.type === 'graph-only' ? 'Prepare a graph'
+				: canvas?.type === 'table-only' ? 'Prepare a table'
+					: 'Your canvas is ready';
+		const steps = mapCanvas
+			? [
+				'Choose a dataset with spatial coordinate fields (latitude and longitude) in the Datasets pane and select Analyze.',
+				'Choose the latitude and longitude fields in Map Configuration.',
+				'Save the map configuration to display the map.'
+			]
+			: canvas?.type === 'graph-only'
+				? [
+					'Choose a dataset from the Datasets pane and select Analyze.',
+					'Choose Horizontal Bar, Vertical Bar, or Pie in the canvas toolbar.',
+					'Use the controls on the right to choose dimensions, metrics, and sorting.'
+				]
+				: canvas?.type === 'table-only'
+					? [
+						'Choose a dataset from the Datasets pane and select Analyze.',
+						'The table will appear here; use the controls on the right to configure the view.'
+					]
+					: [
+						'Choose a dataset from the Datasets pane and select Analyze.',
+						'Choose a graph type and configure it with the controls on the right.',
+						'The matching data table appears below.'
+					];
+		const message = document.createElement('div');
+		message.className = 'canvas-empty-state';
+		const icon = document.createElement('i');
+		icon.className = `bi ${mapCanvas ? 'bi-geo-alt' : canvas?.type === 'table-only' ? 'bi-table' : 'bi-bar-chart'}`;
+		icon.setAttribute('aria-hidden', 'true');
+		const heading = document.createElement('h2');
+		heading.textContent = title;
+		const list = document.createElement('ol');
+		steps.forEach(step => {
+			const item = document.createElement('li');
+			item.textContent = step;
+			list.appendChild(item);
+		});
+		message.append(icon, heading, list);
+		container.replaceChildren(message);
 	}
 
 	function destroyVisuals() {
@@ -1449,7 +1971,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			&& window._edaTableColumns?.has(state.datasetId);
 
 		if (!canUseDuckDB && !state.allRows.length) {
-			container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
+			container.innerHTML = '<div class="canvas-table-empty">Analyze a dataset from the left pane to load its rows into this table.</div>';
 			populateColumnPicker();
 			return;
 		}
@@ -1675,7 +2197,11 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		if (sqlWorkbench) sqlWorkbench.style.display = sqlActive    ? 'flex' : 'none';
 
 		if (tableCard) tableCard.style.display = sqlActive ? 'none' : '';
-		if (tableControlsCard) tableControlsCard.style.display = sqlActive ? 'none' : '';
+		if (tableControlsCard) {
+			const canvasType = activeCanvas()?.type;
+			const supportsTableControls = ['all-in-one', 'table-only', 'map-all-in-one'].includes(canvasType);
+			tableControlsCard.style.display = sqlActive || !supportsTableControls ? 'none' : '';
+		}
 	}
 
 	function updateProgress(message) {
@@ -2067,12 +2593,19 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				analyzeButton.textContent = 'Loading…';
 			}
 			const loaded = await selectDataset(dataset.id);
+			if (loaded === null) {
+				updateCatalogTreeState();
+				if (status) status.textContent = 'Load canceled; another selection took precedence.';
+				return;
+			}
 			if (!loaded) {
 				if (status) status.textContent = 'Load failed. Check the connection and try again.';
 				updateCatalogTreeState();
 				return;
 			}
 			updateCatalogTreeState();
+			updateCanvasContextToolbar();
+			await persistWorkspace();
 			await updateCatalogCacheStatuses(buildCatalogItems());
 			return;
 		}
@@ -2084,10 +2617,21 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			try {
 				const removed = await window._edaRemoveUserSource(dataset.id);
 				if (!removed) return;
+				canvases.forEach(canvas => {
+					if (canvas.datasetId === dataset.id) {
+						canvas.datasetId = null;
+						canvas.controls = {};
+						canvas.hiddenColumns = [];
+						canvas.mapConfig = null;
+						canvas.mapOptions = null;
+					}
+				});
 				if (state.datasetId === dataset.id && DATASETS.length) {
 					await selectDataset(DATASETS[0].id);
 				}
 				renderCatalog();
+				updateCanvasContextToolbar();
+				await persistWorkspace();
 			} catch (error) {
 				console.error(`Could not remove dataset "${dataset.id}":`, error);
 				updateProgress(`Could not remove "${dataset.title}": ${error.message}`);
@@ -2116,6 +2660,12 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			catalogSchemaCache.delete(dataset.id);
 			if (state.datasetId === dataset.id) {
 				const loaded = await selectDataset(dataset.id);
+				if (loaded === null) {
+					status.textContent = 'Refresh complete; reload was superseded.';
+					buttons.forEach(button => { button.disabled = false; });
+					updateCatalogTreeState();
+					return;
+				}
 				if (!loaded) {
 					status.textContent = 'Refresh downloaded, but reloading failed. Use Analyze to retry.';
 					buttons.forEach(button => { button.disabled = false; });
@@ -2123,6 +2673,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					return;
 				}
 				updateCatalogTreeState();
+				updateCanvasContextToolbar();
+				await persistWorkspace();
 				await updateCatalogCacheStatuses(buildCatalogItems());
 				return;
 			}

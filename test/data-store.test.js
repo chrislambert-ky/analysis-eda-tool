@@ -24,7 +24,14 @@ describe('shared IndexedDB database', () => {
         return {};
       },
       transaction(name) {
-        return {
+        const tx = {};
+        let completionQueued = false;
+        const queueCompletion = () => {
+          if (completionQueued) return;
+          completionQueued = true;
+          queueMicrotask(() => tx.oncomplete?.());
+        };
+        return Object.assign(tx, {
           objectStore() {
             return {
               getAll() {
@@ -37,23 +44,24 @@ describe('shared IndexedDB database', () => {
               },
               put(value) {
                 const request = {};
-                queueMicrotask(() => {
-                  records.get(name).set(value.id, value);
-                  request.onsuccess();
-                });
+                records.get(name).set(value.id, value);
+                queueCompletion();
+                queueMicrotask(() => request.onsuccess?.());
                 return request;
+              },
+              clear() {
+                records.get(name).clear();
+                queueCompletion();
               },
               delete(id) {
                 const request = {};
-                queueMicrotask(() => {
-                  records.get(name).delete(id);
-                  request.onsuccess();
-                });
+                records.get(name).delete(id);
+                queueMicrotask(() => request.onsuccess());
                 return request;
               }
             };
           }
-        };
+        });
       }
     };
     global.indexedDB = {
@@ -79,19 +87,20 @@ describe('shared IndexedDB database', () => {
     }
   });
 
-  it('creates all version-3 stores once and shares the database connection', async () => {
+  it('creates all version-5 stores once and shares the database connection', async () => {
     const first = await dataStore.getDatabase();
     const second = await dataStore.getDatabase();
 
     assert.equal(first, database);
     assert.equal(second, database);
-    assert.deepEqual(openCalls, [{ name: 'analysis_eda_tool_db', version: 3 }]);
+    assert.deepEqual(openCalls, [{ name: 'analysis_eda_tool_db', version: 5 }]);
     assert.deepEqual([...stores.entries()], [
       ['partitions', { keyPath: 'key' }],
       ['sources', { keyPath: 'alias' }],
       ['user_source_data', { keyPath: 'alias' }],
       ['user_source_bytes', { keyPath: 'alias' }],
-      ['saved_queries', { keyPath: 'id' }]
+      ['saved_queries', { keyPath: 'id' }],
+      ['workspace_canvases', { keyPath: 'id' }]
     ]);
   });
 
@@ -112,5 +121,18 @@ describe('shared IndexedDB database', () => {
   it('rejects saved queries without a title or SQL text', async () => {
     await assert.rejects(dataStore.saveSavedQuery({ id: 'bad', title: ' ', sql: 'SELECT 1' }), TypeError);
     await assert.rejects(dataStore.saveSavedQuery({ id: 'bad', title: 'Missing SQL', sql: ' ' }), TypeError);
+  });
+
+  it('persists canvases and the active canvas across reloads', async () => {
+    const workspace = [
+      { id: 'all-in-one-1', type: 'all-in-one', name: 'Dashboard', datasetId: 'bridges' },
+      { id: 'table-1', type: 'table-only', name: 'Contracts', datasetId: 'contracts' }
+    ];
+    await dataStore.writeWorkspaceCanvases(workspace, 'table-1');
+    assert.deepEqual(await dataStore.readWorkspaceCanvases(), {
+      canvases: workspace,
+      activeCanvasId: 'table-1'
+    });
+    await assert.rejects(dataStore.writeWorkspaceCanvases(workspace, 'missing'), TypeError);
   });
 });

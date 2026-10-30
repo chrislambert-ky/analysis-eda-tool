@@ -19,6 +19,7 @@ A single-page, fully in-browser exploratory data analysis tool built with vanill
 - **Data Table:** Tabulator-powered table with per-column header filters, horizontal scroll, and consistent column widths.
 - **Contextual controls:** Chart settings sit beside the graph, while table-column visibility controls sit beside the data table.
 - **Session continuity:** The browser remembers the last active dataset and basic chart settings; share links take precedence when opened.
+- **Canvas workspace:** Add All in One, Graph Only, Table Only, Map + Table, Map Only, or SQL canvases. Each canvas keeps its own dataset, controls, and SQL text; tabs can be renamed, closed, and restored after reload.
 - **Download:** Export the full dataset or the currently filtered rows to CSV.
 - **Chart filter:** Clicking a chart series/segment filters the table to matching rows; a badge shows the active filter with a one-click clear.
 - **Map options:** Clustering (on by default), district/county filter, and color-by-field controls appear automatically when a dataset has map configuration. Selecting a specific district or county temporarily disables clustering.
@@ -31,6 +32,13 @@ The docked **Datasets** pane provides a tree of preloaded and imported datasets:
 - **Analyze** makes that dataset active in the visualization and table.
 - **Refresh** updates that dataset's cached partitions. If it is active, the app reloads it; otherwise, the active dataset is unchanged and the left pane remains available.
 - The schema includes inferred SQL-style column types (`VARCHAR`, `INTEGER`, `DOUBLE`, `DATE`) and dimension/metric classifications.
+
+### Canvases
+- Use **+** above the workspace to add an **All in One**, **Graph Only**, **Table Only**, **Map + Table**, **Map Only**, or **SQL** canvas.
+- Blank graph, table, and map canvases show brief setup instructions. Map instructions call out loading spatial attributes and saving the map fields.
+- Analyze a dataset from the left pane to load it into the active canvas. Canvases retain independent dataset selections, chart settings, visible table columns, and SQL text.
+- Rename, close, and switch between canvas tabs; open canvases are restored from browser IndexedDB after reload.
+- The slim canvas toolbar shows the active canvas and its context-sensitive controls. Graph Only, Table Only, and Map Only reduce the work area to their respective surface; Map + Table pairs the existing map and table, and SQL canvases keep the editor and results together.
 
 ### SQL Workbench
 - **In-browser SQL** powered by [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview.html) — no backend required.
@@ -82,6 +90,7 @@ analysis-eda-tool/
 │   ├── data-store.mjs                  # Shared IndexedDB database and partition-cache API
 │   ├── dataset-loader.mjs              # CSV parsing, partition fetching, and cache coordination
 │   ├── share.mjs                       # Pure share-link parsing and serialization
+│   ├── canvas-state.mjs                # Canvas types, defaults, and persisted-state normalization
 │   ├── workspace-preferences.mjs       # Last active dataset and chart controls
 │   └── duckdb.js                       # DuckDB-WASM SQL workbench
 ├── etl.js                              # Node ETL: downloads CSVs, partitions by district

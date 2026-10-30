@@ -81,18 +81,34 @@
 				</div>
 			</div>
 		</header>
-		<div class="d-flex justify-content-end mb-3">
-			<div class="btn-group" role="group" aria-label="Chart and data views">
+		<div class="canvas-tabs-bar" role="navigation" aria-label="Workspace canvases">
+			<div id="canvasTabs" class="canvas-tabs" role="tablist" aria-label="Canvas tabs"></div>
+			<div class="canvas-add-menu">
+				<button type="button" class="btn btn-outline-secondary btn-sm" id="addCanvasBtn" aria-haspopup="menu" aria-expanded="false" title="Add canvas">+</button>
+				<div id="canvasTypeMenu" class="canvas-type-menu" role="menu" hidden>
+					<button type="button" role="menuitem" data-canvas-type="all-in-one">All in One</button>
+					<button type="button" role="menuitem" data-canvas-type="graph-only">Graph Only</button>
+					<button type="button" role="menuitem" data-canvas-type="table-only">Table Only</button>
+					<button type="button" role="menuitem" data-canvas-type="map-all-in-one">Map + Table</button>
+					<button type="button" role="menuitem" data-canvas-type="map-only">Map Only</button>
+					<button type="button" role="menuitem" data-canvas-type="sql">SQL</button>
+				</div>
+			</div>
+		</div>
+		<div class="canvas-context-toolbar" aria-label="Active canvas controls">
+			<div class="canvas-context-label">
+				<strong id="canvasContextTitle">All in One</strong>
+				<span id="canvasContextDataset">No dataset loaded</span>
+			</div>
+			<div id="canvasViewButtons" class="btn-group" role="group" aria-label="Chart and data views">
 				<button class="btn btn-outline-primary btn-chart" data-chart="bar-horizontal" id="btnBarH">Horizontal Bar</button>
 				<button class="btn btn-outline-primary btn-chart" data-chart="bar-vertical" id="btnBarV">Vertical Bar</button>
 				<button class="btn btn-outline-primary btn-chart" data-chart="pie" id="btnPie">Pie</button>
-				<button class="btn btn-outline-primary btn-chart" data-chart="map" id="btnMap">Map</button>
-				<button class="btn btn-outline-primary btn-chart" data-chart="sql" id="btnSQL">SQL</button>
 			</div>
 		</div>
 
-		<div class="row g-3 align-items-stretch">
-			<div class="col-lg-9">
+		<div class="row g-3 align-items-stretch" id="chartWorkspaceRow">
+			<div class="col-lg-9" id="chartCanvasColumn">
 					<div class="card shadow-sm chart-card">
 						<div class="card-body d-flex flex-column">
 							<div id="chartArea" class="chart-surface flex-grow-1"></div>
@@ -138,7 +154,7 @@
 						</div>
 					</div>
 			</div>
-			<div class="col-lg-3">
+			<div class="col-lg-3" id="chartControlsColumn">
 				<div id="controlsCard" class="card shadow-sm controls-card h-100">
 					<div class="card-body d-flex flex-column">
 						<div id="generalControls">
@@ -255,7 +271,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="row g-3 align-items-stretch mt-1">
+		<div class="row g-3 align-items-stretch mt-1" id="tableWorkspaceRow">
 			<div class="col-lg-9">
 				<div class="card shadow-sm table-card">
 					<div class="card-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center">
@@ -280,7 +296,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="col-lg-3">
+			<div class="col-lg-3" id="tableControlsColumn">
 				<div id="tableControlsCard" class="card shadow-sm table-controls-card">
 					<div class="card-body">
 						<div id="colPickerPanel">

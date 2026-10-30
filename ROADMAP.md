@@ -8,15 +8,15 @@ This document describes a staged path from the current GitHub Pages tool to a mo
 
 - Static, no-build app hosted on GitHub Pages; no backend, and user data stays in the browser.
 - `index.html` is now the page shell; styles and browser logic are split across `css/app.css` and native ES modules in `js/`.
-- Modules extracted so far: chart engine, dataset loader, shared IndexedDB store, share-link helpers, and DuckDB-WASM SQL workbench. `js/app.js` remains the large UI coordinator; further feature-boundary extraction is still needed.
+- Modules extracted so far: chart engine, dataset loader, shared IndexedDB store, share-link helpers, canvas-state normalization, and DuckDB-WASM SQL workbench. `js/app.js` remains the large UI coordinator; further feature-boundary extraction is still needed.
 - The app has a full-height dataset tree with Preview / Analyze / Refresh, a 10-row preview and separate schema view, chart and SQL surfaces, a chart view, a paged data table, and the existing Leaflet map/options.
 - Chart aggregation uses DuckDB-WASM when available with a tested JavaScript fallback. Managed CSV partitions and imported user sources are cached in the shared IndexedDB database.
 - The left catalog drives dataset selection; the header indicates the active dataset. Chart controls sit beside the chart; table-column controls sit beside the table.
 - SQL schema explorer supports dataset/column search, qualified-column insertion, and saved queries in IndexedDB.
-- The last active dataset and basic chart selections restore from browser local storage; share links override saved preferences. This is not yet independent per-canvas workspace persistence.
+- Canvas tabs support All in One, Graph Only, Table Only, Map + Table, Map Only, and SQL. Each persists its own dataset, controls, hidden columns, SQL text, and map settings in IndexedDB; tabs can be renamed, closed, and restored. Share links override the active canvas at startup.
 - Dataset loads and refreshes report progress/errors, and failed Analyze attempts retain the previously active dataset. The table controls show visible/total column counts and scroll within the table-height panel.
-- **Not yet implemented:** multiple independent canvas tabs, OPFS-backed DuckDB database, service worker/offline app shell, PWA manifest/install flow, file conversion, and desktop packaging.
-- Current test suite covers ETL, chart engine, dataset loader, IndexedDB initialization/saved queries, share links, and workspace-preference serialization.
+- **Not yet implemented:** OPFS-backed DuckDB database, service worker/offline app shell, PWA manifest/install flow, file conversion, and desktop packaging.
+- Current test suite covers ETL, chart engine, dataset loader, IndexedDB initialization/saved queries/canvas state, share links, and workspace-preference serialization.
 
 ---
 
@@ -513,11 +513,12 @@ The initial split is done: HTML and CSS are externalized; chart logic, dataset l
 - Map Preview is shown only when a geometry/lat-lon column is detected
 - Schema surface: columns, types, null counts, distinct counts, basic profile (all via DuckDB `SUMMARIZE`/`DESCRIBE`)
 
-### 6.4 Workspace tabs and canvases
-- "+" opens a new tab. A blank canvas lets the user choose **Query/Table**, **Chart**, or **Map**.
-- Model each canvas as serializable state, for example `{id, kind, title, datasetRef, query, view, config}`. Keep the SQL editor/query text in query canvases, not above chart output.
-- A canvas owns its own selected dataset/query, view type, and control configuration. Switching canvases must not silently overwrite another canvas's state.
-- First ship in-memory tab state; persist and restore canvases only after the state model and migration/versioning behavior are tested.
+### 6.4 Workspace tabs and canvases (Initial version implemented)
+- "+" opens **All in One**, **Graph Only**, **Table Only**, **Map + Table**, **Map Only**, or **SQL** canvases; new canvases start blank and load datasets through the left catalog's **Analyze** action.
+- Blank graph, table, and map canvases include short setup instructions; map guidance calls out spatial attributes and map configuration.
+- Canvases own dataset, view/control settings, hidden columns, map configuration, and SQL text. Tabs support rename, close, switching, and IndexedDB persistence.
+- The slim context toolbar names the active canvas and presents chart-view controls where appropriate. SQL canvases keep SQL editor and query results together; Table Only shows table-column controls beside the table. Map + Table and Map Only use the existing Leaflet implementation and map options.
+- **Next refinement:** make the context toolbar and right-side controls more explicitly adapt to each canvas type; test changing the dataset and settings independently across multiple canvases.
 - **Chart canvas toolbar:** x-axis, y-axis (multi), chart type (bar, horizontal bar, stacked bar, line, area, pie), group-by/series, aggregation (sum, avg, count, min, max, count distinct), sort (field + direction), title and axis labels. Config → SQL builder → ECharts option; the builder is a pure function and unit tested.
 
 ### 6.5 Export & Convert
@@ -526,8 +527,9 @@ The initial split is done: HTML and CSS are externalized; chart logic, dataset l
 - Options: column selection, row filter, compression, CRS for spatial outputs
 - Large files: warn above a configurable size; stream where possible
 
-### 6.6 Map canvas (spatial)
-- Library decision deferred (Leaflet + spatial-SQL layers vs. MapLibre GL + deck.gl). Evaluate when 6.1–6.5 ship, against: WebGL performance with >100k features, vector tiles, and licensing/CDN needs for GitHub Pages
+### 6.6 Advanced GIS map capabilities (Deferred)
+- The initial Map + Table and Map Only canvases wrap the existing Leaflet map/options. Keep that map unchanged while canvases stabilize.
+- Library decision for an advanced GIS experience remains deferred (extend Leaflet with spatial-SQL layers vs. MapLibre GL + deck.gl). Evaluate against WebGL performance with >100k features, vector tiles, and licensing/CDN needs for GitHub Pages.
 - Layer panel (add/remove/reorder), each layer backed by a SQL query returning a geometry (as GeoJSON via `ST_AsGeoJSON` or WKB)
 - Styling: fill/stroke, color by column (categorical/quantile), size, opacity, tooltips, legend
 - Filters: attribute and spatial (bbox, within, buffer) exposed as UI controls that generate SQL
@@ -564,13 +566,13 @@ The initial split is done: HTML and CSS are externalized; chart logic, dataset l
 - **Exit:** changing a dataset or surface does not depend on script load order or undocumented globals.
 
 ### Milestone B — Make it a workspace
-- Introduce canvas tabs and a blank-canvas state. Begin with in-memory canvases so each canvas can independently own a dataset, query, visualization type, and settings.
-- Provide focused **Table**, **Chart**, and **SQL/Query** experiences; keep SQL text/results inside the query experience.
-- Add chart configuration controls to chart canvases and preserve the existing table/chart/map behaviors during migration.
-- **Exit:** users can open and switch between two canvases without one canvas changing the other's controls or result.
+- ✅ Initial canvas tabs and blank-canvas types shipped: All in One, Graph Only, Table Only, Map + Table, Map Only, SQL.
+- ✅ Canvas dataset, chart controls, table visibility, SQL text, and active tab persist in the versioned IndexedDB workspace store.
+- ✅ Analyze loads into the selected canvas; canvas switching restores its dataset and controls.
+- **Remaining:** refine the contextual ribbon and add the richer chart-building toolbar.
 
 ### Milestone C — Persist workspace and data safely
-- Version and migrate persisted workspace state; restore tab/canvas selection and configuration after reload.
+- Version and migrate persisted workspace state; restore tab/canvas selection and configuration after reload. (Initial canvas persistence is implemented.)
 - Evaluate DuckDB-WASM OPFS for managed/imported data, with IndexedDB/CSV fallback where OPFS or browser support is unavailable.
 - Keep the current hosted CSV partitions as the source of truth initially. Treat hosted Parquet/range querying as a later opt-in optimization after real files, CORS, HTTP range behavior, and DuckDB-WASM compatibility are verified.
 - **Exit:** a reload restores workspace state and previously imported data without silently corrupting existing IndexedDB data.
@@ -603,11 +605,11 @@ The initial split is done: HTML and CSS are externalized; chart logic, dataset l
 ## Recommended Implementation Order
 
 ```
-Now          Finish Phase 1.7           — complete feature modules and explicit app state
+Now          Finish Phase 1.7           — complete table/catalog modules and explicit feature boundaries
              ↓
-Next         Phase 6.3–6.4               — surface navigation, independent in-memory canvases
+Next         Phase 6.3–6.4               — refine contextual canvas ribbon and verify per-canvas controls
              ↓
-Then         Phase 2                     — versioned OPFS persistence with browser fallback
+Then         Phase 2                     — evaluate OPFS for dataset persistence; keep IndexedDB fallback
              ↓
 Then         Phase 4                     — installable PWA; GitHub Pages subpath-aware caching
              ↓
@@ -616,7 +618,7 @@ Last         Phase 6.6                   — choose/evolve GIS canvas after map 
 Far future   Phase 5                     — evaluate a local Rust/Tauri, Rust-native, or Electron app only if justified
 ```
 
-Phase 6.1 and 6.2 (the docked dataset browser, preview, Analyze/Refresh flow) are implemented. Phase 1 DuckDB chart aggregation, shared IndexedDB, modular CSS, and several tested ES modules are also in place. The immediate work is to finish the app-state/module boundary, then build canvases in memory before deciding persistence details. This order reduces the risk of persisting an unstable state model.
+Phase 6.1 and 6.2 (docked dataset browser, preview, Analyze/Refresh) and the initial persistent Phase 6.4 canvas model are implemented. Phase 1 DuckDB chart aggregation, shared IndexedDB, modular CSS, and several tested ES modules are also in place. The immediate work is to finish module boundaries and refine canvas-specific controls, keeping the map stable until its direction is clear.
 
 ---
 
