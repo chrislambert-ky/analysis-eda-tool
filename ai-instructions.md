@@ -70,7 +70,7 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
 **Consequences:**
 - `state.allRows` materialisation is eliminated for charts and table (map lat/lon rows remain until Phase 3).
 - Partition CSV files under `data/report/` become redundant and will be deleted after Phase 1 validation.
-- ETL simplifies to: download raw CSV → write BI settings JSON (no partition splitting).
+- ETL currently downloads raw CSVs, generates Parquet copies, writes BI settings, and rebuilds district partitions.
 - Offline capability is temporarily reduced between Phase 1.6 (partition removal) and Phase 2 (OPFS), unless the intermediate IDB raw-bytes cache is implemented.
 
 ---
@@ -88,17 +88,18 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
 - A second IDB (`eda_sql_user_sources`) stores user-added source metadata and row data. **Will be merged into OPFS in Phase 2.**
 - UI supports charts (horizontal/vertical bar, pie), map mode, Tabulator grid, SQL workbench, and Data Catalog.
 
-**Current data layer (Phase 1.6 — DuckDB-first)**
-- Raw CSVs live in `data/raw/` — the authoritative source for DuckDB views.
-- BI settings live in `data/report/<dataset>/<dataset>-bi-settings.json` — contains `totalRecords`, `dimensions`, `metrics`, and optional `map` config. No partition CSVs or `index.json`.
-- `state.allRows` is **empty** for managed datasets until the map tab is activated; charts and table use DuckDB SQL exclusively.
+**Current data layer (transitional)**
+- Source CSVs live in `data/raw/`; ETL-generated Parquet copies live in `data/parquet/`.
+- The current browser app still reads CSVs; Parquet generation is enabled for evaluation and future use.
+- BI settings, district partitions, and indexes live in `data/report/<dataset>/`.
+- For the DuckDB pilot datasets (Bridge Conditions and Expenditures), `state.allRows` stays empty for charts and tables; bridge features are fetched only when the map is opened. Other managed datasets still use district partitions.
 - Map rows are fetched lazily via `loadMapRowsFromDuckDB()` when `chartType === 'map'` and `state.allRows` is empty.
 - Dimension/metric selector lists are expanded from DuckDB native column types by `expandControlsFromDuckDB()` once `eda:duckdb-ready` fires.
 - IDB `partitions` store is no longer written to; will be dropped in Phase 2 (OPFS).
 
-**ETL (Phase 1.6)**
-- `etl.js` (Node 20-compatible) downloads remote CSVs to `data/raw/` and writes `bi-settings.json` per dataset using `csv-parse`.
-- No partition splitting, no `index.json`. `totalRecords` is counted from the raw CSV and embedded in `bi-settings.json`.
+**ETL**
+- `etl.js` (Node 20-compatible) downloads source CSVs, writes Zstandard-compressed Parquet copies with DuckDB's Node API, and partitions CSV records by district.
+- `totalRecords` and chart/map metadata are written to `bi-settings.json`; each report also includes an index and district CSVs.
 - Map configuration for the bridge dataset is hardcoded in `etl.js` (clustering defaults, color-field options).
 
 **Automation**
@@ -119,7 +120,8 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
    node etl.js
    ```
    Outputs:
-   - `data/raw/*.csv` (raw downloads)
+   - `data/raw/*.csv` (source downloads)
+   - `data/parquet/*.parquet` (generated Parquet copies)
    - `data/report/<dataset>/*.csv` partitions
    - `data/report/<dataset>/<dataset>.index.json`
    - `data/report/<dataset>/<dataset>-bi-settings.json`
@@ -133,11 +135,22 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
 
 ### Data sources
 - `eda_assets_bridge_condition_owner_area`
+- `eda_awarded_projects`
 - `eda_construction_procurement`
 - `eda_current_enact_plan_data_set`
+- `eda_expenditures`
 - `eda_programmanagement_authorized_detailed`
+- `export-bi-agency-construction-change-orders-dataview`
+- `export-bi-agency-constructionprocurement-altdelivery-dataview`
+- `export-bi-agency-constructionprocurement-dataview`
+- `export-bi-agency-maintenance-roadwayweather-machinehours-dataview`
+- `export-bi-agency-toc-roadwayweather-roadwayreport-dataview`
+- `export-bi-analysis-planning-systemmobility-dataview`
+- `export-bi-analysis-programmanagement-cost-change-dataview`
+- `export-bi-analysis-roadwayweatherevents-expenditures-dataview`
+- `export-bi-economic-fueltyperegistration-dataview`
 
-Each dataset definition exists in `DATASETS` array at the top of `index.html`. The value of `id` must match the folder name under `data/report/`.
+Each managed dataset is registered in `etl.js`, the catalog in `js/app.js`, and the SQL workbench in `js/duckdb.js`. The dataset ID must match its folder under `data/report/`, its source CSV under `data/raw/`, and its generated Parquet file under `data/parquet/`.
 
 ### BI settings format (Phase 1.6+)
 Each `data/report/<dataset>/<dataset>-bi-settings.json` contains:

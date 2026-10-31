@@ -2,10 +2,21 @@ import { getDatabase } from './data-store.mjs';
 
 // ── Dataset sources (raw CSV files, not partitioned report data) ───────────
 const SQL_DATASETS = [
-	{ alias: 'eda_assets_bridge_condition_owner_area',    title: 'Bridge Condition & Owner Area',                url: 'data/raw/eda_assets_bridge_condition_owner_area.csv' },
-	{ alias: 'eda_construction_procurement',              title: 'Construction Procurement',                     url: 'data/raw/eda_construction_procurement.csv' },
-	{ alias: 'eda_current_enact_plan_data_set',           title: 'Current Enacted Plan',                         url: 'data/raw/eda_current_enact_plan_data_set.csv' },
-	{ alias: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',     url: 'data/raw/eda_programmanagement_authorized_detailed.csv' }
+	{ alias: 'eda_assets_bridge_condition_owner_area', title: 'Assets Bridge Conditions', url: 'data/raw/eda_assets_bridge_condition_owner_area.csv' },
+	{ alias: 'eda_awarded_projects', title: 'Awarded Projects', url: 'data/raw/eda_awarded_projects.csv' },
+	{ alias: 'eda_construction_procurement', title: 'Construction Procurement', url: 'data/raw/eda_construction_procurement.csv' },
+	{ alias: 'eda_current_enact_plan_data_set', title: 'Current Enact Plan Data Set', url: 'data/raw/eda_current_enact_plan_data_set.csv' },
+	{ alias: 'eda_expenditures', title: 'Expenditures', url: 'data/raw/eda_expenditures.csv' },
+	{ alias: 'eda_programmanagement_authorized_detailed', title: 'Authorized Dollars', url: 'data/raw/eda_programmanagement_authorized_detailed.csv' },
+	{ alias: 'export-bi-agency-construction-change-orders-dataview', title: 'Agency Construction Change Orders', url: 'data/raw/export-bi-agency-construction-change-orders-dataview.csv' },
+	{ alias: 'export-bi-agency-constructionprocurement-altdelivery-dataview', title: 'Agency Construction Procurement Alt Delivery', url: 'data/raw/export-bi-agency-constructionprocurement-altdelivery-dataview.csv' },
+	{ alias: 'export-bi-agency-constructionprocurement-dataview', title: 'Agency Construction Procurement', url: 'data/raw/export-bi-agency-constructionprocurement-dataview.csv' },
+	{ alias: 'export-bi-agency-maintenance-roadwayweather-machinehours-dataview', title: 'Agency Maintenance Roadway Weather Machine Hours', url: 'data/raw/export-bi-agency-maintenance-roadwayweather-machinehours-dataview.csv' },
+	{ alias: 'export-bi-agency-toc-roadwayweather-roadwayreport-dataview', title: 'Agency TOC Roadway Weather Roadway Report', url: 'data/raw/export-bi-agency-toc-roadwayweather-roadwayreport-dataview.csv' },
+	{ alias: 'export-bi-analysis-planning-systemmobility-dataview', title: 'Analysis Planning System Mobility', url: 'data/raw/export-bi-analysis-planning-systemmobility-dataview.csv' },
+	{ alias: 'export-bi-analysis-programmanagement-cost-change-dataview', title: 'Analysis Program Management Cost Change', url: 'data/raw/export-bi-analysis-programmanagement-cost-change-dataview.csv' },
+	{ alias: 'export-bi-analysis-roadwayweatherevents-expenditures-dataview', title: 'Analysis Roadway Weather Events Expenditures', url: 'data/raw/export-bi-analysis-roadwayweatherevents-expenditures-dataview.csv' },
+	{ alias: 'export-bi-economic-fueltyperegistration-dataview', title: 'Economic Fuel Type Registration', url: 'data/raw/export-bi-economic-fueltyperegistration-dataview.csv' }
 ];
 
 // ── IndexedDB for user-added sources (unified with main partition-cache IDB) ─
@@ -89,6 +100,7 @@ let duck_db       = null;
 let conn          = null;
 let initialized   = false;
 let initializing  = false;
+let initializationError = null;
 let tableColumns     = new Map();   // alias → [{name, type}]
 window._edaTableColumns = tableColumns; // expose to catalog schema resolver
 window._edaRemoveUserSource = removeUserSource;
@@ -117,6 +129,7 @@ function setStatus(st, msg) {
 async function initDuckDB() {
 	if (initialized || initializing) return;
 	initializing = true;
+	initializationError = null;
 	try {
 		setStatus('loading', 'loading wasm\u2026');
 		const duckdb = await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm');
@@ -169,8 +182,10 @@ async function initDuckDB() {
 		if (catalogAddBtn) catalogAddBtn.disabled = false;
 	} catch (e) {
 		initializing = false;
+		initializationError = e;
 		setStatus('error', 'init failed');
 		console.error('DuckDB init error:', e);
+		document.dispatchEvent(new CustomEvent('eda:duckdb-error', { detail: e }));
 	}
 }
 
@@ -1225,6 +1240,59 @@ window._edaDescribeTable = async function(alias) {
 		if (tableColumns.has(alias)) return tableColumns.get(alias);
 	}
 	return null;
+};
+
+function waitForDuckDBInitialization() {
+	if (initialized) return Promise.resolve();
+	if (initializationError) return Promise.reject(initializationError);
+
+	return new Promise((resolve, reject) => {
+		const cleanup = () => {
+			document.removeEventListener('eda:duckdb-ready', onReady);
+			document.removeEventListener('eda:duckdb-error', onError);
+		};
+		const onReady = () => {
+			cleanup();
+			resolve();
+		};
+		const onError = event => {
+			cleanup();
+			reject(event.detail || new Error('DuckDB initialization failed.'));
+		};
+
+		document.addEventListener('eda:duckdb-ready', onReady, { once: true });
+		document.addEventListener('eda:duckdb-error', onError, { once: true });
+		if (!initializing) void initDuckDB();
+		if (initialized) onReady();
+		else if (initializationError) onError({ detail: initializationError });
+	});
+}
+
+window._edaPrepareDataset = async function(alias, { refresh = false } = {}) {
+	await waitForDuckDBInitialization();
+	const source = SQL_DATASETS.find(item => item.alias === alias);
+	if (!source) throw new Error(`Unknown managed DuckDB dataset "${alias}".`);
+	const materializedAlias = `__eda_materialized_${alias}`;
+	if (refresh) {
+		await window._edaQuery(`DROP VIEW IF EXISTS "${alias}";`);
+		await window._edaQuery(`DROP TABLE IF EXISTS "${materializedAlias}";`);
+		tableColumns.delete(alias);
+	}
+
+	let columns = tableColumns.get(alias);
+	if (!columns) {
+		await registerSource(source);
+		columns = tableColumns.get(alias);
+	}
+	if (!columns?.length) throw new Error(`Could not read the schema for "${alias}".`);
+
+	await window._edaQuery(
+		`CREATE TABLE IF NOT EXISTS "${materializedAlias}" AS SELECT * FROM "${alias}";`
+	);
+	await window._edaQuery(
+		`CREATE OR REPLACE VIEW "${alias}" AS SELECT * FROM "${materializedAlias}";`
+	);
+	return columns;
 };
 
 // ── Fired by the main EDA script when user clicks the SQL button ─────────────────

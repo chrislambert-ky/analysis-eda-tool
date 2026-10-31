@@ -45,11 +45,26 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 	// ECharts 5 default palette — used for both charts and map markers so colors stay consistent
 	const CHART_PALETTE = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
 	const DATASETS = [
-		{ id: 'eda_assets_bridge_condition_owner_area',    title: 'Bridge Condition & Owner Area',              description: 'Bridge inventory and condition ratings. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_construction_procurement',              title: 'Construction Procurement',                   description: 'Awarded construction contracts. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_current_enact_plan_data_set',           title: 'Current Enacted Plan',                       description: 'Current enacted highway plan, including funding allocations. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_programmanagement_authorized_detailed', title: 'Program Management Authorized (Detailed)',   description: 'Details of authorized dollars including project phases, costs, and schedule data. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' }
+		{ id: 'eda_assets_bridge_condition_owner_area', title: 'Assets Bridge Conditions', description: 'The most up-to-date inventory of Kentucky bridges, including attributes and classifications used for management and maintenance. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_awarded_projects', title: 'Awarded Projects', description: 'Transportation improvement projects awarded to construction, including all awarded contracts from the past six years and Alternative Delivery. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_construction_procurement', title: 'Construction Procurement', description: 'Awarded contracts from the past six years, including Alternative Delivery. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_current_enact_plan_data_set', title: 'Current Enact Plan Data Set', description: 'The most recent Highway Enacted Plan. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_expenditures', title: 'Expenditures', description: 'Expenditures over the last six years. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'eda_programmanagement_authorized_detailed', title: 'Authorized Dollars', description: 'Approved authorizations from Program Management over the past six years. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'export-bi-agency-construction-change-orders-dataview', title: 'Agency Construction Change Orders', description: 'Matches the Change Orders dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/ProjectDelivery_ChangeOrders' },
+		{ id: 'export-bi-agency-constructionprocurement-altdelivery-dataview', title: 'Agency Construction Procurement Alt Delivery', description: 'Matches the Awarded Projects Alternative Delivery dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Awarded_Projects' },
+		{ id: 'export-bi-agency-constructionprocurement-dataview', title: 'Agency Construction Procurement', description: 'Matches the Awarded Projects dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Awarded_Projects' },
+		{ id: 'export-bi-agency-maintenance-roadwayweather-machinehours-dataview', title: 'Agency Maintenance Roadway Weather Machine Hours', description: 'Matches the Snow and Ice dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Maintenance_SNIC' },
+		{ id: 'export-bi-agency-toc-roadwayweather-roadwayreport-dataview', title: 'Agency TOC Roadway Weather Roadway Report', description: 'Matches the Road Closures dashboard Data View. VPN required. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Internal_RoadClosures' },
+		{ id: 'export-bi-analysis-planning-systemmobility-dataview', title: 'Analysis Planning System Mobility', description: 'Matches the Travel Flow dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Travel_Flow' },
+		{ id: 'export-bi-analysis-programmanagement-cost-change-dataview', title: 'Analysis Program Management Cost Change', description: 'Program Management cost change data view. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
+		{ id: 'export-bi-analysis-roadwayweatherevents-expenditures-dataview', title: 'Analysis Roadway Weather Events Expenditures', description: 'Matches the Emergency Response dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Maintenance_EmergencyResponse' },
+		{ id: 'export-bi-economic-fueltyperegistration-dataview', title: 'Economic Fuel Type Registration', description: 'Matches the Vehicle Registrations dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/VehicleRegistrations' }
 	];
+	const DUCKDB_PILOT_DATASET_IDS = new Set([
+		'eda_assets_bridge_condition_owner_area',
+		'eda_expenditures'
+	]);
 	const APP_VERSION = '1.5.0';
 	const PRESET_DATASET_SLUGS = {
 		eda_assets_bridge_condition_owner_area: 'assets_bridge_condition_owner_area',
@@ -86,6 +101,22 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 			tableHidden: new Set()
 		}
 	};
+
+	function isDuckDBPilotDataset(datasetId = state.datasetId) {
+		return DUCKDB_PILOT_DATASET_IDS.has(datasetId);
+	}
+
+	function getDatasetColumns(datasetId = state.datasetId) {
+		if (datasetId === state.datasetId && state.allRows.length) {
+			return Object.keys(state.allRows[0]);
+		}
+		return (window._edaTableColumns?.get(datasetId) || []).map(column => column.name);
+	}
+
+	function hasMapData(datasetId = state.datasetId) {
+		const columns = getDatasetColumns(datasetId);
+		return columns.includes('LATITUDE') && columns.includes('LONGITUDE');
+	}
 
 	let startupShareState = null;
 	let startupWorkspacePreferences = null;
@@ -346,7 +377,7 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 			if (select && [...select.options].some(option => option.value === value)) select.value = value;
 		});
 		state.hiddenColumns = new Set((canvas.hiddenColumns || []).filter(column =>
-			state.allRows[0] && Object.hasOwn(state.allRows[0], column)
+			getDatasetColumns().includes(column)
 		));
 		if (canvas.mapConfig) {
 			state.mapConfig = {
@@ -362,8 +393,8 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 				tableHidden: new Set(canvas.mapOptions.tableHidden || [])
 			};
 		}
-		if (state.allRows.length) {
-			const columns = Object.keys(state.allRows[0]);
+		const columns = getDatasetColumns();
+		if (columns.length) {
 			const clusterToggle = document.getElementById('mapClusterToggle');
 			if (clusterToggle) clusterToggle.checked = state.mapOptions.cluster;
 			populateMapConfigForm(columns);
@@ -857,7 +888,7 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 		document.querySelectorAll('.btn-chart').forEach(button => {
 			button.addEventListener('click', () => {
 				const chartType = button.getAttribute('data-chart');
-				if (chartType === 'map' && !state.allRows.length) return;
+				if (chartType === 'map' && !state.allRows.length && !hasMapData()) return;
 				state.chartType = chartType;
 				updateChartButtons();
 				updateCanvasLayout();
@@ -900,9 +931,10 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 		});
 
 		document.getElementById('colPickerClearAll').addEventListener('click', () => {
-			if (!state.allRows.length) return;
+			const columns = getDatasetColumns();
+			if (!columns.length) return;
 			const locked = getLockedColumns();
-			Object.keys(state.allRows[0]).forEach(col => {
+			columns.forEach(col => {
 				if (!locked.has(col)) state.hiddenColumns.add(col);
 			});
 			renderTable();
@@ -951,16 +983,16 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 		}
 
 document.getElementById('mapPopupShowAll').addEventListener('click', () => {
-				if (!state.allRows.length) return;
-				state.mapOptions.popupHidden.clear();
-				const cols = Object.keys(state.allRows[0]);
+		const cols = getDatasetColumns();
+		if (!cols.length) return;
+		state.mapOptions.popupHidden.clear();
 				buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
 				void persistWorkspace();
 			});
 
 			document.getElementById('mapPopupClearAll').addEventListener('click', () => {
-				if (!state.allRows.length) return;
-				const cols = Object.keys(state.allRows[0]);
+		const cols = getDatasetColumns();
+		if (!cols.length) return;
 				cols.forEach(col => state.mapOptions.popupHidden.add(col));
 				buildFieldChecklist(document.getElementById('mapPopupFieldList'), state.mapOptions.popupHidden, cols);
 				void persistWorkspace();
@@ -994,13 +1026,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			void persistWorkspace();
 		});
 
-		// When DuckDB becomes ready, subsequent dataset switches will automatically
-		// use DuckDB remote-paging mode. We do NOT rebuild the current table here:
-		// state.allRows is already fully loaded and the local Tabulator is showing
-		// correct data — tearing it down to rebuild in DuckDB mode mid-session
-		// causes a visible blank/gray flash with no benefit.
-		document.addEventListener('eda:duckdb-ready', () => { /* intentionally empty */ });
-
 	}
 
 	function initializeTableControlsSizing() {
@@ -1032,7 +1057,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		chartResizeObserver.observe(chartArea);
 	}
 
-	async function selectDataset(datasetId, { activationSequence = null } = {}) {
+	async function selectDataset(datasetId, { activationSequence = null, refreshDuckDB = false } = {}) {
 		if (!datasetId) return;
 		if (activationSequence === null) canvasActivationSequence += 1;
 		const loadSequence = ++datasetLoadSequence;
@@ -1085,7 +1110,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		state.datasetId = datasetId;
 		updateCatalogTreeState();
 		state.hiddenColumns = new Set();
-		const loaded = await loadDataset(datasetId, loadSequence);
+		const loaded = await loadDataset(datasetId, loadSequence, { refreshDuckDB });
 		if (loadSequence !== datasetLoadSequence) return null;
 		datasetLoadPending = false;
 		if (loaded) {
@@ -1111,7 +1136,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		return false;
 	}
 
-	async function loadDataset(datasetId, loadSequence) {
+	async function loadDataset(datasetId, loadSequence, { refreshDuckDB = false } = {}) {
 		try {
 			updateProgress('Loading dataset configuration…');
 			const settingsPath = `${DATA_ROOT}/${datasetId}/${datasetId}-bi-settings.json`;
@@ -1122,43 +1147,55 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			]);
 			if (loadSequence !== datasetLoadSequence) return null;
 			const datasetSettings = enrichSettings(settings);
-			const datasetRows = await loadPartitionsIntoState(datasetId, indexData, loadSequence);
-			if (!datasetRows || loadSequence !== datasetLoadSequence) return null;
+			const usesDuckDB = isDuckDBPilotDataset(datasetId);
+			let datasetRows = [];
+			let duckDBColumns = [];
+			if (usesDuckDB) {
+				updateProgress('Loading dataset into DuckDB…');
+				if (typeof window._edaPrepareDataset !== 'function') {
+					throw new Error('DuckDB is not available for this dataset.');
+				}
+				duckDBColumns = await window._edaPrepareDataset(datasetId, { refresh: refreshDuckDB });
+				if (!Array.isArray(duckDBColumns) || !duckDBColumns.length) {
+					throw new Error('DuckDB returned no columns for this dataset.');
+				}
+			} else {
+				datasetRows = await loadPartitionsIntoState(datasetId, indexData, loadSequence);
+				if (!datasetRows) return null;
+			}
+			if (loadSequence !== datasetLoadSequence) return null;
 			state.settings = datasetSettings;
 			state.index = indexData;
 			state.allRows = datasetRows;
 			populateControls();
 			updateDatasetInfo();
 			updateChartButtons();
-			// After rows load, merge any field not already in dimensions so numeric
-			// columns (e.g. DISTRICT stored as 1–12) are selectable as grouping keys.
-			// Also expand metrics to include all numeric columns so users can freely
-			// change the metric — same behaviour as user-loaded datasets.
-			if (state.allRows.length) {
-				const allCols  = Object.keys(state.allRows[0]);
-
-				// Expand dimensions
+			const allCols = state.allRows.length
+				? Object.keys(state.allRows[0])
+				: duckDBColumns.map(column => column.name);
+			if (allCols.length) {
 				const existingDims = new Set(state.settings.dimensions);
-				const extraDims    = allCols.filter(c => !existingDims.has(c));
+				const extraDims = allCols.filter(column => !existingDims.has(column));
 				if (extraDims.length) {
 					state.settings.dimensions = [...state.settings.dimensions, ...extraDims];
 				}
 
-				// Expand metrics with all numeric columns not already listed
 				const existingMetrics = new Set(state.settings.metrics);
-				const numCols = allCols.filter(c => !existingMetrics.has(c) &&
-					state.allRows.slice(0, 50).some(r => {
-						const v = parseFloat(r[c]);
-						return Number.isFinite(v) && String(r[c]).trim() !== '';
+				const numericColumns = usesDuckDB
+					? duckDBColumns
+						.filter(column => /^(?:U?TINYINT|U?SMALLINT|U?INTEGER|U?BIGINT|U?HUGEINT|FLOAT|DOUBLE|REAL|DECIMAL|NUMERIC)(?:\b|\()/i.test(column.type))
+						.map(column => column.name)
+					: allCols.filter(column => state.allRows.slice(0, 50).some(row => {
+						const value = parseFloat(row[column]);
+						return Number.isFinite(value) && String(row[column]).trim() !== '';
 					}));
+				const numCols = numericColumns.filter(column => !existingMetrics.has(column));
 				if (numCols.length) {
 					state.settings.metrics = [...state.settings.metrics, ...numCols];
 				}
 
 				if (extraDims.length || numCols.length) {
-					// Re-populate selects; dimension defaults to first entry (DISTRICT),
-					// metric defaults to the first bi-settings metric (preserved as first item).
-					populateControls(); // refresh selects with the complete field list
+					populateControls();
 				}
 			}
 			initializeMapControls();
@@ -1167,7 +1204,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			renderVisual();
 			renderTable();
 			updateActiveDatasetIndicator(datasetId);
-			updateProgress('All partitions loaded.');
+			updateProgress(usesDuckDB ? 'Dataset loaded into DuckDB.' : 'All partitions loaded.');
 			saveCurrentWorkspacePreferences();
 			const catalogItems = buildCatalogItems();
 			updateCatalogCacheStatuses(catalogItems);
@@ -1306,12 +1343,12 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	function initializeMapControls() {
 		const container = document.getElementById('mapOptions');
 		if (!container) return;
-		if (!state.allRows.length) {
+		const cols = getDatasetColumns();
+		if (!cols.length) {
 			container.classList.add('d-none');
 			return;
 		}
 		const mapCfg  = state.settings?.map;
-		const cols    = Object.keys(state.allRows[0]);
 
 		// Reset to edit (unconfigured) state on dataset change
 		state.mapConfig = {
@@ -1395,7 +1432,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 	function editMapConfig() {
 		state.mapConfig.saved = false;
-		const cols = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+		const cols = getDatasetColumns();
 		populateMapConfigForm(cols);
 		document.getElementById('mapConfigForm').style.display     = '';
 		document.getElementById('mapConfigSummary').style.display  = 'none';
@@ -1422,7 +1459,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	}
 
 	function populateMapOptionsSection() {
-		const cols = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+		const cols = getDatasetColumns();
 		// Rebuild filter value dropdowns
 		const filtersEl = document.getElementById('mapOptFiltersSection');
 		filtersEl.innerHTML = '';
@@ -1557,7 +1594,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		}
 		const totalRecords = state.index.totalRecords ?? state.allRows.length;
 		const timestamp = state.lastLoadedAt ? formatTimestamp(state.lastLoadedAt) : '—';
-		summary.textContent = `Records loaded: ${formatNumber(state.allRows.length)} · Index total: ${formatNumber(totalRecords)} · Last refreshed: ${timestamp}`;
+		summary.textContent = isDuckDBPilotDataset()
+			? `Records in DuckDB: ${formatNumber(totalRecords)} · Last refreshed: ${timestamp}`
+			: `Records loaded: ${formatNumber(state.allRows.length)} · Index total: ${formatNumber(totalRecords)} · Last refreshed: ${timestamp}`;
 	}
 
 	function renderVisual() {
@@ -1576,17 +1615,45 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		// Increment sequence so a pending async renderChart() knows it is stale
 		state._renderSeq += 1;
 		const seq = state._renderSeq;
-		if (!state.allRows.length) {
+		const canQueryDuckDB = isDuckDBPilotDataset() && typeof window._edaQuery === 'function';
+		if (!state.allRows.length && !canQueryDuckDB) {
 			renderCanvasEmptyState(document.getElementById('chartArea'));
 			return;
 		}
 		if (state.chartType === 'map') {
-			renderMap();
+			if (!state.allRows.length) {
+				if (canQueryDuckDB && hasMapData()) {
+					void loadDuckDBMapRows(state.datasetId, seq);
+				} else {
+					renderCanvasEmptyState(document.getElementById('chartArea'));
+				}
+			} else {
+				renderMap();
+			}
 		} else {
 			renderChart(seq);
 		}
 		// Refresh lock indicators whenever BI selects change
 		populateColumnPicker();
+	}
+
+	async function loadDuckDBMapRows(datasetId, renderSequence) {
+		updateProgress('Loading map features from DuckDB…');
+		try {
+			const result = await window._edaQuery(`SELECT * FROM "${datasetId}"`);
+			if (renderSequence !== state._renderSeq || datasetId !== state.datasetId) return;
+			state.allRows = arrowToPlainRows(result);
+			updateChartButtons();
+			updateControlVisibility();
+			if (state.mapConfig.saved) populateMapOptionsSection();
+			renderMap();
+		} catch (error) {
+			if (renderSequence !== state._renderSeq || datasetId !== state.datasetId) return;
+			console.error(`Could not load map features for "${datasetId}" from DuckDB:`, error);
+			const chartArea = document.getElementById('chartArea');
+			if (chartArea) chartArea.textContent = `Could not load map features: ${error.message}`;
+			updateProgress(`Could not load map features: ${error.message}`);
+		}
 	}
 
 	function renderCanvasEmptyState(container) {
@@ -1799,9 +1866,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const orderBy         = document.getElementById('orderBySelect').value;
 
 		let prepared;
-		// Use DuckDB for chart aggregation when the connection is available.
-		// On first load DuckDB may still be initialising — the JS fallback produces
-		// the same results and DuckDB is used for all subsequent renders.
+		// Pilot datasets require DuckDB; other datasets retain the JS fallback.
 		const canUseDuckDB = typeof window._edaQuery === 'function' && state.datasetId;
 		if (canUseDuckDB) {
 			try {
@@ -1810,6 +1875,13 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					metricField, aggregationType, orderBy, orderMode
 				);
 			} catch (e) {
+				if (isDuckDBPilotDataset()) {
+					console.error('DuckDB chart query failed:', e);
+					const chartArea = document.getElementById('chartArea');
+					if (chartArea) chartArea.textContent = `DuckDB chart query failed: ${e.message}`;
+					updateProgress(`DuckDB chart query failed: ${e.message}`);
+					return;
+				}
 				console.warn('DuckDB chart query failed, falling back to JS aggregation:', e);
 				prepared = prepareSeries(state.allRows, dimensionField, splitValue, metricField, aggregationType, state.chartType);
 				sortSeries(prepared, orderBy, orderMode);
@@ -1904,7 +1976,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const filteredRows  = getMapFilteredRows();
 		const colorValues   = colorField ? getColorValues(filteredRows, colorField) : [];
 		const colorMap      = new Map(colorValues.map((v, i) => [v, CHART_PALETTE[i % CHART_PALETTE.length]]));
-		const allCols       = state.allRows.length ? Object.keys(state.allRows[0]) : [];
+		const allCols       = getDatasetColumns();
 		const chartArea     = document.getElementById('chartArea');
 		const mapDiv        = document.createElement('div');
 		mapDiv.style.height    = '100%';
@@ -1960,12 +2032,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		container.innerHTML = '';
 		state.tableDuckDB = false;
 
-		// Use DuckDB remote-paging only when there are no in-memory rows.
-		// If state.allRows is populated (the normal case for all current datasets)
-		// we use local Tabulator mode — it's simpler, faster, and avoids DuckDB
-		// connection contention. DuckDB mode is reserved for future large datasets
-		// that are never fully loaded into memory (Phase 1.6+).
-		const canUseDuckDB = !state.allRows.length
+		const canUseDuckDB = (isDuckDBPilotDataset() || !state.allRows.length)
 			&& typeof window._edaQuery === 'function'
 			&& state.datasetId
 			&& window._edaTableColumns?.has(state.datasetId);
@@ -1979,10 +2046,11 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		// Remove from hidden set any columns that are now locked (dimension/metric/split)
 		getLockedColumns().forEach(c => state.hiddenColumns.delete(c));
 
-		// Derive column list from allRows (always populated today) with DuckDB schema as fallback
-		const allColKeys = state.allRows.length
-			? Object.keys(state.allRows[0])
-			: (window._edaTableColumns.get(state.datasetId) || []).map(c => c.name);
+		const allColKeys = isDuckDBPilotDataset()
+			? getDatasetColumns()
+			: state.allRows.length
+				? Object.keys(state.allRows[0])
+				: getDatasetColumns();
 
 		if (!allColKeys.length) {
 			container.innerHTML = '<div class="text-muted">No data available for this dataset.</div>';
@@ -2024,7 +2092,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				sortMode: 'remote',
 				layout: 'fitDataStretch',
 				height: '420px',
-				pagination: 'remote',
+				pagination: true,
+				paginationMode: 'remote',
 				paginationSize: 25,
 				paginationSizeSelector: [25, 50, 100, 200],
 				columns,
@@ -2072,13 +2141,13 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const badge = document.getElementById('colPickerBadge');
 		const visibleCount = document.getElementById('colPickerVisibleCount');
 		if (!list) return;
-		if (!state.allRows.length) {
+		const allCols = getDatasetColumns();
+		if (!allCols.length) {
 			list.innerHTML = '<div class="col-picker-empty">No dataset loaded.</div>';
 			if (badge) badge.style.display = 'none';
 			if (visibleCount) visibleCount.textContent = '';
 			return;
 		}
-		const allCols   = Object.keys(state.allRows[0]);
 		const locked    = getLockedColumns();
 		// Ensure locked columns are never left in the hidden set
 		locked.forEach(c => state.hiddenColumns.delete(c));
@@ -2148,7 +2217,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			const chartType = button.getAttribute('data-chart');
 			button.classList.toggle('active', chartType === state.chartType);
 			if (chartType === 'map') {
-				const enabled = state.allRows.length > 0;
+				const enabled = state.allRows.length > 0 || hasMapData();
 				button.disabled = !enabled;
 				button.setAttribute('title', enabled ? 'Show Leaflet map view' : 'Map not available \u2014 load a dataset first');
 			}
@@ -2168,7 +2237,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const sqlWorkbench    = document.getElementById('sqlWorkbenchPanel');
 		const tableCard       = document.querySelector('.table-card');
 		const tableControlsCard = document.getElementById('tableControlsCard');
-		const hasMap       = state.allRows.length > 0;
+		const hasMap       = state.allRows.length > 0 || hasMapData();
 		const mapActive    = state.chartType === 'map' && hasMap;
 		const sqlActive    = state.chartType === 'sql';
 
@@ -2659,7 +2728,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 
 			catalogSchemaCache.delete(dataset.id);
 			if (state.datasetId === dataset.id) {
-				const loaded = await selectDataset(dataset.id);
+				const loaded = await selectDataset(dataset.id, { refreshDuckDB: isDuckDBPilotDataset(dataset.id) });
 				if (loaded === null) {
 					status.textContent = 'Refresh complete; reload was superseded.';
 					buttons.forEach(button => { button.disabled = false; });

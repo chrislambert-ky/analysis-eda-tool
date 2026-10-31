@@ -4,13 +4,16 @@ const os = require('node:os');
 const path = require('node:path');
 const { after, describe, it } = require('node:test');
 const { parse } = require('csv-parse/sync');
-const { normalizeDistrict, writePartitionFiles } = require('../etl');
+const { normalizeDistrict, writeParquetFile, writePartitionFiles } = require('../etl');
 
 describe('normalizeDistrict', () => {
   it('normalizes district numbers and known non-district labels', () => {
     assert.equal(normalizeDistrict(' District 1 '), '01');
     assert.equal(normalizeDistrict('12'), '12');
     assert.equal(normalizeDistrict('District Various'), 'Various');
+    assert.equal(normalizeDistrict('District 00'), 'Various');
+    assert.equal(normalizeDistrict('District 99'), 'Various');
+    assert.equal(normalizeDistrict('Statewide'), 'Various');
     assert.equal(normalizeDistrict(''), 'Various');
   });
 });
@@ -46,5 +49,36 @@ describe('writePartitionFiles', () => {
         return total + rows.length;
       }, 0);
     assert.equal(partitionCount, records.length);
+  });
+});
+
+describe('writeParquetFile', () => {
+  it('converts CSV to Parquet while preserving inferred values', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eda-parquet-test-'));
+    const csvPath = path.join(tempDir, 'sample.csv');
+    const parquetPath = path.join(tempDir, 'sample.parquet');
+    const { DuckDBInstance } = await import('@duckdb/node-api');
+    const instance = await DuckDBInstance.create(':memory:');
+    const connection = await instance.connect();
+
+    try {
+      fs.writeFileSync(csvPath, 'CODE,VALUE\n0012,12.5\nAB03,20\n');
+      const parquetBytes = await writeParquetFile(connection, csvPath, parquetPath);
+      assert.ok(parquetBytes > 0);
+
+      const parquetSqlPath = path.resolve(parquetPath).replace(/\\/g, '/').replace(/'/g, "''");
+      const reader = await connection.runAndReadAll(
+        `SELECT CODE, VALUE FROM read_parquet('${parquetSqlPath}') ORDER BY CODE`
+      );
+      try {
+        assert.deepEqual(reader.getRows(), [['0012', 12.5], ['AB03', 20]]);
+      } finally {
+        reader.closeSync();
+      }
+    } finally {
+      connection.closeSync();
+      instance.closeSync();
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

@@ -1,0 +1,21 @@
+{
+  "datasetName": "export-bi-agency-construction-change-orders-dataview",
+  "totalRecords": 5487,
+  "dimensions": [
+    "District"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

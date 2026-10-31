@@ -1,0 +1,22 @@
+{
+  "datasetName": "export-bi-agency-toc-roadwayweather-roadwayreport-dataview",
+  "totalRecords": 4109,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

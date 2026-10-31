@@ -1,0 +1,22 @@
+{
+  "datasetName": "eda_expenditures",
+  "totalRecords": 156570,
+  "dimensions": [
+    "DISTRICT",
+    "COUNTY"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

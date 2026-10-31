@@ -1,0 +1,22 @@
+{
+  "datasetName": "export-bi-analysis-planning-systemmobility-dataview",
+  "totalRecords": 600,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

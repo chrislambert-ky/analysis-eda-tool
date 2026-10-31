@@ -1,0 +1,22 @@
+{
+  "datasetName": "export-bi-agency-maintenance-roadwayweather-machinehours-dataview",
+  "totalRecords": 11985,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}
