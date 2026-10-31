@@ -37,10 +37,10 @@ jobs:
 
       - name: Commit and push if data changed
         run: |
-          if git diff --quiet; then
+          git add data
+          if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-          git add data
           git commit -m "chore: nightly ETL refresh"
           git push
