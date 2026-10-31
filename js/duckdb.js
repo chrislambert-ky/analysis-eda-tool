@@ -163,6 +163,8 @@ async function initDuckDB() {
 		initialized  = true;
 		initializing = false;
 		setStatus('ready', 'ready');
+		const startupMessage = $('startupLoadingMessage');
+		if (startupMessage) startupMessage.hidden = true;
 		// Expose query interface so the IIFE can use DuckDB for chart aggregation.
 		// All calls are serialized through a single promise chain so concurrent
 		// callers (chart render + table page request) never collide on the one connection.
@@ -184,6 +186,8 @@ async function initDuckDB() {
 		initializing = false;
 		initializationError = e;
 		setStatus('error', 'init failed');
+		const startupMessage = $('startupLoadingMessage');
+		if (startupMessage) startupMessage.hidden = true;
 		console.error('DuckDB init error:', e);
 		document.dispatchEvent(new CustomEvent('eda:duckdb-error', { detail: e }));
 	}

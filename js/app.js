@@ -29,6 +29,7 @@ import {
 	writeWorkspacePreferences
 } from './workspace-preferences.mjs';
 import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs';
+import { detectCoordinateFields } from './map-utils.mjs';
 
 (function () {
 	'use strict';
@@ -104,7 +105,8 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 
 	function hasMapData(datasetId = state.datasetId) {
 		const columns = getDatasetColumns(datasetId);
-		return columns.includes('LATITUDE') && columns.includes('LONGITUDE');
+		const coordinates = detectCoordinateFields(columns);
+		return Boolean(coordinates.latitude && coordinates.longitude);
 	}
 
 	let startupShareState = null;
@@ -1260,8 +1262,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const orderDirectionSelect = document.getElementById('orderDirectionSelect');
 		const previousOrderDirection = orderDirectionSelect.value;
 		fillSelect('orderDirectionSelect', [
-			{ label: 'Descending', value: 'desc' },
-			{ label: 'Ascending', value: 'asc' }
+			{ label: 'Ascending', value: 'asc' },
+			{ label: 'Descending', value: 'desc' }
 		], true);
 		orderDirectionSelect.value = previousOrderDirection || 'asc';
 	}
@@ -1306,12 +1308,13 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			return;
 		}
 		const mapCfg  = state.settings?.map;
+		const coordinates = detectCoordinateFields(cols);
 
 		// Reset to edit (unconfigured) state on dataset change
 		state.mapConfig = {
 			saved:        false,
-			latField:     (mapCfg?.latitudeField  && cols.includes(mapCfg.latitudeField))  ? mapCfg.latitudeField  : null,
-			lonField:     (mapCfg?.longitudeField && cols.includes(mapCfg.longitudeField)) ? mapCfg.longitudeField : null,
+			latField:     (mapCfg?.latitudeField  && cols.includes(mapCfg.latitudeField))  ? mapCfg.latitudeField  : coordinates.latitude,
+			lonField:     (mapCfg?.longitudeField && cols.includes(mapCfg.longitudeField)) ? mapCfg.longitudeField : coordinates.longitude,
 			filterFields: [null, null, null],
 			colorField:   (mapCfg?.defaultColorField && cols.includes(mapCfg.defaultColorField)) ? mapCfg.defaultColorField : null
 		};
@@ -2195,7 +2198,8 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const tableCard       = document.querySelector('.table-card');
 		const tableControlsCard = document.getElementById('tableControlsCard');
 		const hasMap       = state.allRows.length > 0 || hasMapData();
-		const mapActive    = state.chartType === 'map' && hasMap;
+		const mapCanvas    = activeCanvas()?.type.startsWith('map-');
+		const mapActive    = state.chartType === 'map' && (hasMap || mapCanvas);
 		const sqlActive    = state.chartType === 'sql';
 
 		if (controlsCard) {

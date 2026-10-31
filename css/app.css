@@ -58,6 +58,8 @@
 	.sql-status-dot.ready   { background: #198754; box-shadow: 0 0 5px #198754; }
 	.sql-status-dot.loading { background: #0d6efd; animation: sql-pulse 1s infinite; }
 	.sql-status-dot.error   { background: #dc3545; }
+	.startup-loading-message { position: fixed; top: 50%; left: 50%; z-index: 1040; display: flex; align-items: center; gap: .75rem; max-width: calc(100vw - 2rem); padding: .875rem 1rem; transform: translate(-50%, -50%); border: 1px solid #dee2e6; border-radius: .5rem; background: rgba(255,255,255,.96); box-shadow: 0 .25rem 1rem rgba(0,0,0,.12); color: #495057; font-size: .9rem; pointer-events: none; }
+	.startup-loading-message[hidden] { display: none; }
 	@keyframes sql-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 	.sql-spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #dee2e6; border-top-color: #0d6efd; border-radius: 50%; animation: sql-spin .6s linear infinite; vertical-align: middle; }
 	@keyframes sql-spin { to { transform: rotate(360deg); } }

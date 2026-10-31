@@ -181,8 +181,8 @@
 							<div class="mb-3">
 								<label for="orderDirectionSelect" class="form-label">Order</label>
 								<select id="orderDirectionSelect" class="form-select form-select-sm">
-									<option value="desc">Descending</option>
 									<option value="asc">Ascending</option>
+									<option value="desc">Descending</option>
 								</select>
 							</div>
 						</div>
@@ -319,6 +319,11 @@
 		</div>
 			</main>
 		</div>
+
+	<div id="startupLoadingMessage" class="startup-loading-message" role="status" aria-live="polite">
+		<span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+		<span>Loading the DuckDB engine in the background. This can take 5–10 seconds on your first visit and a few seconds after that.</span>
+	</div>
 
 	<!-- About Modal -->
 	<div class="modal-overlay" id="aboutModal">
