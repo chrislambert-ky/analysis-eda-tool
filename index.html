@@ -334,13 +334,7 @@
 				<p>Charts, aggregations, and SQL queries are all powered by <strong>DuckDB-WASM</strong>, a full analytical database engine running entirely inside the browser tab. DuckDB initializes automatically in the background when you open the page &mdash; the status indicator next to the <em>About</em> button shows when it is ready.</p>
 
 				<h6>Preloaded Datasets</h6>
-				<p>Four datasets are preloaded and available in the docked <strong>Datasets</strong> pane. They are sourced from the <a href="https://trak.kytc.ky.gov/" target="_blank" rel="noopener noreferrer">Kentucky Transportation Cabinet TRAK system</a>, cached in your browser so subsequent loads are instant:</p>
-				<ul>
-					<li><strong>Bridge Condition &amp; Owner Area</strong> &mdash; bridge inventory and condition ratings by owner and geographic area</li>
-					<li><strong>Construction Procurement</strong> &mdash; awarded construction contracts by district</li>
-					<li><strong>Current Enacted Plan</strong> &mdash; current enacted highway plan including funding allocations</li>
-					<li><strong>Program Management Authorized (Detailed)</strong> &mdash; authorized dollars by project phase, cost, and schedule</li>
-				</ul>
+				<p>Managed datasets are sourced from the <a href="https://trak.kytc.ky.gov/" target="_blank" rel="noopener noreferrer">Kentucky Transportation Cabinet TRAK system</a>. Their Parquet files are loaded into DuckDB when you choose <strong>Analyze</strong>; the catalog shows all available datasets.</p>
 
 				<h6>Charts</h6>
 				<p>Use the <strong>Dimension</strong>, <strong>Metric</strong>, <strong>Aggregation</strong>, <strong>Split By</strong>, and <strong>Order</strong> controls to configure the chart. Supported aggregations are <em>Count</em>, <em>Distinct Count</em>, <em>Sum</em>, <em>Average</em>, <em>Min</em>, and <em>Max</em>. Chart types include Horizontal Bar, Vertical Bar, and Pie. Click a bar or slice to filter the data table below to matching rows.</p>
@@ -349,7 +343,7 @@
 				<p>Click <strong>Share</strong> under the <em>About</em> button to copy a URL that includes your current dashboard selections (dataset, chart type, dimension, metric, aggregation, split, and ordering). Opening that link restores the same state for preloaded datasets, while normal use of the app continues on the clean base URL without persistent query-string parameters.</p>
 
 				<h6>Dataset Browser</h6>
-				<p>Use the full-height <strong>Datasets</strong> pane to browse preloaded and imported data. Select <strong>Preview</strong> to see its first 10 rows with type icons or switch to the separate Schema view. Choose <strong>Analyze</strong> to load it into the visualization and table, or <strong>Refresh</strong> to download a fresh copy.</p>
+				<p>Use the full-height <strong>Datasets</strong> pane to browse preloaded and imported data. Select <strong>Preview</strong> to see its first 10 rows with type icons or switch to the separate Schema view. Choose <strong>Analyze</strong> to load a managed Parquet dataset into DuckDB for charts and tables, or <strong>Refresh</strong> to reload it.</p>
 
 				<h6>Adding Your Own Data</h6>
 				<p>Load your own data file and query it alongside the preloaded datasets. Click <strong>+ Add Source</strong> in the docked dataset pane. Three formats are supported:</p>
@@ -453,9 +447,9 @@
 
 	<!-- ═══════════════════════════════════════════════════════════════════════
 	     SQL WORKBENCH MODULE
-	     Uses DuckDB-WASM to run SQL directly against the raw CSV files.
-	     Sources: data/raw/<dataset-id>.csv  (NOT the IndexedDB partition cache)
-	     Activated lazily on first click of the SQL chart-type button.
+	     Uses DuckDB-WASM to run SQL against managed Parquet datasets.
+	     Sources: data/parquet/<dataset-id>.parquet
+	     DuckDB is initialized on page load for charts, tables, and SQL.
 	     ═══════════════════════════════════════════════════════════════════════ -->
 	<script type="module" src="js/duckdb.js"></script>
 </body>

@@ -6,11 +6,7 @@ import {
 	parseSharedState
 } from './share.mjs';
 import {
-	estimatePartitionStorageBytes,
 	getDatabase,
-	readCachedRecordCount,
-	readCachedSample,
-	readDatasetCachedAt,
 	deleteSavedQuery,
 	readSavedQueries,
 	saveSavedQuery,
@@ -19,12 +15,8 @@ import {
 } from './data-store.mjs';
 import {
 	DATA_ROOT,
-	DISTRICTS,
 	fetchJSON,
-	fetchRawCsvSample,
-	loadPartition,
-	parseCSV,
-	refreshPartitionCache
+	parseCSV
 } from './dataset-loader.mjs';
 import {
 	buildChartOption,
@@ -61,10 +53,7 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 		{ id: 'export-bi-analysis-roadwayweatherevents-expenditures-dataview', title: 'Analysis Roadway Weather Events Expenditures', description: 'Matches the Emergency Response dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Maintenance_EmergencyResponse' },
 		{ id: 'export-bi-economic-fueltyperegistration-dataview', title: 'Economic Fuel Type Registration', description: 'Matches the Vehicle Registrations dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/VehicleRegistrations' }
 	];
-	const DUCKDB_PILOT_DATASET_IDS = new Set([
-		'eda_assets_bridge_condition_owner_area',
-		'eda_expenditures'
-	]);
+	const DUCKDB_DATASET_IDS = new Set(DATASETS.map(dataset => dataset.id));
 	const APP_VERSION = '1.5.0';
 	const PRESET_DATASET_SLUGS = {
 		eda_assets_bridge_condition_owner_area: 'assets_bridge_condition_owner_area',
@@ -102,8 +91,8 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 		}
 	};
 
-	function isDuckDBPilotDataset(datasetId = state.datasetId) {
-		return DUCKDB_PILOT_DATASET_IDS.has(datasetId);
+	function isDuckDBDataset(datasetId = state.datasetId) {
+		return DUCKDB_DATASET_IDS.has(datasetId);
 	}
 
 	function getDatasetColumns(datasetId = state.datasetId) {
@@ -661,7 +650,7 @@ import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs'
 	 */
 	async function loadPersistedUserDatasets() {
 		try {
-			// Use the shared unified IDB — same database as the partition cache.
+			// Use the shared unified IDB for persisted user-source metadata and rows.
 			const db = await getDatabase();
 
 			const sources = await new Promise((resolve, reject) => {
@@ -1057,7 +1046,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		chartResizeObserver.observe(chartArea);
 	}
 
-	async function selectDataset(datasetId, { activationSequence = null, refreshDuckDB = false } = {}) {
+	async function selectDataset(datasetId, { activationSequence = null } = {}) {
 		if (!datasetId) return;
 		if (activationSequence === null) canvasActivationSequence += 1;
 		const loadSequence = ++datasetLoadSequence;
@@ -1110,7 +1099,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		state.datasetId = datasetId;
 		updateCatalogTreeState();
 		state.hiddenColumns = new Set();
-		const loaded = await loadDataset(datasetId, loadSequence, { refreshDuckDB });
+		const loaded = await loadDataset(datasetId, loadSequence);
 		if (loadSequence !== datasetLoadSequence) return null;
 		datasetLoadPending = false;
 		if (loaded) {
@@ -1136,7 +1125,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		return false;
 	}
 
-	async function loadDataset(datasetId, loadSequence, { refreshDuckDB = false } = {}) {
+	async function loadDataset(datasetId, loadSequence) {
 		try {
 			updateProgress('Loading dataset configuration…');
 			const settingsPath = `${DATA_ROOT}/${datasetId}/${datasetId}-bi-settings.json`;
@@ -1147,32 +1136,22 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			]);
 			if (loadSequence !== datasetLoadSequence) return null;
 			const datasetSettings = enrichSettings(settings);
-			const usesDuckDB = isDuckDBPilotDataset(datasetId);
-			let datasetRows = [];
-			let duckDBColumns = [];
-			if (usesDuckDB) {
-				updateProgress('Loading dataset into DuckDB…');
-				if (typeof window._edaPrepareDataset !== 'function') {
-					throw new Error('DuckDB is not available for this dataset.');
-				}
-				duckDBColumns = await window._edaPrepareDataset(datasetId, { refresh: refreshDuckDB });
-				if (!Array.isArray(duckDBColumns) || !duckDBColumns.length) {
-					throw new Error('DuckDB returned no columns for this dataset.');
-				}
-			} else {
-				datasetRows = await loadPartitionsIntoState(datasetId, indexData, loadSequence);
-				if (!datasetRows) return null;
+			updateProgress('Loading dataset into DuckDB…');
+			if (typeof window._edaPrepareDataset !== 'function') {
+				throw new Error('DuckDB is not available for this dataset.');
+			}
+			const duckDBColumns = await window._edaPrepareDataset(datasetId);
+			if (!Array.isArray(duckDBColumns) || !duckDBColumns.length) {
+				throw new Error('DuckDB returned no columns for this dataset.');
 			}
 			if (loadSequence !== datasetLoadSequence) return null;
 			state.settings = datasetSettings;
 			state.index = indexData;
-			state.allRows = datasetRows;
+			state.allRows = [];
 			populateControls();
 			updateDatasetInfo();
 			updateChartButtons();
-			const allCols = state.allRows.length
-				? Object.keys(state.allRows[0])
-				: duckDBColumns.map(column => column.name);
+			const allCols = duckDBColumns.map(column => column.name);
 			if (allCols.length) {
 				const existingDims = new Set(state.settings.dimensions);
 				const extraDims = allCols.filter(column => !existingDims.has(column));
@@ -1181,14 +1160,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				}
 
 				const existingMetrics = new Set(state.settings.metrics);
-				const numericColumns = usesDuckDB
-					? duckDBColumns
-						.filter(column => /^(?:U?TINYINT|U?SMALLINT|U?INTEGER|U?BIGINT|U?HUGEINT|FLOAT|DOUBLE|REAL|DECIMAL|NUMERIC)(?:\b|\()/i.test(column.type))
-						.map(column => column.name)
-					: allCols.filter(column => state.allRows.slice(0, 50).some(row => {
-						const value = parseFloat(row[column]);
-						return Number.isFinite(value) && String(row[column]).trim() !== '';
-					}));
+				const numericColumns = duckDBColumns
+					.filter(column => /^(?:U?TINYINT|U?SMALLINT|U?INTEGER|U?BIGINT|U?HUGEINT|FLOAT|DOUBLE|REAL|DECIMAL|NUMERIC)(?:\b|\()/i.test(column.type))
+					.map(column => column.name);
 				const numCols = numericColumns.filter(column => !existingMetrics.has(column));
 				if (numCols.length) {
 					state.settings.metrics = [...state.settings.metrics, ...numCols];
@@ -1204,7 +1178,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			renderVisual();
 			renderTable();
 			updateActiveDatasetIndicator(datasetId);
-			updateProgress(usesDuckDB ? 'Dataset loaded into DuckDB.' : 'All partitions loaded.');
+			updateProgress('Dataset loaded into DuckDB.');
 			saveCurrentWorkspacePreferences();
 			const catalogItems = buildCatalogItems();
 			updateCatalogCacheStatuses(catalogItems);
@@ -1321,23 +1295,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			<div><strong>ID:</strong> ${state.datasetId}</div>
 			<div><strong>Total Records:</strong> ${formatNumber(totalRecords)}</div>
 		`;
-	}
-
-	async function loadPartitionsIntoState(datasetId, index, loadSequence) {
-		const combined = [];
-		let processed = 0;
-		updateProgress('Loading partitions…');
-		for (const district of DISTRICTS) {
-			if (loadSequence !== datasetLoadSequence) return null;
-			const key = `${datasetId}-District-${district}.csv`;
-			const expected = index[key]?.records ?? 0;
-			const partitionRows = await loadPartition(datasetId, district, expected);
-			if (loadSequence !== datasetLoadSequence) return null;
-			combined.push(...partitionRows);
-			processed += 1;
-			updateProgress(`Loaded ${processed}/${DISTRICTS.length} partitions…`);
-		}
-		return combined;
 	}
 
 	function initializeMapControls() {
@@ -1594,7 +1551,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		}
 		const totalRecords = state.index.totalRecords ?? state.allRows.length;
 		const timestamp = state.lastLoadedAt ? formatTimestamp(state.lastLoadedAt) : '—';
-		summary.textContent = isDuckDBPilotDataset()
+		summary.textContent = isDuckDBDataset()
 			? `Records in DuckDB: ${formatNumber(totalRecords)} · Last refreshed: ${timestamp}`
 			: `Records loaded: ${formatNumber(state.allRows.length)} · Index total: ${formatNumber(totalRecords)} · Last refreshed: ${timestamp}`;
 	}
@@ -1615,7 +1572,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		// Increment sequence so a pending async renderChart() knows it is stale
 		state._renderSeq += 1;
 		const seq = state._renderSeq;
-		const canQueryDuckDB = isDuckDBPilotDataset() && typeof window._edaQuery === 'function';
+		const canQueryDuckDB = isDuckDBDataset() && typeof window._edaQuery === 'function';
 		if (!state.allRows.length && !canQueryDuckDB) {
 			renderCanvasEmptyState(document.getElementById('chartArea'));
 			return;
@@ -1866,7 +1823,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const orderBy         = document.getElementById('orderBySelect').value;
 
 		let prepared;
-		// Pilot datasets require DuckDB; other datasets retain the JS fallback.
+		// Managed datasets use DuckDB; imported in-memory sources retain the JS fallback.
 		const canUseDuckDB = typeof window._edaQuery === 'function' && state.datasetId;
 		if (canUseDuckDB) {
 			try {
@@ -1875,7 +1832,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					metricField, aggregationType, orderBy, orderMode
 				);
 			} catch (e) {
-				if (isDuckDBPilotDataset()) {
+				if (isDuckDBDataset()) {
 					console.error('DuckDB chart query failed:', e);
 					const chartArea = document.getElementById('chartArea');
 					if (chartArea) chartArea.textContent = `DuckDB chart query failed: ${e.message}`;
@@ -2032,7 +1989,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		container.innerHTML = '';
 		state.tableDuckDB = false;
 
-		const canUseDuckDB = (isDuckDBPilotDataset() || !state.allRows.length)
+		const canUseDuckDB = (isDuckDBDataset() || !state.allRows.length)
 			&& typeof window._edaQuery === 'function'
 			&& state.datasetId
 			&& window._edaTableColumns?.has(state.datasetId);
@@ -2046,7 +2003,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		// Remove from hidden set any columns that are now locked (dimension/metric/split)
 		getLockedColumns().forEach(c => state.hiddenColumns.delete(c));
 
-		const allColKeys = isDuckDBPilotDataset()
+		const allColKeys = isDuckDBDataset()
 			? getDatasetColumns()
 			: state.allRows.length
 				? Object.keys(state.allRows[0])
@@ -2450,7 +2407,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 						+ `<div class="dataset-tree-actions">`
 						+ `<button type="button" class="btn btn-outline-primary btn-sm" data-catalog-action="preview" data-dataset-id="${escHtml(item.id)}" title="Preview data and schema"><i class="bi bi-eye" aria-hidden="true"></i> Preview</button>`
 						+ `<button type="button" class="btn btn-primary btn-sm" data-catalog-action="analyze" data-dataset-id="${escHtml(item.id)}" title="Load this dataset into the visualization and table">Analyze</button>`
-						+ (canRefresh ? `<button type="button" class="btn btn-outline-secondary btn-sm" data-catalog-action="refresh" data-dataset-id="${escHtml(item.id)}" title="Download a fresh copy and update the browser cache">Refresh</button>` : '')
+						+ (canRefresh ? `<button type="button" class="btn btn-outline-secondary btn-sm" data-catalog-action="refresh" data-dataset-id="${escHtml(item.id)}" title="Reload the dataset from Parquet into DuckDB">Refresh</button>` : '')
 						+ (canRemove ? `<button type="button" class="btn btn-outline-danger btn-sm" data-catalog-action="remove" data-dataset-id="${escHtml(item.id)}" title="Remove this imported data source">Remove</button>` : '')
 						+ `</div></div>`;
 				}).join('')
@@ -2467,26 +2424,10 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 	async function updateCatalogSummary(items) {
 		const summary = document.getElementById('catalogSummary');
 		if (!summary) return;
-		try {
-			const counts = await Promise.all(DATASETS.map(dataset => readCachedRecordCount(dataset.id)));
-			let cachedRows = counts.reduce((total, count) => total + (count || 0), 0);
-			items.filter(item => item.sourceType === 'user')
-				.forEach(item => { cachedRows += item.rows?.length || 0; });
-			const storageBytes = await estimatePartitionStorageBytes();
-			const preloadedCount = items.filter(item => item.sourceType === 'preloaded').length;
-			const importedCount = items.length - preloadedCount;
-			summary.textContent = `${preloadedCount} preloaded · ${importedCount} imported · ${formatNumber(cachedRows)} cached rows · ${storageBytes ? formatBytes(storageBytes) : 'no cache'}`;
-		} catch (error) {
-			console.error('Catalog cache summary failed:', error);
-			summary.textContent = 'Cache summary unavailable.';
-		}
-	}
-
-	function formatBytes(bytes) {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-		if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-		return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+		const preloadedCount = items.filter(item => item.sourceType === 'preloaded').length;
+		const imported = items.filter(item => item.sourceType === 'user');
+		const importedRows = imported.reduce((total, item) => total + (item.rows?.length || 0), 0);
+		summary.textContent = `${preloadedCount} Parquet · ${imported.length} imported · ${formatNumber(importedRows)} imported rows`;
 	}
 
 	function updateCatalogTreeState() {
@@ -2571,16 +2512,15 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			let rows;
 			if (dataset.sourceType === 'user') {
 				rows = dataset.rows.slice(0, 10);
-			} else if (state.datasetId === dataset.id && state.allRows.length) {
-				rows = state.allRows.slice(0, 10);
 			} else {
-				try {
-					rows = await readCachedSample(dataset.id, 10);
-				} catch (error) {
-					console.warn(`Cached preview unavailable for "${dataset.id}":`, error);
+				if (typeof window._edaQuery !== 'function') {
+					await window._edaDescribeTable?.(dataset.id);
 				}
-				if (!rows?.length) rows = await fetchRawCsvSample(dataset.id);
-				rows = rows?.slice(0, 10);
+				if (typeof window._edaQuery !== 'function') {
+					throw new Error('DuckDB is not available for the Parquet preview.');
+				}
+				const result = await window._edaQuery(`SELECT * FROM "${dataset.id}" LIMIT 10`);
+				rows = arrowToPlainRows(result);
 			}
 			if (sequence !== catalogPreviewSequence) return;
 			if (!rows?.length) {
@@ -2623,19 +2563,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				status.textContent = `${formatNumber(item.rows.length)} rows available in browser`;
 				return;
 			}
-			try {
-				const [count, cachedAt] = await Promise.all([
-					readCachedRecordCount(item.id),
-					readDatasetCachedAt(item.id)
-				]);
-				const suffix = cachedAt ? ` · refreshed ${formatTimestamp(new Date(cachedAt))}` : '';
-				status.textContent = count === null
-					? 'Not cached · loads from hosted files'
-					: `${formatNumber(count)} rows cached${suffix}`;
-			} catch (error) {
-				console.error(`Cache status failed for "${item.id}":`, error);
-				status.textContent = 'Cache status unavailable';
-			}
+			status.textContent = item.id === state.datasetId
+				? 'Loaded into DuckDB'
+				: 'Parquet ready · loads on Analyze';
 		}));
 	}
 
@@ -2721,14 +2651,16 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				const rows = await window._edaRefreshUserSource(dataset.id);
 				if (!rows) throw new Error('The imported source could not be refreshed.');
 			} else {
-				await refreshPartitionCache(dataset.id, (completed, total) => {
-					status.textContent = `Refreshing partitions ${completed}/${total}…`;
-				});
+				if (typeof window._edaPrepareDataset !== 'function') {
+					throw new Error('DuckDB is not available to refresh this dataset.');
+				}
+				status.textContent = 'Reloading Parquet into DuckDB…';
+				await window._edaPrepareDataset(dataset.id, { refresh: true });
 			}
 
 			catalogSchemaCache.delete(dataset.id);
 			if (state.datasetId === dataset.id) {
-				const loaded = await selectDataset(dataset.id, { refreshDuckDB: isDuckDBPilotDataset(dataset.id) });
+				const loaded = await selectDataset(dataset.id);
 				if (loaded === null) {
 					status.textContent = 'Refresh complete; reload was superseded.';
 					buttons.forEach(button => { button.disabled = false; });
@@ -2736,7 +2668,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 					return;
 				}
 				if (!loaded) {
-					status.textContent = 'Refresh downloaded, but reloading failed. Use Analyze to retry.';
+					status.textContent = 'Refresh completed, but reloading failed. Use Analyze to retry.';
 					buttons.forEach(button => { button.disabled = false; });
 					updateCatalogTreeState();
 					return;
@@ -2791,72 +2723,26 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				: (settings?.metrics  || []).includes(name) ? 'metric'
 				: 'column';
 
-			let columns = [];
-			let partial = false;
-			const activeDataset = state.datasetId === ds.id && state.allRows.length;
-			const cachedSample = activeDataset ? null : await readCachedSample(ds.id);
-
-			// Priority 1: active loaded dataset — already in memory, free
-			if (activeDataset) {
-				const sample = state.allRows.slice(0, 200);
-				columns = Object.keys(state.allRows[0]).map(name => ({
-					name, kind: classify(name), type: inferColumnType(name, sample)
-				}));
-
-			// Priority 2: IDB partition cache
-			} else if (cachedSample?.length) {
-				columns = Object.keys(cachedSample[0]).map(name => ({
-					name, kind: classify(name), type: inferColumnType(name, cachedSample)
-				}));
-
-			// Priority 3: DuckDB DESCRIBE — same source & same types as the SQL panel.
-			// Triggers lazy DuckDB init if the SQL tab hasn't been visited yet.
-			} else if (typeof window._edaDescribeTable === 'function') {
-				const duckCols = await window._edaDescribeTable(ds.id).catch(() => null);
-				if (duckCols && duckCols.length) {
-					columns = duckCols.map(c => ({
-						name: c.name, kind: classify(c.name), type: c.type
-					}));
-				} else {
-					// Priority 4: raw CSV header parse (no DuckDB, offline fallback)
-					const sample = await fetchRawCsvSample(ds.id);
-					if (sample && sample.length) {
-						columns = Object.keys(sample[0]).map(name => ({
-							name, kind: classify(name), type: inferColumnType(name, sample)
-						}));
-					}
-				}
-			} else {
-				// Priority 3b: SQL module not yet evaluated — raw CSV parse
-				const sample = await fetchRawCsvSample(ds.id);
-				if (sample && sample.length) {
-					columns = Object.keys(sample[0]).map(name => ({
-						name, kind: classify(name), type: inferColumnType(name, sample)
-					}));
-				}
+			if (typeof window._edaDescribeTable !== 'function') {
+				throw new Error('DuckDB is not available for the Parquet schema.');
 			}
-			if (!columns.length && settings) {
-				// Last resort: BI-configured fields only (raw CSV unreachable)
-				partial = true;
-				const seen = new Set();
-				(settings.dimensions || []).forEach(name => {
-					if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'dimension' }); }
-				});
-				(settings.metrics || []).forEach(name => {
-					if (name === 'Record Count') return;
-					if (!seen.has(name)) { seen.add(name); columns.push({ name, kind: 'metric' }); }
-				});
-			}
-
-			const recordCount = indexData?.totalRecords ?? null;
+			const duckColumns = await window._edaDescribeTable(ds.id);
+			if (!duckColumns?.length) throw new Error(`No schema found for "${ds.id}".`);
+			const columns = duckColumns.map(column => ({
+				name: column.name,
+				kind: classify(column.name),
+				type: column.type
+			}));
+			const recordCount = indexData?.totalRecords ?? settings?.totalRecords ?? null;
 			const rcEl = document.getElementById(`catalog-rc-${ds.id}`);
 			if (rcEl && recordCount !== null) rcEl.textContent = `${formatNumber(recordCount)}\u00a0records`;
 
-			const schema = { columns, recordCount, partial };
+			const schema = { columns, recordCount, partial: false };
 			catalogSchemaCache.set(ds.id, schema);
 			renderCatalogSchemaView(schemaEl, schema);
 		} catch (e) {
-			schemaEl.innerHTML = `<div style="color:#dc3545;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 0">Failed to load schema.</div>`;
+			console.error(`Schema preview failed for "${ds.id}":`, e);
+			schemaEl.textContent = `Failed to load schema: ${e.message}`;
 		}
 	}
 

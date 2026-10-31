@@ -14,6 +14,8 @@ describe('shared IndexedDB database', () => {
     openCalls = [];
     stores = new Map();
     records = new Map();
+    stores.set('partitions', { keyPath: 'key' });
+    records.set('partitions', new Map([['legacy', { key: 'legacy' }]]));
     database = {
       objectStoreNames: {
         contains: name => stores.has(name)
@@ -22,6 +24,10 @@ describe('shared IndexedDB database', () => {
         stores.set(name, options);
         records.set(name, new Map());
         return {};
+      },
+      deleteObjectStore(name) {
+        stores.delete(name);
+        records.delete(name);
       },
       transaction(name) {
         const tx = {};
@@ -69,7 +75,7 @@ describe('shared IndexedDB database', () => {
         openCalls.push({ name, version });
         const request = {};
         queueMicrotask(() => {
-          request.onupgradeneeded({ target: { result: database } });
+          request.onupgradeneeded({ oldVersion: 5, target: { result: database } });
           request.result = database;
           request.onsuccess();
         });
@@ -87,15 +93,15 @@ describe('shared IndexedDB database', () => {
     }
   });
 
-  it('creates all version-5 stores once and shares the database connection', async () => {
+  it('removes the legacy partition cache and preserves other version-6 stores', async () => {
     const first = await dataStore.getDatabase();
     const second = await dataStore.getDatabase();
 
     assert.equal(first, database);
     assert.equal(second, database);
-    assert.deepEqual(openCalls, [{ name: 'analysis_eda_tool_db', version: 5 }]);
+    assert.deepEqual(openCalls, [{ name: 'analysis_eda_tool_db', version: 6 }]);
+    assert.equal(stores.has('partitions'), false);
     assert.deepEqual([...stores.entries()], [
-      ['partitions', { keyPath: 'key' }],
       ['sources', { keyPath: 'alias' }],
       ['user_source_data', { keyPath: 'alias' }],
       ['user_source_bytes', { keyPath: 'alias' }],

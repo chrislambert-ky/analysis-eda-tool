@@ -10,12 +10,12 @@ This document describes a staged path from the current GitHub Pages tool to a mo
 - `index.html` is now the page shell; styles and browser logic are split across `css/app.css` and native ES modules in `js/`.
 - Modules extracted so far: chart engine, dataset loader, shared IndexedDB store, share-link helpers, canvas-state normalization, and DuckDB-WASM SQL workbench. `js/app.js` remains the large UI coordinator; further feature-boundary extraction is still needed.
 - The app has a full-height dataset tree with Preview / Analyze / Refresh, a 10-row preview and separate schema view, chart and SQL surfaces, a chart view, a paged data table, and the existing Leaflet map/options.
-- Chart aggregation uses DuckDB-WASM when available with a tested JavaScript fallback. Managed CSV partitions and imported user sources are cached in the shared IndexedDB database.
+- Managed datasets use ETL-generated Parquet files and DuckDB-WASM for charts, tables, and SQL. IndexedDB persists workspace state, saved queries, and user-imported sources.
 - The left catalog drives dataset selection; the header indicates the active dataset. Chart controls sit beside the chart; table-column controls sit beside the table.
 - SQL schema explorer supports dataset/column search, qualified-column insertion, and saved queries in IndexedDB.
 - Canvas tabs support All in One, Graph Only, Table Only, Map + Table, Map Only, and SQL. Each persists its own dataset, controls, hidden columns, SQL text, and map settings in IndexedDB; tabs can be renamed, closed, and restored. Share links override the active canvas at startup.
 - Dataset loads and refreshes report progress/errors, and failed Analyze attempts retain the previously active dataset. The table controls show visible/total column counts and scroll within the table-height panel.
-- **Not yet implemented:** OPFS-backed DuckDB database, service worker/offline app shell, PWA manifest/install flow, file conversion, and desktop packaging.
+- **Not yet implemented:** OPFS-backed DuckDB database, service worker/offline app shell, PWA manifest/install flow, and desktop packaging.
 - Current test suite covers ETL, chart engine, dataset loader, IndexedDB initialization/saved queries/canvas state, share links, and workspace-preference serialization.
 
 ---
@@ -39,34 +39,33 @@ This document describes a staged path from the current GitHub Pages tool to a mo
 - ✅ App versioned at `v1.2.0` displayed in the About modal
 
 ### 1.3 SQL-driven Tabulator (paged) ✅
-- ✅ `renderTable()` uses DuckDB `ajaxRequestFunc` when DuckDB is ready and `state.allRows` is empty — falls back to local Tabulator pagination when rows are already in memory (the current normal case)
+- ✅ `renderTable()` uses DuckDB `ajaxRequestFunc` for managed Parquet datasets; user-imported in-memory sources use local Tabulator pagination
 - ✅ `filterMode: 'remote'` + `sortMode: 'remote'` — header filters become SQL `ILIKE` clauses; sort becomes `ORDER BY` when in DuckDB mode
 - ✅ `buildWhereSQL()` / `buildOrderSQL()` helpers translate Tabulator filter/sort params to safe SQL fragments
 - ✅ `applyChartFilter()` uses a serializable `{field, type: '=', value}` object in DuckDB mode; `'Unknown'` maps to `IS NULL OR TRIM(...) = ''` in SQL
 - ✅ "Download Full" queries DuckDB for all rows when in DuckDB table mode
 - ✅ "Download Filtered" queries DuckDB with the current filter + sort state in DuckDB mode
 - ✅ All `_edaQuery` calls serialized through a single promise chain — prevents concurrent-query collisions on the single DuckDB-WASM connection
-- ✅ DuckDB remote-paging activates automatically on dataset switches once `state.allRows` is no longer pre-loaded (Phase 1.6 prerequisite)
+- ✅ DuckDB remote-paging is used for all managed Parquet datasets; imported in-memory sources retain local pagination
 - ✅ App versioned at `v1.4.0`
 
 ### 1.4 Unify the IDB stores ✅
-- ✅ `analysis_eda_tool_db` version 3 contains `partitions`, `sources`, `user_source_data`, `user_source_bytes`, and `saved_queries`
+- ✅ `analysis_eda_tool_db` version 6 stores sources, user data, saved queries, and workspace canvases; the upgrade removes the obsolete managed-dataset partition cache
 - ✅ `eda_sql_user_sources` database eliminated; dashboard and SQL workbench share `analysis_eda_tool_db`
 - ✅ Shared `getDatabase()` connection/schema initialization extracted to `js/data-store.mjs`
 - ✅ Dashboard and SQL workbench use the same opener and preserve the existing stores during upgrades
 - ✅ SQL snippets persist in the `saved_queries` object store
 - ✅ App versioned at `v1.5.0`
 
-### 1.5 Catalog schema via DuckDB only (Deferred)
-- Current preview uses DuckDB schema when available, with sampled CSV and BI-settings fallback paths.
-- Consolidate schema lookup on `DESCRIBE` after the catalog and SQL data-source lifecycles have a stable interface.
+### 1.5 Catalog schema via DuckDB only ✅
+- ✅ Catalog previews and schema views use DuckDB against the managed Parquet sources.
 
-### 1.6 ETL simplification
-- Remove partition CSV generation from `etl.js` — only write `data/raw/*.csv` and BI settings JSON
-- DuckDB's `read_csv_auto()` replaces all partition loading
-- `data/report/<dataset>/*.csv` partition files can be deleted from the repo once Phase 1 is validated
+### 1.6 Parquet-managed datasets ✅
+- ✅ ETL retains source CSVs, writes Zstandard-compressed Parquet copies, and emits report settings plus record-count indexes.
+- ✅ `SQL_DATASETS` registers the Parquet artifacts; all managed charts, tables, previews, schemas, and SQL use DuckDB.
+- ✅ ETL removes legacy district CSV partitions; the IndexedDB partition store is deleted when existing databases upgrade.
 
-**Milestone:** App purely routes all data access through DuckDB. `state.allRows` only exists for the map (lat/lon per point still needs row-level data).
+**Milestone:** App routes managed data access through DuckDB. `state.allRows` is populated only when the bridge map needs point features.
 
 ---
 
@@ -181,8 +180,8 @@ analysis-eda-tool/
 └── js/
     ├── app.js                 (page startup, UI state, event wiring; still oversized)
     ├── chart-engine.mjs       (aggregation, sorting, ECharts options)
-    ├── data-store.mjs         (shared IndexedDB schema and partition API)
-    ├── dataset-loader.mjs     (CSV parsing, partition fetch/cache, previews)
+    ├── data-store.mjs         (shared IndexedDB workspace and user-source stores)
+    ├── dataset-loader.mjs     (CSV parsing for user imports)
     ├── share.mjs              (pure share-link parsing/serialization)
     └── duckdb.js              (DuckDB-WASM, SQL workbench, imported sources)
 ```
@@ -210,14 +209,12 @@ The HTML contains real page markup and does not need an arbitrary line-count tar
 - The OPFS file is invisible to users (private browser storage), but survives page reloads and browser restarts
 
 ### 2.2 Parquet-first data layer
-- ETL writes `data/raw/<dataset>.parquet` alongside (eventually replacing) CSVs
+- ETL retains source CSVs in `data/raw/` and writes runtime Parquet files to `data/parquet/`
 - DuckDB registers Parquet via `read_parquet(url)` — column-level HTTP range requests mean only referenced columns are fetched
 - For remote big-data sources: register directly as `read_parquet('https://...')`, no local copy needed
 
 ### 2.3 Incremental refresh
-- ETL embeds a `generatedAt` timestamp into each Parquet file's metadata
-- On "Refresh Cache", DuckDB compares the remote timestamp against the locally stored one
-- Only re-imports if the remote file is newer — avoids re-downloading unchanged datasets
+- "Refresh" reloads the selected managed dataset from its hosted Parquet file into DuckDB
 
 ### 2.4 User dataset persistence
 - Imported CSVs and Parquets are stored as OPFS tables inside the same DuckDB file
@@ -573,8 +570,8 @@ The initial split is done: HTML and CSS are externalized; chart logic, dataset l
 
 ### Milestone C — Persist workspace and data safely
 - Version and migrate persisted workspace state; restore tab/canvas selection and configuration after reload. (Initial canvas persistence is implemented.)
-- Evaluate DuckDB-WASM OPFS for managed/imported data, with IndexedDB/CSV fallback where OPFS or browser support is unavailable.
-- Keep the current hosted CSV partitions as the source of truth initially. Treat hosted Parquet/range querying as a later opt-in optimization after real files, CORS, HTTP range behavior, and DuckDB-WASM compatibility are verified.
+- Evaluate DuckDB-WASM OPFS for managed/imported data, with in-memory DuckDB fallback where OPFS or browser support is unavailable.
+- Managed Parquet is the hosted analytical source of truth; raw CSVs remain available for ETL regeneration.
 - **Exit:** a reload restores workspace state and previously imported data without silently corrupting existing IndexedDB data.
 
 ### Milestone D — Installable GitHub Pages app
@@ -626,8 +623,8 @@ Phase 6.1 and 6.2 (docked dataset browser, preview, Analyze/Refresh) and the ini
 
 | Phase | New Files | Modified Files | Deleted Files |
 |---|---|---|---|
-| 1 | — | `index.html` (consolidate scripts), `etl.js` | `data/report/<dataset>/*.csv` partitions |
-| 2 | — | `index.html` (OPFS VFS), `etl.js` (Parquet output) | `data/raw/*.csv` (replaced by `.parquet`) |
+| 1 | — | `index.html` (consolidate scripts), `etl.js` | `data/report/<dataset>/*-District-*.csv` legacy partitions |
+| 2 | — | `index.html` (OPFS VFS), `etl.js` (Parquet refresh metadata) | — |
 | 3 | — | `index.html` | — |
 | 4 | `manifest.json`, `sw.js`, `icons/*.png` | `index.html` (manifest link) | — |
 | 5 | `electron/main.js`, `electron/preload.js`, `electron/package.json` | `package.json` (build config) | — |

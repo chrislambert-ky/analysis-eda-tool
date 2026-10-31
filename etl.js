@@ -5,7 +5,6 @@ const fetch = require('node-fetch');
 const fs = require('fs-extra');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
-const { stringify } = require('csv-stringify/sync');
 
 const DATASETS = [
   {
@@ -70,65 +69,13 @@ const DATASETS = [
   },
 ];
 
-const EXPECTED_DISTRICTS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', 'Various'];
-
-function normalizeDistrict(value) {
-  const raw = String(value ?? '').trim();
-  if (!raw) return 'Various';
-
-  const lower = raw.toLowerCase();
-  if (lower === 'various' || lower === 'district various' || lower === 'district var') {
-    return 'Various';
-  }
-
-  const districtMatch = raw.match(/district\s*0?(\d{1,2})/i) || raw.match(/^(\d{1,2})$/);
-  if (districtMatch) {
-    const districtNumber = Number.parseInt(districtMatch[1], 10);
-    return districtNumber >= 1 && districtNumber <= 12
-      ? String(districtNumber).padStart(2, '0')
-      : 'Various';
-  }
-
-  return 'Various';
-}
-
-async function writePartitionFiles(datasetName, records, outDir) {
-  await fs.ensureDir(outDir);
-
-  const existingPartitionFiles = (await fs.readdir(outDir))
+async function removeLegacyDistrictPartitions(datasetName, reportDir) {
+  const partitionFiles = (await fs.readdir(reportDir))
     .filter(name => name.startsWith(`${datasetName}-District-`) && name.endsWith('.csv'));
-  for (const fileName of existingPartitionFiles) {
-    await fs.remove(path.join(outDir, fileName));
+  for (const fileName of partitionFiles) {
+    await fs.remove(path.join(reportDir, fileName));
   }
-
-  const headers = records.length ? Object.keys(records[0]) : [];
-  const partitions = new Map();
-
-  for (const record of records) {
-    const district = normalizeDistrict(record.DISTRICT ?? record.district ?? '');
-    if (!partitions.has(district)) {
-      partitions.set(district, []);
-    }
-    partitions.get(district).push(record);
-  }
-
-  const index = { totalRecords: records.length };
-
-  for (const district of EXPECTED_DISTRICTS) {
-    const rows = partitions.get(district) || [];
-    const fileName = `${datasetName}-District-${district}.csv`;
-    const csvText = stringify(rows, {
-      header: true,
-      columns: headers,
-      quoted: true,
-      quoted_empty: true,
-    });
-    await fs.writeFile(path.join(outDir, fileName), csvText);
-    index[fileName] = { records: rows.length };
-  }
-
-  await fs.writeJson(path.join(outDir, `${datasetName}.index.json`), index, { spaces: 2 });
-  return index;
+  return partitionFiles.length;
 }
 
 function sqlString(value) {
@@ -185,8 +132,10 @@ async function main() {
       const sample = records[0] || {};
       const totalRecords = records.length;
 
-      await writePartitionFiles(ds.name, records, outDir);
+      const removedPartitions = await removeLegacyDistrictPartitions(ds.name, outDir);
       const parquetBytes = await writeParquetFile(connection, rawPath, parquetPath);
+      const index = { totalRecords };
+      await fs.writeJson(path.join(outDir, `${ds.name}.index.json`), index, { spaces: 2 });
 
       const settings = {
         datasetName: ds.name,
@@ -216,7 +165,7 @@ async function main() {
       }
 
       await fs.writeJson(path.join(outDir, `${ds.name}-bi-settings.json`), settings, { spaces: 2 });
-      console.log(`[ETL INFO] ${ds.name}: wrote partitions and BI settings (${totalRecords} records); Parquet ${parquetBytes} bytes.`);
+      console.log(`[ETL INFO] ${ds.name}: wrote index and BI settings (${totalRecords} records); Parquet ${parquetBytes} bytes; removed ${removedPartitions} legacy partitions.`);
     }
   } finally {
     connection?.closeSync();
@@ -228,4 +177,4 @@ if (require.main === module) {
   main().catch(e => { console.error(e); process.exit(1); });
 }
 
-module.exports = { main, normalizeDistrict, writePartitionFiles, writeParquetFile };
+module.exports = { main, removeLegacyDistrictPartitions, writeParquetFile };

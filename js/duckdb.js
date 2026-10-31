@@ -1,22 +1,22 @@
 import { getDatabase } from './data-store.mjs';
 
-// ── Dataset sources (raw CSV files, not partitioned report data) ───────────
+// ── Managed Parquet dataset sources ────────────────────────────────────────
 const SQL_DATASETS = [
-	{ alias: 'eda_assets_bridge_condition_owner_area', title: 'Assets Bridge Conditions', url: 'data/raw/eda_assets_bridge_condition_owner_area.csv' },
-	{ alias: 'eda_awarded_projects', title: 'Awarded Projects', url: 'data/raw/eda_awarded_projects.csv' },
-	{ alias: 'eda_construction_procurement', title: 'Construction Procurement', url: 'data/raw/eda_construction_procurement.csv' },
-	{ alias: 'eda_current_enact_plan_data_set', title: 'Current Enact Plan Data Set', url: 'data/raw/eda_current_enact_plan_data_set.csv' },
-	{ alias: 'eda_expenditures', title: 'Expenditures', url: 'data/raw/eda_expenditures.csv' },
-	{ alias: 'eda_programmanagement_authorized_detailed', title: 'Authorized Dollars', url: 'data/raw/eda_programmanagement_authorized_detailed.csv' },
-	{ alias: 'export-bi-agency-construction-change-orders-dataview', title: 'Agency Construction Change Orders', url: 'data/raw/export-bi-agency-construction-change-orders-dataview.csv' },
-	{ alias: 'export-bi-agency-constructionprocurement-altdelivery-dataview', title: 'Agency Construction Procurement Alt Delivery', url: 'data/raw/export-bi-agency-constructionprocurement-altdelivery-dataview.csv' },
-	{ alias: 'export-bi-agency-constructionprocurement-dataview', title: 'Agency Construction Procurement', url: 'data/raw/export-bi-agency-constructionprocurement-dataview.csv' },
-	{ alias: 'export-bi-agency-maintenance-roadwayweather-machinehours-dataview', title: 'Agency Maintenance Roadway Weather Machine Hours', url: 'data/raw/export-bi-agency-maintenance-roadwayweather-machinehours-dataview.csv' },
-	{ alias: 'export-bi-agency-toc-roadwayweather-roadwayreport-dataview', title: 'Agency TOC Roadway Weather Roadway Report', url: 'data/raw/export-bi-agency-toc-roadwayweather-roadwayreport-dataview.csv' },
-	{ alias: 'export-bi-analysis-planning-systemmobility-dataview', title: 'Analysis Planning System Mobility', url: 'data/raw/export-bi-analysis-planning-systemmobility-dataview.csv' },
-	{ alias: 'export-bi-analysis-programmanagement-cost-change-dataview', title: 'Analysis Program Management Cost Change', url: 'data/raw/export-bi-analysis-programmanagement-cost-change-dataview.csv' },
-	{ alias: 'export-bi-analysis-roadwayweatherevents-expenditures-dataview', title: 'Analysis Roadway Weather Events Expenditures', url: 'data/raw/export-bi-analysis-roadwayweatherevents-expenditures-dataview.csv' },
-	{ alias: 'export-bi-economic-fueltyperegistration-dataview', title: 'Economic Fuel Type Registration', url: 'data/raw/export-bi-economic-fueltyperegistration-dataview.csv' }
+	{ alias: 'eda_assets_bridge_condition_owner_area', title: 'Assets Bridge Conditions', url: 'data/parquet/eda_assets_bridge_condition_owner_area.parquet' },
+	{ alias: 'eda_awarded_projects', title: 'Awarded Projects', url: 'data/parquet/eda_awarded_projects.parquet' },
+	{ alias: 'eda_construction_procurement', title: 'Construction Procurement', url: 'data/parquet/eda_construction_procurement.parquet' },
+	{ alias: 'eda_current_enact_plan_data_set', title: 'Current Enact Plan Data Set', url: 'data/parquet/eda_current_enact_plan_data_set.parquet' },
+	{ alias: 'eda_expenditures', title: 'Expenditures', url: 'data/parquet/eda_expenditures.parquet' },
+	{ alias: 'eda_programmanagement_authorized_detailed', title: 'Authorized Dollars', url: 'data/parquet/eda_programmanagement_authorized_detailed.parquet' },
+	{ alias: 'export-bi-agency-construction-change-orders-dataview', title: 'Agency Construction Change Orders', url: 'data/parquet/export-bi-agency-construction-change-orders-dataview.parquet' },
+	{ alias: 'export-bi-agency-constructionprocurement-altdelivery-dataview', title: 'Agency Construction Procurement Alt Delivery', url: 'data/parquet/export-bi-agency-constructionprocurement-altdelivery-dataview.parquet' },
+	{ alias: 'export-bi-agency-constructionprocurement-dataview', title: 'Agency Construction Procurement', url: 'data/parquet/export-bi-agency-constructionprocurement-dataview.parquet' },
+	{ alias: 'export-bi-agency-maintenance-roadwayweather-machinehours-dataview', title: 'Agency Maintenance Roadway Weather Machine Hours', url: 'data/parquet/export-bi-agency-maintenance-roadwayweather-machinehours-dataview.parquet' },
+	{ alias: 'export-bi-agency-toc-roadwayweather-roadwayreport-dataview', title: 'Agency TOC Roadway Weather Roadway Report', url: 'data/parquet/export-bi-agency-toc-roadwayweather-roadwayreport-dataview.parquet' },
+	{ alias: 'export-bi-analysis-planning-systemmobility-dataview', title: 'Analysis Planning System Mobility', url: 'data/parquet/export-bi-analysis-planning-systemmobility-dataview.parquet' },
+	{ alias: 'export-bi-analysis-programmanagement-cost-change-dataview', title: 'Analysis Program Management Cost Change', url: 'data/parquet/export-bi-analysis-programmanagement-cost-change-dataview.parquet' },
+	{ alias: 'export-bi-analysis-roadwayweatherevents-expenditures-dataview', title: 'Analysis Roadway Weather Events Expenditures', url: 'data/parquet/export-bi-analysis-roadwayweatherevents-expenditures-dataview.parquet' },
+	{ alias: 'export-bi-economic-fueltyperegistration-dataview', title: 'Economic Fuel Type Registration', url: 'data/parquet/export-bi-economic-fueltyperegistration-dataview.parquet' }
 ];
 
 // ── IndexedDB for user-added sources (unified with main partition-cache IDB) ─
@@ -1273,15 +1273,18 @@ window._edaPrepareDataset = async function(alias, { refresh = false } = {}) {
 	const source = SQL_DATASETS.find(item => item.alias === alias);
 	if (!source) throw new Error(`Unknown managed DuckDB dataset "${alias}".`);
 	const materializedAlias = `__eda_materialized_${alias}`;
+	let registrationSource = source;
 	if (refresh) {
 		await window._edaQuery(`DROP VIEW IF EXISTS "${alias}";`);
 		await window._edaQuery(`DROP TABLE IF EXISTS "${materializedAlias}";`);
 		tableColumns.delete(alias);
+		const separator = source.url.includes('?') ? '&' : '?';
+		registrationSource = { ...source, url: `${source.url}${separator}refresh=${Date.now()}` };
 	}
 
 	let columns = tableColumns.get(alias);
 	if (!columns) {
-		await registerSource(source);
+		await registerSource(registrationSource);
 		columns = tableColumns.get(alias);
 	}
 	if (!columns?.length) throw new Error(`Could not read the schema for "${alias}".`);

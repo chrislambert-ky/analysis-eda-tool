@@ -19,13 +19,13 @@ IDB / OPFS cache ─────────→   Single query interface  →  T
 **Core principles:**
 - **DuckDB-WASM is the single query engine** for charts, catalog, SQL panel, schema, and table pagination. It is initialized eagerly at page load, not lazily on SQL tab click.
 - **Apache ECharts** receives only pre-aggregated query results (a few rows), never the full dataset.
-- **IndexedDB / OPFS** is used for persistent storage of imported datasets and cached remote data. The goal is DuckDB's OPFS VFS as a persistent browser database.
+- **IndexedDB / OPFS** is used for workspace state, saved queries, and imported datasets. Managed data is loaded from hosted Parquet files into DuckDB.
 - **No JS-side aggregation** — `prepareSeries()` and the `state.allRows` full-materialization pattern are replaced by SQL queries built from chart control state.
 - **Parquet is the preferred format** for large datasets — DuckDB uses HTTP range requests against remote Parquet files for efficient big-data querying.
 
 **Migration phases:**
-1. **Phase 1 (in progress):** Shared DuckDB instance, SQL-driven chart aggregation, eager init.
-2. **Phase 2:** OPFS persistence replaces IDB partition cache. Datasets imported as Arrow/Parquet.
+1. **Phase 1 (complete):** Shared DuckDB instance, Parquet-managed datasets, SQL-driven chart/table queries, eager init.
+2. **Phase 2:** Evaluate OPFS persistence for DuckDB tables and imported datasets.
 3. **Phase 3:** DuckDB-paged Tabulator, File System Access API for huge local files, cross-dataset JOINs.
 
 ---
@@ -62,16 +62,15 @@ AMOUNT:    [120000, 85000, 210000, ...]  ← packed doubles
 
 There are no row objects, no per-value boxing, and low-cardinality columns (like DISTRICT with 13 unique values) compress extremely well. DuckDB typically uses 3–5× less memory than a row-oriented in-memory store for the same data. For datasets that exceed available WASM heap, DuckDB can spill to the virtual filesystem — it does not crash.
 
-**What IDB still provides (Phase 1 → Phase 2 transition):**
-- IDB continues to cache the raw CSV bytes for managed datasets (one entry per dataset, not 13 partition files) so repeat visits avoid a network round-trip — same offline benefit, simpler storage.
-- User-uploaded files are persisted in IDB and re-registered with DuckDB on each page load (DuckDB views are not persistent across reloads until Phase 2 OPFS).
-- Phase 2 replaces IDB entirely with DuckDB's Origin Private File System (OPFS) VFS — a persistent `.duckdb` file in the browser's private storage that survives reloads natively.
+**What IDB provides:**
+- User-uploaded files, saved queries, canvas workspaces, and preferences are persisted in IndexedDB.
+- Managed datasets are loaded from Parquet into DuckDB on demand; they are not cached as district rows in IndexedDB.
+- OPFS remains a possible future option for persistent DuckDB tables.
 
 **Consequences:**
-- `state.allRows` materialisation is eliminated for charts and table (map lat/lon rows remain until Phase 3).
-- Partition CSV files under `data/report/` become redundant and will be deleted after Phase 1 validation.
-- ETL currently downloads raw CSVs, generates Parquet copies, writes BI settings, and rebuilds district partitions.
-- Offline capability is temporarily reduced between Phase 1.6 (partition removal) and Phase 2 (OPFS), unless the intermediate IDB raw-bytes cache is implemented.
+- Managed charts and tables query the active DuckDB dataset; full bridge rows are fetched only when rendering its map.
+- District partition CSVs are no longer generated. The report index contains the total record count only.
+- ETL retains source CSVs, writes Parquet copies, and generates BI settings and record-count indexes.
 
 ---
 
@@ -84,22 +83,21 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
   - Tabulator 5.5
   - Leaflet 1.9 + Leaflet MarkerCluster 1.5
   - DuckDB-WASM 1.29.0 (CDN, lazy-loaded in SQL `<script type="module">`)
-- IndexedDB (`analysis_eda_tool_db` store `partitions`) caches dataset partitions keyed by `dataset|district`. **Will be replaced by OPFS in Phase 2.**
+- IndexedDB (`analysis_eda_tool_db`) persists workspace and user-source data; the old `partitions` store may contain legacy entries but is not used for managed datasets.
 - A second IDB (`eda_sql_user_sources`) stores user-added source metadata and row data. **Will be merged into OPFS in Phase 2.**
 - UI supports charts (horizontal/vertical bar, pie), map mode, Tabulator grid, SQL workbench, and Data Catalog.
 
-**Current data layer (transitional)**
-- Source CSVs live in `data/raw/`; ETL-generated Parquet copies live in `data/parquet/`.
-- The current browser app still reads CSVs; Parquet generation is enabled for evaluation and future use.
-- BI settings, district partitions, and indexes live in `data/report/<dataset>/`.
-- For the DuckDB pilot datasets (Bridge Conditions and Expenditures), `state.allRows` stays empty for charts and tables; bridge features are fetched only when the map is opened. Other managed datasets still use district partitions.
-- Map rows are fetched lazily via `loadMapRowsFromDuckDB()` when `chartType === 'map'` and `state.allRows` is empty.
+**Current data layer**
+- Source CSVs live in `data/raw/`; the app reads generated Parquet files from `data/parquet/`.
+- BI settings and total-record indexes live in `data/report/<dataset>/`; there are no district partitions.
+- All managed datasets are materialized in DuckDB when analyzed. `state.allRows` remains empty except while bridge map features are rendered.
+- Bridge map rows are fetched lazily from DuckDB.
 - Dimension/metric selector lists are expanded from DuckDB native column types by `expandControlsFromDuckDB()` once `eda:duckdb-ready` fires.
-- IDB `partitions` store is no longer written to; will be dropped in Phase 2 (OPFS).
+- IDB `partitions` store is deleted during the version-6 upgrade and is no longer used for managed datasets.
 
 **ETL**
-- `etl.js` (Node 20-compatible) downloads source CSVs, writes Zstandard-compressed Parquet copies with DuckDB's Node API, and partitions CSV records by district.
-- `totalRecords` and chart/map metadata are written to `bi-settings.json`; each report also includes an index and district CSVs.
+- `etl.js` (Node 20-compatible) downloads source CSVs and writes Zstandard-compressed Parquet copies with DuckDB's Node API.
+- `totalRecords` and chart/map metadata are written to `bi-settings.json`; each report includes a `{ "totalRecords": n }` index and no partition CSVs.
 - Map configuration for the bridge dataset is hardcoded in `etl.js` (clustering defaults, color-field options).
 
 **Automation**
@@ -114,7 +112,7 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
    ```bash
    npm install
    ```
-   Packages used: `csv-parse`, `csv-stringify`, `fs-extra`, `node-fetch`.
+   Packages used: `@duckdb/node-api`, `csv-parse`, `fs-extra`, `node-fetch`.
 3. **Run ETL**
    ```bash
    node etl.js
@@ -122,8 +120,7 @@ There are no row objects, no per-value boxing, and low-cardinality columns (like
    Outputs:
    - `data/raw/*.csv` (source downloads)
    - `data/parquet/*.parquet` (generated Parquet copies)
-   - `data/report/<dataset>/*.csv` partitions
-   - `data/report/<dataset>/<dataset>.index.json`
+   - `data/report/<dataset>/<dataset>.index.json` (total record count)
    - `data/report/<dataset>/<dataset>-bi-settings.json`
 4. **Open the UI**
    - Either double-click `index.html` or serve via a static server (`npx serve .`).
@@ -166,8 +163,8 @@ Each `data/report/<dataset>/<dataset>-bi-settings.json` contains:
   "map": { ... }   // optional, present when lat/lon fields exist
 }
 ```
-- `totalRecords` replaces the old `index.json` as the record count source.
-- There are no partition CSV files or `index.json` files.
+- `totalRecords` is included in BI settings and mirrored in `<dataset>.index.json`.
+- No district partition CSV files are generated.
 
 ### Map metadata
 - Bridge dataset (`eda_assets_bridge_condition_owner_area`) includes:
@@ -183,10 +180,10 @@ Each `data/report/<dataset>/<dataset>-bi-settings.json` contains:
 
 ## 4. UI Behaviour Cheatsheet
 
-- **Dataset load**: fetch settings/index JSON, populate controls, then sequentially load partitions (respecting cache).
-- **Progress**: text hints (`progressMessage`) update during partition load and map rendering.
+- **Dataset load**: fetch settings/index JSON, load the managed Parquet file into DuckDB, and populate controls from DuckDB schema.
+- **Progress**: text hints (`progressMessage`) update during DuckDB loading and map rendering.
 - **Chart legends**: hidden automatically when split-by produces >13 series.
-- **Table downloads**: “Filtered” uses `getRows('active')` to honor filters; “Full” uses `state.allRows`.
+- **Table downloads**: managed datasets use DuckDB queries; imported in-memory sources use Tabulator rows.
 - **Map toggles**:
   - Clustering toggle always displayed; auto-set based on district/county selection rules above.
   - District dropdown cascades into county dropdown (county list filters to selected district).
