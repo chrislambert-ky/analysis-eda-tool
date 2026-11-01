@@ -2496,7 +2496,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const sourceLink = dataset.dashboardLocation
 			? `<div class="catalog-source-link"><a href="${escHtml(dataset.dashboardLocation)}" target="_blank" rel="noopener noreferrer">${dataset.id.startsWith('kytc-trak-') ? 'Open TRAK dashboard' : 'Open related EDA view'} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>`
 			: '';
-		document.getElementById('datasetPreviewTitle').textContent = `Preview: ${dataset.title}`;
+		document.getElementById('datasetPreviewTitle').textContent = dataset.title;
 		const analyzeButton = document.getElementById('datasetPreviewAnalyzeBtn');
 		analyzeButton.dataset.datasetId = dataset.id;
 		analyzeButton.disabled = state.datasetId === dataset.id;
@@ -2504,7 +2504,6 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		pane.innerHTML = `
 			<div class="catalog-detail-header">
 				<div>
-					<h4 class="catalog-detail-title">${escHtml(dataset.title)}</h4>
 					<div class="catalog-detail-description">${description}</div>
 					${sourceLink}
 					<div class="catalog-detail-id">${escHtml(dataset.id)}</div>

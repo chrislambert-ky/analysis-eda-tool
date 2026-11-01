@@ -170,7 +170,6 @@
 	.catalog-browser-dialog { max-width: min(1120px, 96vw); }
 	.catalog-detail-pane { min-height: 460px; }
 	.catalog-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-	.catalog-detail-title { margin: 0; font-size: 18px; font-weight: 600; }
 	.catalog-detail-description { margin: 6px 0; color: #6c757d; font-size: 12px; line-height: 1.45; }
 	.catalog-source-link { margin: 4px 0 6px; font-size: 12px; }
 	.catalog-detail-id { color: #adb5bd; font-family: 'IBM Plex Mono', monospace; font-size: 10px; overflow-wrap: anywhere; }
