@@ -1,7 +1,7 @@
 {
   "datasetName": "kytc-trak-programmanagement-cost-change-dataview",
-  "datasetLabel": "Program Management Cost Change",
-  "description": "Program Management cost change data view. Data supplied by Kentucky Transportation Cabinet.",
+  "datasetLabel": "Cost Change Analysis",
+  "description": "Matches the Cost Change data view. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/Project_Cost_Comparison",
   "totalRecords": 36,
   "dimensions": [
