@@ -1,0 +1,26 @@
+{
+  "datasetName": "kytc-trak-assets-regionalroutelist-1mile-dataview",
+  "datasetLabel": "Regional Route List (1-mile)",
+  "description": "KYTC regional route list data at 1-mile resolution. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/",
+  "totalRecords": 29023,
+  "dimensions": [],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ],
+  "map": {
+    "latitudeField": "Latitude",
+    "longitudeField": "Longitude"
+  }
+}

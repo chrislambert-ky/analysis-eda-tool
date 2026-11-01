@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-roadwayweatherevents-expenditures-dataview",
+  "datasetLabel": "Roadway Weather Event Expenditures",
+  "description": "Matches the Emergency Response dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/Maintenance_EmergencyResponse",
+  "totalRecords": 3657,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

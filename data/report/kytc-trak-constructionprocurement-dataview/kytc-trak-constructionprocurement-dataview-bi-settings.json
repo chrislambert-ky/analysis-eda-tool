@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-constructionprocurement-dataview",
+  "datasetLabel": "Construction Procurement",
+  "description": "Matches the Awarded Projects dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/Awarded_Projects",
+  "totalRecords": 5183,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

@@ -66,7 +66,7 @@ The **+ Add Source** button in the docked dataset pane lets you bring in your ow
 - User-added datasets appear immediately in the docked tree and SQL schema explorer.
 
 ### Preloaded Datasets
-Managed datasets are sourced from the [Kentucky Transportation Cabinet TRAK system](https://trak.kytc.ky.gov/). The ETL retains each source CSV and generates a Parquet copy. All preloaded datasets load from Parquet into DuckDB when analyzed; charts and tables query DuckDB instead of loading all rows into JavaScript. Bridge map features are fetched from DuckDB on demand.
+Managed datasets are listed in [`data-links.csv`](./data-links.csv), with user-facing labels, descriptions, source URLs, and dashboard links. The ETL retains each CSV, downloads a published Parquet file when supplied, and generates Parquet from CSV when no Parquet URL is provided. All preloaded datasets load from Parquet into DuckDB when analyzed; charts and tables query DuckDB instead of loading all rows into JavaScript.
 
 | Dataset | Description |
 |---|---|
@@ -99,12 +99,14 @@ analysis-eda-tool/
 │   ├── app.js                          # Dashboard UI and application logic
 │   ├── chart-engine.mjs                # Chart aggregation, sorting, and ECharts options
 │   ├── data-store.mjs                  # IndexedDB persistence for workspace and imported data
+│   ├── dataset-catalog.mjs             # Loads and validates the managed dataset manifest
 │   ├── dataset-loader.mjs              # CSV parsing and source-sample helpers
 │   ├── share.mjs                       # Pure share-link parsing and serialization
 │   ├── canvas-state.mjs                # Canvas types, defaults, and persisted-state normalization
 │   ├── workspace-preferences.mjs       # Last active dataset and chart controls
 │   └── duckdb.js                       # DuckDB-WASM SQL workbench
 ├── etl.js                              # Node ETL: downloads CSVs, creates Parquet copies, writes report metadata
+├── data-links.csv                      # Managed dataset labels, descriptions, URLs, and dashboard links
 ├── data/
 │   ├── raw/                            # Source CSV downloads retained for provenance (not used by the app)
 │   ├── parquet/                        # Zstandard-compressed Parquet datasets loaded by DuckDB
@@ -132,11 +134,12 @@ npm test             # Run ETL unit tests
 ```
 
 The ETL:
-1. Downloads fresh source CSVs into `data/raw/`.
-2. Writes one Zstandard-compressed Parquet copy per dataset into `data/parquet/`.
-3. Writes record-count indexes and `<dataset>-bi-settings.json` (including map metadata where applicable) into `data/report/<dataset>/`, and removes obsolete district CSV partitions.
+1. Downloads each source CSV into `data/raw/`.
+2. Downloads published Parquet files or generates Zstandard-compressed Parquet from CSV-only sources into `data/parquet/`.
+3. Validates Parquet schemas and row counts against the CSVs.
+4. Writes record-count indexes and `<dataset>-bi-settings.json` (including detected map metadata where applicable) into `data/report/<dataset>/`.
 
-The browser app reads the Parquet files. The source CSVs remain available for provenance and regenerating the Parquet artifacts.
+The browser app loads its managed catalog from `data-links.csv` and reads the Parquet files. The source CSVs remain available for provenance and regenerating the Parquet artifacts. CSV-only raw files over GitHub's file-size limit are ignored; their Parquet artifacts and generated report metadata are committed for GitHub Pages.
 
 ### Serving the App
 Serve the repository root with a static server; opening `index.html` as a `file://` URL does not support the app's data fetches:
@@ -153,9 +156,9 @@ No build step is required. The browser app's libraries are loaded from CDN; Node
 
 ## Adding / Removing Managed Datasets
 
-1. Add a new entry to the `DATASETS` array in `js/app.js` (id, title, description), matching the folder name under `data/report/`.
-2. Add the corresponding ETL configuration in `etl.js`.
-3. Run `node etl.js` to generate Parquet data files and report metadata.
+1. Add or remove a row in `data-links.csv`. Use the source filename without its extension for `name`, then provide its user-visible `label`, `description`, CSV URL, optional published Parquet URL, and dashboard/source URL.
+2. Leave `parquet_public_url` blank for CSV-only sources; the ETL will generate Parquet.
+3. Run `npm run etl` to download sources and generate/validate Parquet and report metadata.
 
 ---
 

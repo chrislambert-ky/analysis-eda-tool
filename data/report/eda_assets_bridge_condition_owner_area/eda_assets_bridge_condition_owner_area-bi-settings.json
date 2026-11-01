@@ -1,5 +1,8 @@
 {
   "datasetName": "eda_assets_bridge_condition_owner_area",
+  "datasetLabel": "Bridge Condition Inventory (Data Hub)",
+  "description": "The most up-to-date inventory of Kentucky bridges, including attributes and classifications used for management and maintenance. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/eda_tool?dataset=bridges",
   "totalRecords": 14587,
   "dimensions": [
     "DISTRICT",

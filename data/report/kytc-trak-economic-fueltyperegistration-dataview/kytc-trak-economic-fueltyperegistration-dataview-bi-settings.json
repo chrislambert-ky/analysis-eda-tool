@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-economic-fueltyperegistration-dataview",
+  "datasetLabel": "Vehicle Registrations by Fuel Type",
+  "description": "Matches the Vehicle Registrations dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/VehicleRegistrations",
+  "totalRecords": 723,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

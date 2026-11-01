@@ -145797,7 +145797,7 @@ Highway Improvement,Various,Various,8065605D,2027,4,2,5,347.1,FD52,D,2935.32
 Highway Improvement,District 06,Boone,1237301R,2027,1,1,6,80150.0,FD52,R,15671.45
 Highway Improvement,District 06,Kenton,7200301R,2027,1,1,6,17.0,FD04,R,2908.34
 Highway Improvement,District 07,Anderson,1288601R,2027,1,1,7,80001.0,FD52,R,25166.3
-Highway Improvement,District 10,Morgan,2154501C,2027,4,2,10,0.0,FD51,C,3680.0
+Highway Improvement,District 10,Morgan,2154501C,2027,4,2,10,0.0,FD51,C,5409.12
 Highway Improvement,District 04,Hardin,2103201C,2027,4,2,4,0.0,FD52,C,182569.56
 Highway Improvement,District 02,Hopkins,2011301D,2027,4,2,2,13.0,FD52,D,10832.15
 Highway Improvement,District 09,Carter,1528101D,2027,4,2,9,80050.0,FD52,D,946.12
@@ -145853,13 +145853,14 @@ Highway Improvement,District 10,Magoffin,1526001R,2027,3,1,10,169.0,FD52,R,159.9
 Highway Improvement,Various,Various,2108502P,2027,4,2,99,0.0,FD52,P,14936.64
 Highway Improvement,District 10,Magoffin,1526002R,2027,3,1,10,169.0,FD52,R,1902.06
 Highway Improvement,Various,Various,2108507P,2027,4,2,99,0.0,FD52,P,186166.56
-Highway Improvement,Various,Various,THSP27PM,2027,4,2,0,0.0,FL03,M,3508.67
+Highway Improvement,Various,Various,THSP27PM,2027,4,2,0,0.0,FL03,M,10696.36
 Highway Improvement,Various,Various,8696603R,2027,4,2,10,166.01,FD52,R,127578.02
 Highway Improvement,District 01,McCracken,8684501R,2027,4,2,1,8702.0,FD04,R,6577.51
-Highway Improvement,Various,Various,8957601N,2027,4,2,99,0.0,FD52,N,478298.28
-Highway Improvement,Various,Various,8957601N,2027,4,2,99,327.13,FD52,N,478298.28
-Highway Improvement,Various,Various,THSP27OPC,2027,4,2,0,0.0,FL03,P,1161.59
-Highway Improvement,District 06,Boone,8433801R,2027,4,2,6,18.0,FD52,R,11623.8
+Highway Improvement,Various,Various,8957601N,2027,4,2,99,0.0,FD52,N,511797.7
+Highway Improvement,Various,Various,8957601N,2027,4,2,99,327.13,FD52,N,511797.7
+Highway Improvement,Various,Various,THSP27OPC,2027,4,2,0,0.0,FL03,P,2455.02
+Highway Improvement,District 06,Boone,8433801R,2027,4,2,6,18.0,FD52,R,11988.36
+Highway Improvement,Various,Various,THSP27TRM,2027,4,2,0,0.0,FL03,R,12.72
 Highway Improvement,District 08,Rockcastle,1990101C,2027,1,1,8,22370.0,FD52,C,594519.07
 Highway Improvement,District 01,McCracken,8684501C,2027,1,1,1,8702.0,FD06,C,1495554.39
 Highway Improvement,District 12,Pike,8694601C,2027,1,1,12,8705.0,FD06,C,694265.11
@@ -147546,26 +147547,26 @@ Highway Improvement,District 08,Rockcastle,1498301C,2027,4,2,8,80106.0,FD52,C,11
 Highway Improvement,District 11,Whitley,KY002600,2027,4,2,0,0.0,FE01,0,3042.36
 Highway Improvement,Various,Various,9167301C,2027,4,2,8,8601.21,FD52,C,784058.44
 Safety,Various,Various,2047701C,2027,4,2,3,961.0,FD52,C,1052.21
-Highway Improvement,District 08,Woodford,US002700,2027,4,2,0,0.0,FE04,0,23992.22
+Highway Improvement,District 08,Woodford,US002700,2027,4,2,0,0.0,FE04,0,24097.3
 Highway Improvement,District 11,Whitley,I0007500,2027,4,2,0,0.0,FE01,0,120059.04
 Highway Improvement,District 03,Warren,1188101C,2027,4,2,3,9024.0,FD52,C,21271.76
 Highway Improvement,District 10,Wolfe,KY019100,2027,4,2,0,0.0,FE04,0,4212.6
 Highway Improvement,District 10,Lee,KY039900,2027,4,2,0,0.0,FE04,0,9844.24
 Highway Improvement,District 10,Perry,KY047600,2027,4,2,0,0.0,FE04,0,11992.68
 Highway Improvement,District 02,Christian,1989901C,2027,4,2,2,20063.0,FD52,C,1804763.83
-Highway Improvement,District 11,Harlan,2046901C,2027,4,2,11,22332.0,FD52,C,84411.9
-Highway Improvement,Various,Various,9039601N,2027,4,2,99,0.0,FD52,N,465081.28
+Highway Improvement,District 11,Harlan,2046901C,2027,4,2,11,22332.0,FD52,C,85586.01
+Highway Improvement,Various,Various,9039601N,2027,4,2,99,0.0,FD52,N,469450.12
 Highway Improvement,District 05,Jefferson,I0026400,2027,4,2,0,0.0,FE04,0,9324.72
 Highway Improvement,District 05,Jefferson,KY226500,2027,4,2,0,0.0,FE04,0,14944.38
 Highway Improvement,District 03,Monroe,5846020N,2027,4,2,3,128.18,FD04,N,103327.09
 Pavement Asset Management,District 06,Grant,2058901C,2027,4,2,6,0.0,FD05,C,25942.38
 Highway Improvement,District 10,Breathitt,KY054100,2027,4,2,0,0.0,FE04,0,2262.38
 Highway Improvement,District 11,Perry,KY069900,2027,4,2,0,0.0,FE04,0,9291.62
-Highway Improvement,District 05,Bullitt,8330501C,2027,4,2,5,8509.0,FD06,C,11256.22
+Highway Improvement,District 05,Bullitt,8330501C,2027,4,2,5,8509.0,FD06,C,60596.6
 Highway Improvement,District 02,Muhlenberg,9106101C,2027,4,2,2,8802.0,FD52,C,138172.38
 Highway Improvement,District 05,Franklin,1505801C,2027,4,2,5,80212.0,FD52,C,72969.17
-Pavement Asset Management,District 10,Perry,1487101C,2027,4,2,4,5013.0,FD52,C,251225.28
-Highway Improvement,District 06,Gallatin,2097601C,2027,4,2,6,22104.0,FD52,C,1343117.0
+Pavement Asset Management,District 10,Perry,1487101C,2027,4,2,4,5013.0,FD52,C,252451.73
+Highway Improvement,District 06,Gallatin,2097601C,2027,4,2,6,22104.0,FD52,C,1343413.46
 Pavement Asset Management,District 06,Kenton,2064901C,2027,4,2,6,0.0,FD05,C,475530.16
 Highway Improvement,District 10,Powell,1396001R,2027,4,2,10,170.0,FD04,R,6887.38
 Highway Improvement,District 10,Breathitt,9555201U,2027,4,2,10,5014.0,FD52,U,492.46
@@ -147573,14 +147574,14 @@ Highway Improvement,District 09,Rowan,8054302R,2027,4,2,9,192.01,FD52,R,28352.49
 Safety,District 03,Barren,2108401C,2027,4,2,3,20038.0,FD52,C,373914.5
 Highway Improvement,Various,Various,2108503P,2027,4,2,99,0.0,FD52,P,164040.53
 Highway Improvement,District 01,Marshall,5138210D,2027,4,2,1,180.8,FD52,D,24711.7
-Highway Improvement,Various,Various,9440701C,2027,4,2,10,376.0,FD52,C,1228078.65
+Highway Improvement,Various,Various,9440701C,2027,4,2,10,376.0,FD52,C,1228420.64
 Highway Improvement,District 03,Allen,1547501R,2027,4,2,3,80206.0,FD04,R,161881.13
 Highway Improvement,Various,Various,6780810D,2027,4,2,8,59.5,FD52,D,325660.3
 Bridge Asset Management,Various,Various,8580702D,2027,4,2,1,1140.01,FD52,D,31948.64
 Highway Improvement,District 02,Union,1523601D,2027,4,2,2,80203.0,FD52,D,22646.86
-Bridge Asset Management,District 03,Butler,1905702C,2027,4,2,3,10037.0,FD55,C,502500.09
-Bridge Asset Management,District 08,Lincoln,2076102C,2027,4,2,8,10054.0,FD55,C,31698.41
-Highway Improvement,District 05,Shelby,7614040C,2027,4,2,5,65.0,FD52,C,3969306.1
+Bridge Asset Management,District 03,Butler,1905702C,2027,4,2,3,10037.0,FD55,C,502873.27
+Bridge Asset Management,District 08,Lincoln,2076102C,2027,4,2,8,10054.0,FD55,C,31865.16
+Highway Improvement,District 05,Shelby,7614040C,2027,4,2,5,65.0,FD52,C,4116222.85
 Highway Improvement,District 10,Perry,1353301C,2027,4,2,10,80100.0,FD06,C,1125448.5
 Pavement Asset Management,District 04,Grayson,2090501C,2027,4,2,4,0.0,FD05,C,31347.88
 Highway Improvement,District 10,Magoffin,1526002R,2027,4,2,10,169.0,FD52,R,8335.94
@@ -147589,7 +147590,7 @@ Highway Improvement,District 08,Pulaski,6780811R,2027,4,2,8,59.6,FD52,R,944606.4
 Highway Improvement,District 06,Kenton,9442101D,2027,4,2,6,450.0,FD52,D,31259.68
 Highway Improvement,District 09,Rowan,8676401C,2027,4,2,9,204.0,FD06,C,2500827.86
 Highway Improvement,District 11,Harlan,2145901C,2027,4,2,11,0.0,FD51,C,57.39
-Highway Improvement,Various,Whitley,6840202C,2027,4,2,11,14.8,FD52,C,3748943.1
+Highway Improvement,Various,Whitley,6840202C,2027,4,2,11,14.8,FD52,C,3749136.39
 Pavement Asset Management,District 03,Warren,2057901C,2027,4,2,3,0.0,FD05,C,4820.72
 Highway Improvement,District 06,Kenton,KY053600,2027,4,2,0,0.0,FE04,0,14884.14
 Highway Improvement,District 11,Whitley,KY051100,2027,4,2,0,0.0,FE01,0,441.22
@@ -147615,8 +147616,8 @@ Highway Improvement,District 06,Pendleton,2006601C,2027,4,2,6,0.0,CB06,C,25.73
 Highway Improvement,District 03,Todd,9455506C,2027,4,2,3,80001.1,FD52,C,705193.76
 Pavement Asset Management,District 02,Daviess,1889602C,2027,4,2,2,10081.0,FD55,C,11710.88
 Highway Improvement,District 05,Shelby,KY184800,2027,4,2,0,0.0,FE04,0,920.42
-Highway Improvement,District 05,Jefferson,8556401C,2027,4,2,5,804.0,FD52,C,9753530.32
-Highway Improvement,District 05,Jefferson,8556401C,2027,4,2,5,804.1,FD52,C,9753530.32
+Highway Improvement,District 05,Jefferson,8556401C,2027,4,2,5,804.0,FD52,C,10041770.32
+Highway Improvement,District 05,Jefferson,8556401C,2027,4,2,5,804.1,FD52,C,10041770.32
 Bridge Asset Management,District 05,Jefferson,1835702C,2027,4,2,5,10058.0,FD55,C,1755.83
 Pavement Asset Management,District 06,Harrison,2035901C,2027,4,2,6,0.0,FD05,C,678.38
 Highway Improvement,Various,Various,US046000,2027,4,2,0,0.0,FE04,0,69971.12
@@ -147624,19 +147625,19 @@ Highway Improvement,District 10,Breathitt,KY181200,2027,4,2,0,0.0,FE04,0,3874.28
 Highway Improvement,District 12,Perry,KY001500,2027,4,2,0,0.0,FE04,0,10412.7
 Pavement Asset Management,District 10,Estill,1850401C,2027,4,2,10,0.0,FD05,C,131334.54
 Highway Improvement,District 08,Hopkins,KY007000,2027,4,2,0,0.0,FE04,0,14245.18
-Highway Improvement,District 07,Woodford,US006200,2027,4,2,0,0.0,FE04,0,53545.3
+Highway Improvement,District 07,Woodford,US006200,2027,4,2,0,0.0,FE04,0,53719.34
 Highway Improvement,District 02,Caldwell,KY029300,2027,4,2,0,0.0,FE04,0,240.0
 Highway Improvement,District 07,Woodford,2080801C,2027,4,2,7,20048.0,FD52,C,73.16
 Highway Improvement,District 09,Woodford,US006000,2027,4,2,0,0.0,FE04,0,51975.0
 Highway Improvement,District 10,Lee,1894201C,2027,4,2,10,80102.0,FD04,C,15548.61
 Highway Improvement,District 11,Leslie,2079201C,2027,4,2,9,22046.0,FD52,C,1253296.29
 Highway Improvement,District 10,Powell,1396001U,2027,4,2,10,170.0,FD04,U,20743.72
-Safety,District 09,Lewis,2096301C,2027,4,2,9,9036.0,FD52,C,740038.45
+Safety,District 09,Lewis,2096301C,2027,4,2,9,9036.0,FD52,C,740306.04
 Pavement Asset Management,District 03,Monroe,2057601C,2027,4,2,3,0.0,FD05,C,44411.96
 Highway Improvement,District 07,Fayette,8534101U,2027,4,2,7,113.0,FD04,U,21626.86
 Highway Improvement,Various,Various,2108508P,2027,4,2,99,0.0,FD52,P,103763.6
 Safety,District 10,Perry,1317701U,2027,4,2,10,9018.0,FD04,U,2510.65
-Safety,District 08,Clinton,2101701C,2027,4,2,8,957.0,FD52,C,639359.85
+Safety,District 08,Clinton,2101701C,2027,4,2,8,957.0,FD52,C,640448.42
 Pavement Asset Management,District 05,Jefferson,1377702C,2027,4,2,5,20061.1,FD52,C,6006.48
 Highway Improvement,District 02,Christian,1628001C,2027,4,2,2,131.0,FD52,C,1060.45
 Highway Improvement,District 01,McCracken,8687703D,2027,4,2,1,153.3,FD52,D,2147.72
@@ -147647,7 +147648,7 @@ Highway Improvement,District 11,Whitley,KY180900,2027,4,2,0,0.0,FE01,0,5353.0
 Highway Improvement,District 06,Kenton,KY000800,2027,4,2,0,0.0,FE04,0,6465.28
 Highway Improvement,District 11,Scott,US002500,2027,4,2,0,0.0,FE04,0,27774.76
 Highway Improvement,District 08,Owen,US012700,2027,4,2,0,0.0,FE04,0,63917.46
-Highway Improvement,District 05,Franklin,1912901C,2027,4,2,5,22031.0,FD52,C,491583.29
+Highway Improvement,District 05,Franklin,1912901C,2027,4,2,5,22031.0,FD52,C,536583.29
 Highway Improvement,District 03,Warren,9455401C,2027,4,2,3,8904.1,FD06,C,147481.95
 Highway Improvement,District 03,Warren,8963201C,2027,4,2,3,8853.1,FD06,C,11420.63
 Highway Improvement,District 10,Powell,KY900000,2027,4,2,0,0.0,FE04,0,1342.04
@@ -147655,18 +147656,18 @@ Highway Improvement,District 08,Pulaski,1498201C,2027,4,2,8,174.0,FD52,C,20501.1
 Highway Improvement,District 05,Shelby,KY005300,2027,4,2,0,0.0,FE04,0,2133.82
 Highway Improvement,District 05,Oldham,KY285500,2027,4,2,0,0.0,FE04,0,2252.04
 Bridge Asset Management,District 08,McCreary,2054901C,2027,4,2,8,10062.0,FD55,C,48648.93
-Safety,District 05,Jefferson,2102101C,2027,4,2,5,9057.0,FD52,C,445423.54
-Highway Improvement,District 05,Jefferson,5325303C,2027,4,2,5,48.1,FD52,C,1779551.52
+Safety,District 05,Jefferson,2102101C,2027,4,2,5,9057.0,FD52,C,484951.04
+Highway Improvement,District 05,Jefferson,5325303C,2027,4,2,5,48.1,FD52,C,1982881.91
 Highway Improvement,District 02,Ohio,9012101C,2027,4,2,2,8812.2,FD52,C,505140.23
 Highway Improvement,District 04,Marion,1279901C,2027,4,2,4,80152.0,FD52,C,394969.08
 Highway Improvement,District 08,Rockcastle,1990101C,2027,4,2,8,22370.0,FD52,C,506.39
 Highway Improvement,District 02,Union,KY036000,2027,4,2,0,0.0,FE04,0,3762.06
 Highway Improvement,District 02,McLean,KY008100,2027,4,2,0,0.0,FE04,0,17778.92
-Highway Improvement,District 07,Scott,2140401C,2027,4,2,7,37.0,FD52,C,1468129.54
+Highway Improvement,District 07,Scott,2140401C,2027,4,2,7,37.0,FD52,C,1468351.99
 Highway Improvement,District 03,Metcalfe,2159901C,2027,4,2,3,0.0,CB01,C,120195.72
 Pavement Asset Management,District 12,Lawrence,2082701C,2027,4,2,12,0.0,FD05,C,911066.82
 Highway Improvement,District 05,Henry,1738801C,2027,4,2,5,22099.0,FD52,C,8044.88
-Highway Improvement,District 08,Pulaski,9389201C,2027,4,2,8,9010.0,FD52,C,171126.88
+Highway Improvement,District 08,Pulaski,9389201C,2027,4,2,8,9010.0,FD52,C,178741.3
 Highway Improvement,District 11,Laurel,8657601C,2027,4,2,11,185.0,FD52,C,14379.1
 Highway Improvement,District 10,Morgan,8943201R,2027,4,2,10,8804.0,FD52,R,6946.4
 Highway Improvement,District 03,Warren,8962901U,2027,4,2,3,8818.0,FD04,U,4715.19
@@ -147689,7 +147690,7 @@ Highway Improvement,District 08,Lincoln,1797701C,2027,4,2,8,80111.0,FD52,C,1112.
 Highway Improvement,District 10,Wolfe,KY074600,2027,4,2,0,0.0,FE04,0,2506.58
 Highway Improvement,District 05,Oldham,KY071200,2027,4,2,0,0.0,FE04,0,5483.28
 Highway Improvement,District 05,Shelby,KY177900,2027,4,2,0,0.0,FE04,0,2324.64
-Safety,District 05,Jefferson,1910501C,2027,4,2,5,9032.1,FD52,C,6694.76
+Safety,District 05,Jefferson,1910501C,2027,4,2,5,9032.1,FD52,C,12817.26
 Pavement Asset Management,District 02,Henderson,2082401C,2027,4,2,2,0.0,FD05,C,291081.71
 Highway Improvement,District 08,Adair,KY0055X0,2027,4,2,0,0.0,FE04,0,9601.08
 Pavement Asset Management,District 06,Harrison,2056501C,2027,4,2,6,0.0,FD05,C,201703.42
@@ -147722,7 +147723,7 @@ Highway Improvement,Various,Whitley,I0007500,2027,4,2,0,0.0,FE04,0,71149.68
 Highway Improvement,District 09,Elliott,9020801C,2027,4,2,9,8802.0,FD52,C,145238.87
 Pavement Asset Management,District 03,Simpson,1999601C,2027,4,2,3,0.0,FD05,C,12141.14
 Bridge Asset Management,District 08,Cumberland,2074102C,2027,4,2,8,10053.0,FD55,C,6340.76
-Highway Improvement,District 06,Owen,KY022700,2027,4,2,0,0.0,FE04,0,2051.18
+Highway Improvement,District 06,Owen,KY022700,2027,4,2,0,0.0,FE04,0,2357.96
 Highway Improvement,District 11,Whitley,KY009000,2027,4,2,0,0.0,FE01,0,2588.3
 Bridge Asset Management,District 09,Mason,1580501C,2027,4,2,9,10091.0,FD52,C,1068188.04
 Highway Improvement,District 10,Menifee,KY007700,2027,4,2,0,0.0,FE04,0,201.48
@@ -147741,17 +147742,17 @@ Bridge Asset Management,District 05,Franklin,1908202C,2027,4,2,5,10046.0,FD55,C,
 Pavement Asset Management,District 10,Perry,1999301C,2027,4,2,10,0.0,FD05,C,30810.61
 Highway Improvement,District 04,Washington,8940002D,2027,4,2,4,396.0,FD52,D,87791.68
 Highway Improvement,Various,Various,1526001D,2027,4,2,10,169.0,FD52,D,203341.47
-Highway Improvement,District 06,Gallatin,1557201C,2027,4,2,6,20021.0,FD52,C,1901895.12
+Highway Improvement,District 06,Gallatin,1557201C,2027,4,2,6,20021.0,FD52,C,1902113.79
 Highway Improvement,District 12,Powell,5735701R,2027,4,2,12,1.02,FD52,R,267451.59
 Bridge Asset Management,District 04,Hart,2070301C,2027,4,2,4,10095.0,FD52,C,4200.19
 Highway Improvement,Various,Various,2108509P,2027,4,2,99,0.0,FD52,P,39601.28
-Highway Improvement,District 10,Wolfe,8685201C,2027,4,2,10,168.0,FD52,C,99563.07
+Highway Improvement,District 10,Wolfe,8685201C,2027,4,2,10,168.0,FD52,C,105855.69
 Highway Improvement,District 10,Menifee,8943301R,2027,4,2,10,8802.0,FD04,R,7507.45
 Pavement Asset Management,District 07,Clark,2072501C,2027,4,2,7,0.0,FD05,C,189786.17
 Highway Improvement,District 10,Perry,1353301U,2027,4,2,10,80100.0,FD04,U,9154.77
 Highway Improvement,District 07,Fayette,7996301D,2027,4,2,7,252.0,FD04,D,881.46
 Highway Improvement,District 12,Pike,5122169C,2027,4,2,12,263.69,FD52,C,1452134.31
-Highway Improvement,District 09,Boyd,8292801U,2027,4,2,9,8400.0,JL04,U,272999.18
+Highway Improvement,District 09,Boyd,8292801U,2027,4,2,9,8400.0,JL04,U,275528.02
 Highway Improvement,District 11,Whitley,KY148100,2027,4,2,0,0.0,FE01,0,26974.08
 Bridge Asset Management,District 09,Carter,1962202C,2027,4,2,9,10081.0,FD55,C,10968.67
 Highway Improvement,District 11,Whitley,KY000600,2027,4,2,0,0.0,FE01,0,399.06
@@ -147764,7 +147765,7 @@ Pavement Asset Management,District 06,Bracken,2035501C,2027,4,2,6,0.0,FD05,C,117
 Highway Improvement,District 06,Campbell,1990001C,2027,4,2,6,20049.0,FD52,C,801925.05
 Bridge Asset Management,District 06,Bracken,2003602C,2027,4,2,6,10031.0,FD55,C,13175.34
 Pavement Asset Management,District 02,Daviess,2058501C,2027,4,2,2,0.0,FD05,C,16442.06
-Bridge Asset Management,District 05,Jefferson,1946101C,2027,4,2,5,10016.0,FD52,C,1115795.9
+Bridge Asset Management,District 05,Jefferson,1946101C,2027,4,2,5,10016.0,FD52,C,1235095.9
 Safety,District 06,Grant,1188501C,2027,4,2,6,9025.0,FD52,C,77715.7
 Highway Improvement,District 08,Wayne,KY009000,2027,4,2,0,0.0,FE04,0,720.0
 Highway Improvement,District 10,Wolfe,KY249100,2027,4,2,0,0.0,FE04,0,1392.72
@@ -147787,9 +147788,9 @@ Highway Improvement,District 10,Magoffin,6981101U,2027,4,2,10,292.1,FD04,U,8217.
 Pavement Asset Management,District 03,Logan,2084101C,2027,4,2,3,0.0,FD05,C,774411.21
 Highway Improvement,District 10,Powell,1544901U,2027,4,2,10,174.0,FD52,U,658.45
 Pavement Asset Management,District 02,Daviess,1889601C,2027,4,2,2,10081.0,FD55,C,939704.38
-Bridge Asset Management,District 07,Fayette,1974802C,2027,4,2,7,10045.0,FD55,C,4659.06
+Bridge Asset Management,District 07,Fayette,1974802C,2027,4,2,7,10045.0,FD55,C,4671.91
 Highway Improvement,District 02,Christian,1505601D,2027,4,2,2,80250.0,FD04,D,285.8
-Highway Improvement,District 09,Elliott,8694901C,2027,4,2,9,228.3,FD52,C,514709.06
+Highway Improvement,District 09,Elliott,8694901C,2027,4,2,9,228.3,FD52,C,519159.06
 Highway Improvement,District 07,Mercer,1932701D,2027,4,2,7,80355.0,FD04,D,299.87
 Highway Improvement,District 06,Campbell,KY112000,2027,4,2,0,0.0,FE04,0,4151.9
 Pavement Asset Management,District 09,Mason,2034901C,2027,4,2,9,0.0,FD05,C,9681.38
@@ -147797,7 +147798,7 @@ Highway Improvement,District 03,Warren,9333701C,2027,4,2,3,8857.0,FD52,C,84151.5
 Highway Improvement,District 03,Warren,9442001C,2027,4,2,3,8905.0,FD52,C,23159.05
 Highway Improvement,District 10,Madison,KY005200,2027,4,2,0,0.0,FE04,0,6336.28
 Highway Improvement,District 10,Estill,KY246100,2027,4,2,0,0.0,FE04,0,282.78
-Highway Improvement,District 02,Christian,1525801C,2027,4,2,2,898.0,FD52,C,1626665.21
+Highway Improvement,District 02,Christian,1525801C,2027,4,2,2,898.0,FD52,C,1627828.47
 Highway Improvement,District 05,Jefferson,KY205200,2027,4,2,0,0.0,FE04,0,982.92
 Highway Improvement,District 06,Pendleton,8837301C,2027,4,2,6,8706.0,FD52,C,40215.81
 Pavement Asset Management,District 06,Campbell,1846901C,2027,4,2,6,0.0,FD05,C,2301.15
@@ -147813,14 +147814,14 @@ Highway Improvement,District 06,Oldham,I0007100,2027,4,2,0,0.0,FE04,0,10212.08
 Bridge Asset Management,District 04,Marion,2054802C,2027,4,2,4,10077.0,FD55,C,22012.0
 Highway Improvement,District 04,Green,1978701C,2027,4,2,4,80102.0,FD04,C,739636.69
 Pavement Asset Management,District 03,Todd,2058401C,2027,4,2,3,0.0,FD05,C,12458.78
-Highway Improvement,District 07,Fayette,2080701C,2027,4,2,7,20008.0,FD52,C,9010.56
+Highway Improvement,District 07,Fayette,2080701C,2027,4,2,7,20008.0,FD52,C,9601.45
 Highway Improvement,District 07,Scott,2074801C,2027,4,2,7,0.0,CB06,C,1564.7
 Pavement Asset Management,District 09,Mason,2168701C,2027,4,2,9,0.0,FD05,C,3476.27
 Pavement Asset Management,District 01,McCracken,1893401C,2027,4,2,1,22001.0,FD52,C,4617.29
 Highway Improvement,District 07,Fayette,7996301U,2027,4,2,7,252.0,FD52,U,3145.71
-Highway Improvement,District 01,McCracken,8687703R,2027,4,2,1,153.2,FD52,R,3160.55
+Highway Improvement,District 01,McCracken,8687703R,2027,4,2,1,153.2,FD52,R,16884.01
 Pavement Asset Management,District 05,Jefferson,1377701D,2027,4,2,5,20061.0,FD52,D,1802664.04
-Highway Improvement,District 05,Shelby,1866701C,2027,4,2,5,22028.0,FD52,C,168473.06
+Highway Improvement,District 05,Shelby,1866701C,2027,4,2,5,22028.0,FD52,C,168618.95
 Highway Improvement,District 01,McCracken,1989501C,2027,4,2,1,20010.0,FD52,C,2511114.11
 Highway Improvement,District 10,Magoffin,1526001U,2027,4,2,10,169.0,FD52,U,59595.74
 Highway Improvement,District 10,Powell,9441801U,2027,4,2,10,211.0,FD52,U,1557.67
@@ -147836,7 +147837,7 @@ Highway Improvement,District 11,Harlan,2027501C,2027,4,2,11,0.0,FD51,C,306.54
 Highway Improvement,District 10,Lee,KY058700,2027,4,2,0,0.0,FE04,0,1326.88
 Highway Improvement,District 11,Harlan,2147901C,2027,4,2,11,0.0,FD51,C,46014.24
 Bridge Asset Management,District 02,Daviess,1421201C,2027,4,2,2,10020.0,FD52,C,16505.36
-Highway Improvement,District 05,Jefferson,9028501C,2027,4,2,5,531.0,FD52,C,326360.86
+Highway Improvement,District 05,Jefferson,9028501C,2027,4,2,5,531.0,FD52,C,329098.36
 Highway Improvement,District 02,Union,5844402C,2027,4,2,2,310.0,FD52,C,1476358.78
 Highway Improvement,District 04,Nelson,9278301C,2027,4,2,4,8809.0,FD52,C,502704.91
 Highway Improvement,District 08,Pulaski,KY124700,2027,4,2,0,0.0,FE04,0,1595.6
@@ -147865,12 +147866,12 @@ Highway Improvement,District 09,Mason,KY316100,2027,4,2,0,0.0,FE01,0,1673.22
 Highway Improvement,District 11,Harlan,KY007200,2027,4,2,0,0.0,FE01,0,17903.48
 Highway Improvement,District 11,Bell,KY007400,2027,4,2,0,0.0,FE01,0,4300.88
 Highway Improvement,District 09,Carter,KY077300,2027,4,2,0,0.0,FE01,0,45046.96
-Highway Improvement,Various,Various,8534102C,2027,4,2,7,113.02,FD52,C,376661.9
+Highway Improvement,Various,Various,8534102C,2027,4,2,7,113.02,FD52,C,377001.2
 Safety,District 07,Montgomery,2102801C,2027,4,2,7,9043.0,FD52,C,455164.36
 Highway Improvement,District 02,Union,2113301C,2027,4,2,2,0.0,CB06,C,12541.69
 Highway Improvement,District 12,Knott,1510101C,2027,4,2,12,0.0,FD51,C,106823.09
-Highway Improvement,District 12,Johnson,2145201C,2027,4,2,12,0.0,FD51,C,8843.84
-Highway Improvement,District 12,Johnson,2144201C,2027,4,2,12,0.0,FD51,C,82035.49
+Highway Improvement,District 12,Johnson,2145201C,2027,4,2,12,0.0,FD51,C,21547.11
+Highway Improvement,District 12,Johnson,2144201C,2027,4,2,12,0.0,FD51,C,195241.11
 Highway Improvement,District 09,Lewis,KY114900,2027,4,2,0,0.0,FE01,0,6744.92
 Highway Improvement,District 09,Lewis,KY005900,2027,4,2,0,0.0,FE01,0,15077.1
 Highway Improvement,District 09,Mason,KY000900,2027,4,2,0,0.0,FE01,0,16473.8
@@ -147896,12 +147897,12 @@ Highway Improvement,District 12,Lawrence,2147601C,2027,4,2,12,0.0,FD51,C,3129.62
 Pavement Asset Management,District 04,Marion,2057301C,2027,4,2,4,0.0,FD05,C,101214.96
 Highway Improvement,District 11,Woodford,US042100,2027,4,2,0,0.0,FE04,0,23535.34
 Highway Improvement,District 01,Marshall,2013301C,2027,4,2,1,22073.0,FD52,C,288981.48
-Highway Improvement,District 05,Jefferson,1194501C,2027,4,2,5,8952.0,FD52,C,146272.68
+Highway Improvement,District 05,Jefferson,1194501C,2027,4,2,5,8952.0,FD52,C,157140.18
 Highway Improvement,District 12,Pike,US002300,2027,4,2,0,0.0,FE01,0,138715.66
 Highway Improvement,District 09,Greenup,KY069300,2027,4,2,0,0.0,FE01,0,6224.18
 Highway Improvement,District 11,Knox,2096001C,2027,4,2,11,0.0,FD52,C,34311.69
 Bridge Asset Management,District 06,Carroll,1921102C,2027,4,2,6,10037.0,FD55,C,12818.95
-Highway Improvement,District 12,Lawrence,2109401C,2027,4,2,12,0.0,FD51,C,2283.02
+Highway Improvement,District 12,Lawrence,2109401C,2027,4,2,12,0.0,FD51,C,19733.02
 Highway Improvement,District 11,Bell,2148001C,2027,4,2,11,0.0,FD51,C,320.0
 Highway Improvement,District 12,Letcher,KY080500,2027,4,2,0,0.0,FE01,0,2898.8
 Highway Improvement,District 11,Bell,2115301C,2027,4,2,11,0.0,FD52,C,2895.48
@@ -147921,10 +147922,10 @@ Highway Improvement,District 09,Greenup,KY000700,2027,4,2,0,0.0,FE01,0,36531.1
 Highway Improvement,District 06,Kenton,2035001C,2027,4,2,6,1624.0,FD06,C,1503496.34
 Highway Improvement,District 10,Morgan,8943201D,2027,4,2,10,8804.0,FD04,D,43.52
 Highway Improvement,District 12,Floyd,5735701U,2027,4,2,12,1.02,FD52,U,5515.51
-Bridge Asset Management,District 08,Cumberland,2074101C,2027,4,2,8,10053.0,FD55,C,444572.9
+Bridge Asset Management,District 08,Cumberland,2074101C,2027,4,2,8,10053.0,FD55,C,444746.62
 Highway Improvement,District 09,Greenup,KY000100,2027,4,2,0,0.0,FE01,0,22288.84
 Highway Improvement,District 05,Franklin,KY042000,2027,4,2,0,0.0,FE04,0,4842.12
-Safety,District 04,Hardin,2113001C,2027,4,2,4,975.0,FD52,C,173501.64
+Safety,District 04,Hardin,2113001C,2027,4,2,4,975.0,FD52,C,174103.76
 Pavement Asset Management,District 05,Henry,2091101C,2027,4,2,5,0.0,FD05,C,31872.33
 Bridge Asset Management,District 09,Carter,2115801C,2027,4,2,9,40000.0,FD52,C,156171.41
 Bridge Asset Management,District 04,Grayson,2095002C,2027,4,2,4,10048.0,FD55,C,19940.3
@@ -147938,11 +147939,11 @@ Highway Improvement,District 10,Breathitt,9357401R,2027,4,2,10,3203.3,FD52,R,248
 Highway Improvement,District 12,Pike,US002300,2027,4,2,0,0.0,FE04,0,54403.16
 Highway Improvement,District 09,Carter,KY017400,2027,4,2,0,0.0,FE01,0,3653.86
 Highway Improvement,District 10,Menifee,1547001D,2027,4,2,10,80200.0,FD52,D,1196.46
-Highway Improvement,District 04,Hardin,1435401C,2027,4,2,4,171.0,FD52,C,1420941.7
+Highway Improvement,District 04,Hardin,1435401C,2027,4,2,4,171.0,FD52,C,1421007.23
 Highway Improvement,District 05,Jefferson,2095301D,2027,4,2,5,80352.0,FD52,D,1294.42
 Highway Improvement,District 09,Carter,1525701R,2027,4,2,9,80200.0,FD52,R,1906.85
 Highway Improvement,District 10,Magoffin,1526001C,2027,4,2,10,169.0,FD58,C,2066602.91
-Highway Improvement,District 10,Magoffin,1526001C,2027,4,2,10,169.0,FD52,C,2069124.05
+Highway Improvement,District 10,Magoffin,1526001C,2027,4,2,10,169.0,FD52,C,2069136.91
 Highway Improvement,District 03,Butler,2078001C,2027,4,2,3,22311.0,FD52,C,13507.72
 Highway Improvement,District 11,Knox,2148901C,2027,4,2,11,0.0,FD52,C,7351.74
 Bridge Asset Management,District 09,Nicholas,2084702C,2027,4,2,9,10094.0,FD55,C,6233.55
@@ -147978,7 +147979,7 @@ Highway Improvement,District 03,Warren,1899101C,2027,4,2,3,940.0,FD52,C,2400.96
 Highway Improvement,District 09,Fleming,KY0032X0,2027,4,2,0,0.0,FE04,0,1652.62
 Highway Improvement,District 09,Lewis,KY252300,2027,4,2,0,0.0,FE01,0,3073.86
 Highway Improvement,District 11,Knox,US0025E0,2027,4,2,0,0.0,FE01,0,1661.24
-Safety,District 07,Fayette,9528005C,2027,4,2,7,9012.0,FD52,C,566183.11
+Safety,District 07,Fayette,9528005C,2027,4,2,7,9012.0,FD52,C,566582.5
 Highway Improvement,District 12,Letcher,KY0015X0,2027,4,2,0,0.0,FE01,0,26773.5
 Pavement Asset Management,District 12,Knott,2046601C,2027,4,2,12,176.0,FD52,C,24106.97
 Highway Improvement,District 12,Knott,2105301C,2027,4,2,12,0.0,FD52,C,69290.99
@@ -147993,14 +147994,14 @@ Highway Improvement,District 12,Pike,2100801C,2027,4,2,12,0.0,FD51,C,977.29
 Highway Improvement,District 09,Lewis,KY005900,2027,4,2,0,0.0,FE04,0,1134.24
 Highway Improvement,District 05,Bullitt,KY267300,2027,4,2,0,0.0,FE04,0,2859.1
 Highway Improvement,District 01,Graves,2013201C,2027,4,2,1,22072.0,FD52,C,2644504.92
-Pavement Asset Management,District 05,Oldham,2091901C,2027,4,2,5,0.0,FD05,C,64128.71
+Pavement Asset Management,District 05,Oldham,2091901C,2027,4,2,5,0.0,FD05,C,66836.21
 Highway Improvement,District 09,Fleming,KY011100,2027,4,2,0,0.0,FE04,0,372.42
 Highway Improvement,District 04,Larue,KY047000,2027,4,2,0,0.0,FE04,0,1713.54
 Pavement Asset Management,District 06,Boone,1944501C,2027,4,2,6,0.0,FD05,C,15.11
 Pavement Asset Management,District 06,Boone,2058301C,2027,4,2,6,0.0,FD05,C,6134.25
 Highway Improvement,District 12,Martin,1613901C,2027,4,2,12,0.0,FD52,C,180.0
 Highway Improvement,District 12,Martin,1613901C,2027,4,2,12,0.0,EK51,C,45.0
-Highway Improvement,District 07,Fayette,9394301C,2027,4,2,7,8909.2,FD52,C,4475901.24
+Highway Improvement,District 07,Fayette,9394301C,2027,4,2,7,8909.2,FD52,C,4476493.92
 Highway Improvement,District 12,Pike,2068101C,2027,4,2,12,20003.0,FD52,C,258257.0
 Bridge Asset Management,District 05,Shelby,2073002C,2027,4,2,5,10086.0,FD55,C,11453.0
 Highway Improvement,Various,Various,2108512P,2027,4,2,99,0.0,FD52,P,76446.79
@@ -148011,7 +148012,7 @@ Highway Improvement,District 04,Meade,KY031300,2027,4,2,0,0.0,FE04,0,35352.56
 Highway Improvement,District 05,Jefferson,KY106500,2027,4,2,0,0.0,FE04,0,7958.86
 Highway Improvement,District 05,Oldham,KY285700,2027,4,2,0,0.0,FE04,0,3843.74
 Safety,District 04,Hardin,1891001C,2027,4,2,4,954.0,FD52,C,22008.07
-Highway Improvement,District 05,Oldham,7773203C,2027,4,2,5,234.0,FD52,C,756051.51
+Highway Improvement,District 05,Oldham,7773203C,2027,4,2,5,234.0,FD52,C,756667.27
 Highway Improvement,District 09,Nicholas,KY001300,2027,4,2,0,0.0,FE01,0,2989.14
 Highway Improvement,District 12,Johnson,2144202C,2027,4,2,12,0.0,FD51,C,7463.75
 Pavement Asset Management,District 04,Breckinridge,2094001C,2027,4,2,4,0.0,FD05,C,23122.43
@@ -148031,13 +148032,13 @@ Pavement Asset Management,District 03,Todd,2092701C,2027,4,2,3,0.0,FD05,C,1248.5
 Highway Improvement,District 03,Monroe,KY067800,2027,4,2,0,0.0,FE02,0,1068.22
 Highway Improvement,District 08,Russell,6903803D,2027,4,2,8,115.1,FD52,D,12075.7
 Safety,District 07,Fayette,2101801C,2027,4,2,7,981.0,FD52,C,81.0
-Bridge Asset Management,District 04,Grayson,2095001C,2027,4,2,4,10048.0,FD55,C,312044.99
+Bridge Asset Management,District 04,Grayson,2095001C,2027,4,2,4,10048.0,FD55,C,312218.72
 Highway Improvement,Various,Various,1546801D,2027,4,2,10,205.0,FD52,D,57113.66
 Highway Improvement,District 06,Campbell,2004301C,2027,4,2,6,20014.0,FD52,C,26440.37
 Pavement Asset Management,District 04,Hardin,2056401C,2027,4,2,4,0.0,FD05,C,45726.65
 Highway Improvement,District 01,Fulton,9012301C,2027,4,2,1,8853.0,FD52,C,194866.17
 Bridge Asset Management,District 01,Graves,2094902C,2027,4,2,1,10129.0,FD55,C,9964.79
-Highway Improvement,District 12,Pike,2150701C,2027,4,2,12,0.0,FD51,C,868.08
+Highway Improvement,District 12,Pike,2150701C,2027,4,2,12,0.0,FD51,C,70921.22
 Highway Improvement,District 04,Nelson,KY060500,2027,4,2,0,0.0,FE04,0,32531.04
 Highway Improvement,District 04,Green,2028701C,2027,4,2,4,0.0,FD52,C,44138.02
 Highway Improvement,District 04,Grayson,9362101C,2027,4,2,0,0.0,FD06,C,942566.93
@@ -148052,9 +148053,9 @@ Safety,District 02,Muhlenberg,2102401C,2027,4,2,2,947.01,FD52,C,3911.78
 Highway Improvement,District 02,Muhlenberg,1357401C,2027,4,2,2,80100.0,FD52,C,40522.37
 Highway Improvement,District 02,Ohio,US023100,2027,4,2,0,0.0,FE04,0,3991.34
 Highway Improvement,District 09,Lewis,KY047400,2027,4,2,0,0.0,FE01,0,40.0
-Bridge Asset Management,District 05,Franklin,1906102C,2027,4,2,5,10041.0,FD55,C,25.9
+Bridge Asset Management,District 05,Franklin,1906102C,2027,4,2,5,10041.0,FD55,C,576.95
 Highway Improvement,District 10,Perry,1065501R,2027,4,2,10,209.0,FD52,R,73328.62
-Pavement Asset Management,District 05,Shelby,2092501C,2027,4,2,5,0.0,FD05,C,216101.22
+Pavement Asset Management,District 05,Shelby,2092501C,2027,4,2,5,0.0,FD05,C,232493.72
 Pavement Asset Management,District 11,Laurel,2093001C,2027,4,2,11,0.0,FD05,C,69530.88
 Highway Improvement,District 11,Leslie,1704001C,2027,4,2,11,0.0,CB01,C,1.86
 Highway Improvement,Various,Various,8659101D,2027,4,2,99,397.0,FD04,D,504643.72
@@ -150625,7 +150626,7 @@ Pavement Asset Management,District 04,Grayson,2082801C,2027,4,2,4,0.0,FD05,C,559
 Highway Improvement,District 05,Jefferson,1314501D,2027,4,2,5,193.0,FD04,D,120.24
 Highway Improvement,Various,Various,6566401D,2027,4,2,5,373.0,FD04,D,10719.58
 Highway Improvement,District 05,Jefferson,7839101U,2027,4,2,5,8203.0,FD04,U,998.3
-Highway Improvement,District 05,Franklin,1936601C,2027,4,2,5,586.0,FD04,C,8919.58
+Highway Improvement,District 05,Franklin,1936601C,2027,4,2,5,586.0,FD04,C,48659.58
 Highway Improvement,District 05,Jefferson,1552602C,2027,4,2,5,80250.0,FD04,C,600.96
 Highway Improvement,District 05,Jefferson,8626808R,2027,4,2,5,3030.4,FD52,R,677.08
 Highway Improvement,District 05,Jefferson,2067101D,2027,4,2,5,554.0,FD52,D,3249.69
@@ -150675,7 +150676,7 @@ Highway Improvement,District 07,Fayette,KY000400,2027,4,2,0,0.0,FE04,0,3515.22
 Highway Improvement,District 07,Woodford,KY003300,2027,4,2,0,0.0,FE04,0,617.9
 Highway Improvement,District 07,Woodford,KY196500,2027,4,2,0,0.0,FE04,0,2214.64
 Highway Improvement,District 07,Clark,KY196000,2027,4,2,0,0.0,FE04,0,251.26
-Highway Improvement,District 11,Woodford,US042100,2027,4,2,0,0.0,FE01,0,76736.96
+Highway Improvement,District 11,Woodford,US042100,2027,4,2,0,0.0,FE01,0,81536.96
 Highway Improvement,District 07,Fayette,KY197000,2027,4,2,0,0.0,FE04,0,1220.16
 Safety,District 07,Bourbon,1358801R,2027,4,2,7,9024.0,FD04,R,116.87
 Pavement Asset Management,District 07,Clark,2169501C,2027,4,2,7,0.0,FD05,C,442057.4
@@ -150683,7 +150684,7 @@ Highway Improvement,District 07,Madison,KY005200,2027,4,2,0,0.0,FE01,0,34393.28
 Highway Improvement,District 07,Woodford,KY016900,2027,4,2,0,0.0,FE01,0,14963.72
 Pavement Asset Management,District 07,Fayette,2094601C,2027,4,2,7,0.0,FD05,C,21533.71
 Pavement Asset Management,District 07,Madison,2091801C,2027,4,2,7,0.0,FD05,C,87436.79
-Highway Improvement,District 07,Pendleton,US002700,2027,4,2,0,0.0,FE01,0,1654.54
+Highway Improvement,District 07,Pendleton,US002700,2027,4,2,0,0.0,FE01,0,1663.54
 Highway Improvement,District 07,Garrard,KY135500,2027,4,2,0,0.0,FE01,0,925.48
 Highway Improvement,District 07,Anderson,US0127B0,2027,4,2,0,0.0,FE01,0,885.84
 Highway Improvement,District 07,Mercer,KY039000,2027,4,2,0,0.0,FE04,0,221.44
@@ -150718,7 +150719,7 @@ Highway Improvement,District 09,Greenup,KY104300,2027,4,2,0,0.0,FE01,0,14512.64
 Highway Improvement,District 09,Greenup,KY145800,2027,4,2,0,0.0,FE01,0,6499.78
 Highway Improvement,District 09,Greenup,KY145900,2027,4,2,0,0.0,FE01,0,16541.92
 Highway Improvement,District 09,Greenup,KY078400,2027,4,2,0,0.0,FE01,0,45439.76
-Highway Improvement,District 09,Carter,2117401C,2027,4,2,9,0.0,FD51,C,15976.76
+Highway Improvement,District 09,Carter,2117401C,2027,4,2,9,0.0,FD51,C,24181.24
 Highway Improvement,District 09,Greenup,KY310500,2027,4,2,0,0.0,FE01,0,1728.7
 Pavement Asset Management,District 09,Greenup,2090701C,2027,4,2,9,0.0,FD05,C,43837.39
 Highway Improvement,District 09,Boyd,KY075700,2027,4,2,0,0.0,FE01,0,8084.06
@@ -150915,7 +150916,7 @@ Highway Improvement,District 05,Jefferson,8626805C,2027,4,2,5,3030.2,FD52,C,-365
 Highway Improvement,District 05,Oldham,7921601R,2027,4,2,5,441.01,FD52,R,2221.8
 Highway Improvement,District 05,Jefferson,8768103C,2027,4,2,5,8703.0,FD52,C,320.45
 Highway Improvement,District 05,Jefferson,9119901R,2027,4,2,5,518.0,FD52,R,750.9
-Highway Improvement,Various,Various,1291101D,2027,4,2,99,927.0,FD52,D,75668.37
+Highway Improvement,Various,Various,1291101D,2027,4,2,99,927.0,FD52,D,77927.32
 Highway Improvement,District 05,Jefferson,9405402C,2027,4,2,5,3217.0,FD52,C,240.39
 Safety,District 05,Jefferson,2060701U,2027,4,2,5,9047.0,FD52,U,1545.11
 Bridge Asset Management,District 05,Bullitt,1564401C,2027,4,2,5,10035.0,FD52,C,2585.27
@@ -150948,7 +150949,7 @@ Highway Improvement,District 06,Kenton,9441001C,2027,4,2,6,444.0,FD52,C,14296.32
 Highway Improvement,District 07,Montgomery,8027701R,2027,4,2,7,240.0,FD52,R,1013.52
 Highway Improvement,District 07,Fayette,8664701U,2027,4,2,7,412.0,FD52,U,4940.73
 Highway Improvement,District 07,Jessamine,8675802U,2027,4,2,7,414.0,FD52,U,341328.36
-Bridge Asset Management,Various,Various,1974801C,2027,4,2,7,10045.0,FD55,C,244518.51
+Bridge Asset Management,Various,Various,1974801C,2027,4,2,7,10045.0,FD55,C,244709.96
 Highway Improvement,District 07,Fayette,9338401U,2027,4,2,7,8902.0,FD52,U,5152.8
 Highway Improvement,District 07,Fayette,9394301U,2027,4,2,7,8909.3,FD52,U,495.91
 Highway Improvement,District 07,Fayette,9394301D,2027,4,2,7,8909.0,FD52,D,449254.52
@@ -151048,7 +151049,7 @@ Highway Improvement,District 11,Knox,1627801D,2027,4,2,11,182.0,FD52,D,1469.06
 Highway Improvement,Various,Various,1280501D,2027,4,2,3,80050.0,FD52,D,4054.55
 Highway Improvement,Various,Various,7200311D,2027,4,2,6,17.0,FD52,D,2353.67
 Highway Improvement,Various,Various,8664701D,2027,4,2,7,412.0,FD52,D,2951.4
-Highway Improvement,District 04,Washington,1284101D,2027,4,2,4,164.0,FD04,D,3760.65
+Highway Improvement,District 04,Washington,1284101D,2027,4,2,4,164.0,FD04,D,3999.31
 Bridge Asset Management,Various,Various,9224202D,2027,4,2,2,1088.2,FD52,D,3716.52
 Highway Improvement,Various,Various,1563601D,2027,4,2,6,447.0,FD52,D,561.24
 Highway Improvement,Various,Various,9541701D,2027,4,2,5,805.0,FD52,D,2846.06
@@ -151057,7 +151058,7 @@ Highway Improvement,Various,Various,8768803D,2027,4,2,7,8705.1,FD52,D,184.21
 Bridge Asset Management,Various,Various,9517601D,2027,4,2,6,1084.0,FD52,D,17049.53
 Highway Improvement,Various,Various,8315301D,2027,4,2,11,8515.0,FD52,D,18516.64
 Highway Improvement,Various,Various,1249801D,2027,4,2,7,80000.0,FD52,D,1908.1
-Highway Improvement,Various,Washington,1284102D,2027,4,2,4,164.0,FD52,D,138068.69
+Highway Improvement,Various,Washington,1284102D,2027,4,2,4,164.0,FD52,D,148628.16
 Highway Improvement,Various,Various,1531201D,2027,4,2,4,8308.1,FD52,D,1323.6
 Bridge Asset Management,District 06,Bracken,2003601C,2027,4,2,6,10031.0,FD55,C,2882.35
 Pavement Asset Management,District 09,Greenup,2046101C,2027,4,2,9,415.0,FD52,C,43.76
@@ -151067,8 +151068,8 @@ Bridge Asset Management,District 01,Hickman,1891901C,2027,4,2,1,10128.0,FD52,C,2
 Highway Improvement,District 06,Pendleton,1012301C,2027,4,2,2,0.0,FD04,C,43.76
 Bridge Asset Management,District 12,Letcher,1811201C,2027,4,2,12,10017.0,FD55,C,257211.91
 Bridge Asset Management,District 07,Madison,2012201C,2027,4,2,7,10015.0,FD55,C,576759.92
-Highway Improvement,District 02,Caldwell,1989601C,2027,4,2,2,20062.0,FD52,C,160686.06
-Bridge Asset Management,District 06,Kenton,1209901C,2027,4,2,6,1086.0,FD52,C,24454.65
+Highway Improvement,District 02,Caldwell,1989601C,2027,4,2,2,20062.0,FD52,C,161352.95
+Bridge Asset Management,District 06,Kenton,1209901C,2027,4,2,6,1086.0,FD52,C,24646.1
 Highway Improvement,District 09,Boyd,8292801C,2027,4,2,9,8400.0,FD52,C,43.72
 Highway Improvement,District 01,McCracken,6934201C,2027,4,2,1,115.0,FD52,C,986729.57
 Highway Improvement,District 01,Calloway,1553402R,2027,4,2,1,3019.0,FD52,R,1245.04
@@ -151084,7 +151085,7 @@ Highway Improvement,District 12,Pike,8943601R,2027,4,2,12,198.0,FD52,R,1246.12
 Bridge Asset Management,District 06,Campbell,1872401C,2027,4,2,6,10051.0,FD52,C,420.67
 Highway Improvement,District 02,Daviess,1339801C,2027,4,2,2,352.15,FD52,C,258.0
 Highway Improvement,District 11,Knox,1355801U,2027,4,2,11,80155.0,FD52,U,878.81
-Highway Improvement,District 04,Hardin,1435401U,2027,4,2,4,171.0,FD52,U,913.34
+Highway Improvement,District 04,Hardin,1435401U,2027,4,2,4,171.0,FD52,U,3612.22
 Highway Improvement,District 07,Mercer,1340201C,2027,4,2,7,352.15,FD52,C,157.03
 Highway Improvement,District 02,Hopkins,1341101C,2027,4,2,2,352.15,FD52,C,336.53
 Highway Improvement,District 08,Pulaski,6780806U,2027,4,2,8,59.6,FD52,U,1826.68
@@ -151097,7 +151098,7 @@ Highway Improvement,District 09,Fleming,9338201U,2027,4,2,9,8903.0,FD52,U,2489.2
 Highway Improvement,District 10,Wolfe,8685201U,2027,4,2,10,168.0,FD52,U,1869.58
 Bridge Asset Management,District 01,Ballard,8580701U,2027,4,2,1,1140.01,FD52,U,6834.81
 Highway Improvement,District 07,Montgomery,8027701U,2027,4,2,7,240.0,FD52,U,2470.17
-Highway Improvement,District 11,Laurel,1219001D,2027,4,2,11,365.0,FD52,D,1087.18
+Highway Improvement,District 11,Laurel,1219001D,2027,4,2,11,365.0,FD52,D,1293.89
 Highway Improvement,District 02,Hancock,8687001U,2027,4,2,2,226.0,FD52,U,831.64
 Highway Improvement,District 05,Oldham,8930701U,2027,4,2,5,483.0,FD52,U,509.14
 Highway Improvement,District 03,Metcalfe,9021702U,2027,4,2,3,8706.2,FD52,U,1128.37
@@ -151107,13 +151108,13 @@ Highway Improvement,District 07,Madison,8105501U,2027,4,2,7,235.0,FD52,U,1582.01
 Highway Improvement,District 04,Grayson,9362101U,2027,4,2,4,8954.0,FD52,U,2998.52
 Highway Improvement,District 01,Calloway,7697801U,2027,4,2,1,120.0,FD52,U,1663.28
 Highway Improvement,District 05,Oldham,7921601U,2027,4,2,5,441.01,FD52,U,1818.4
-Highway Improvement,Various,Various,8491001D,2027,4,2,99,0.0,FD52,D,2379.34
+Highway Improvement,Various,Various,8491001D,2027,4,2,99,0.0,FD52,D,3185.86
 Highway Improvement,Various,Various,THSP26IDC,2027,4,2,0,0.0,FL03,D,5676.6
 Pavement Asset Management,District 05,Jefferson,1377701R,2027,4,2,5,20061.0,FD52,R,216.69
 Highway Improvement,Various,Various,THSP26OPC,2027,4,2,0,0.0,FL03,P,5620.99
-Highway Improvement,District 05,Jefferson,8556401R,2027,4,2,5,804.0,FD52,R,61.91
+Highway Improvement,District 05,Jefferson,8556401R,2027,4,2,5,804.0,FD52,R,132.27
 Highway Improvement,District 10,Perry,8658101U,2027,4,2,10,158.0,FD52,U,4917.76
-Highway Improvement,District 11,Laurel,8742701R,2027,4,2,11,187.0,FD52,R,34923.56
+Highway Improvement,District 11,Laurel,8742701R,2027,4,2,11,187.0,FD52,R,36776.88
 Highway Improvement,Various,Various,THSP26IIC,2027,4,2,0,0.0,FL03,I,5365.63
 Highway Improvement,District 08,Clinton,9167301U,2027,4,2,8,8601.21,FD52,U,1826.68
 Highway Improvement,District 11,Bell,2148101C,2027,4,2,11,0.0,FD51,C,25813.14
@@ -151122,7 +151123,7 @@ Highway Improvement,District 11,Bell,2144901C,2027,4,2,11,0.0,FD51,C,2724.25
 Highway Improvement,District 11,Harlan,2117601C,2027,4,2,11,0.0,FD51,C,39523.22
 Highway Improvement,District 11,Leslie,1393301C,2027,4,2,11,0.0,FD51,C,53462.65
 Highway Improvement,District 11,Harlan,2109601C,2027,4,2,11,0.0,FD51,C,17453.74
-Highway Improvement,District 11,Harlan,2149801C,2027,4,2,11,0.0,FD51,C,191768.11
+Highway Improvement,District 11,Harlan,2149801C,2027,4,2,11,0.0,FD51,C,382636.31
 Highway Improvement,District 11,Harlan,2079101C,2027,4,2,11,0.0,FD51,C,6395.04
 Highway Improvement,District 11,Harlan,2145701C,2027,4,2,11,0.0,FD51,C,114641.81
 Highway Improvement,District 11,Clay,2052801C,2027,4,2,11,0.0,FD51,C,970.78
@@ -151152,11 +151153,11 @@ Highway Improvement,District 04,Hardin,1706501D,2027,4,2,4,202.0,FD04,D,8322.53
 Highway Improvement,District 04,Hart,2181901C,2027,4,2,4,0.0,CB06,C,64076.81
 Highway Improvement,District 04,Hardin,2174801C,2027,4,2,4,0.0,CB06,C,24316.45
 Pavement Asset Management,District 04,Taylor,2081701C,2027,4,2,4,0.0,FD05,C,2324.04
-Bridge Asset Management,District 05,Trimble,2036901C,2027,4,2,5,10138.0,FD52,C,147.19
+Bridge Asset Management,District 05,Trimble,2036901C,2027,4,2,5,10138.0,FD52,C,25584.69
 Highway Improvement,District 05,Franklin,1493704R,2027,4,2,5,582.2,FD52,R,278.34
 Highway Improvement,District 05,Jefferson,2090101D,2027,4,2,5,610.0,FD52,D,206.96
-Highway Improvement,District 05,Spencer,2049401C,2027,4,2,5,0.0,CB06,C,561.84
-Highway Improvement,District 05,Shelby,2048601C,2027,4,2,5,0.0,CB06,C,276.72
+Highway Improvement,District 05,Spencer,2049401C,2027,4,2,5,0.0,CB06,C,6051.84
+Highway Improvement,District 05,Shelby,2048601C,2027,4,2,5,0.0,CB06,C,31884.22
 Highway Improvement,District 05,Jefferson,2004601C,2027,4,2,5,0.0,CB06,C,166.78
 Highway Improvement,District 05,Jefferson,1314501C,2027,4,2,5,193.0,FD04,C,22573.55
 Highway Improvement,District 05,Jefferson,US0060A0,2027,4,2,0,0.0,FE02,0,1061.14
@@ -151170,7 +151171,7 @@ Highway Improvement,District 05,Oldham,KY322300,2027,4,2,0,0.0,FE04,0,1346.86
 Highway Improvement,District 05,Jefferson,KY186500,2027,4,2,0,0.0,FE04,0,956.64
 Highway Improvement,District 06,Owen,8049801C,2027,4,2,6,198.0,FD04,C,73075.31
 Highway Improvement,District 06,Kenton,KY023600,2027,4,2,0,0.0,FE04,0,1311.84
-Highway Improvement,District 06,Kenton,I0027500,2027,4,2,0,0.0,FE04,0,8389.64
+Highway Improvement,District 06,Kenton,I0027500,2027,4,2,0,0.0,FE04,0,8420.62
 Highway Improvement,District 06,Owen,KY002200,2027,4,2,0,0.0,FE04,0,3688.54
 Highway Improvement,District 06,Pendleton,KY017700,2027,4,2,0,0.0,FE04,0,970.38
 Highway Improvement,District 06,Kenton,KY204300,2027,4,2,0,0.0,FE04,0,812.18
@@ -151285,7 +151286,7 @@ Highway Improvement,District 12,Johnson,1355701D,2027,4,2,12,194.0,FD04,D,453.9
 Highway Improvement,District 12,Knott,7958801U,2027,4,2,12,8200.0,FD04,U,26.48
 Highway Improvement,District 12,Pike,6739801C,2027,4,2,12,2.98,FD04,C,18.04
 Highway Improvement,District 12,Pike,6739801C,2027,4,2,12,298.2,FD04,C,18.04
-Highway Improvement,District 12,Floyd,8742602U,2027,4,2,12,195.0,FD52,U,175.62
+Highway Improvement,District 12,Floyd,8742602U,2027,4,2,12,195.0,FD52,U,169751.57
 Highway Improvement,District 12,Pike,2069801C,2027,4,2,12,0.0,FD52,C,47.92
 Highway Improvement,District 01,McCracken,8687702D,2027,4,2,1,153.0,FD52,D,24.36
 Highway Improvement,District 08,Rockcastle,1498301D,2027,4,2,8,80106.0,FD04,D,14942.99
@@ -151303,7 +151304,7 @@ Pavement Asset Management,District 05,Jefferson,2180201C,2027,4,2,5,20073.0,FD52
 Highway Improvement,District 05,Jefferson,1046902N,2027,4,2,5,3719.0,FD52,N,14.3
 Highway Improvement,District 05,Oldham,1705602D,2027,4,2,5,588.0,FD52,D,0.11
 Highway Improvement,District 05,Shelby,1493002D,2027,4,2,5,3042.0,FD52,D,350.39
-Pavement Asset Management,District 07,Woodford,2180701C,2027,4,2,7,20054.0,FD52,C,66132.22
+Pavement Asset Management,District 07,Woodford,2180701C,2027,4,2,7,20054.0,FD52,C,66354.67
 Safety,District 07,Scott,1076102R,2027,4,2,7,9018.02,FD52,R,208.04
 Safety,District 07,Scott,2115001C,2027,4,2,7,984.0,FD52,C,640.58
 Safety,District 07,Garrard,2113401C,2027,4,2,7,989.0,FD52,C,181.91
@@ -151337,6 +151338,8 @@ Highway Improvement,Various,Various,2157001D,2027,4,2,1,80408.0,FD52,D,238.46
 Highway Improvement,Various,Various,1556201D,2027,4,2,8,80150.0,FD52,D,135.9
 Highway Improvement,Various,Various,1237001D,2027,4,2,1,398.0,FD52,D,20172.77
 Highway Improvement,Various,Various,1605601D,2027,4,2,1,80203.0,FD52,D,172.82
+Safety,District 07,Fayette,2085301C,2027,4,2,7,9042.0,FD52,C,198.11
+Highway Improvement,District 07,Montgomery,2034401C,2027,4,2,7,22043.0,FD52,C,228072.26
 Highway Improvement,District 02,Daviess,8503502U,2027,4,2,2,8300.3,FD52,U,10871.42
 Highway Improvement,District 07,Bourbon,8768802U,2027,4,2,7,8705.0,FD52,U,468.24
 Highway Improvement,District 05,Franklin,9541701U,2027,4,2,5,805.0,FD52,U,143.41
@@ -151352,11 +151355,13 @@ Highway Improvement,District 01,McCracken,6934202U,2027,4,2,1,115.1,FD52,U,296.7
 Highway Improvement,District 09,Rowan,1203501U,2027,4,2,9,8915.0,FD52,U,187.51
 Highway Improvement,District 04,Hardin,1891001U,2027,4,2,4,954.0,FD52,U,187.51
 Highway Improvement,District 06,Kenton,7200301U,2027,4,2,6,17.0,FD52,U,957.46
-Highway Improvement,District 04,Hardin,8383101U,2027,4,2,4,153.01,FD52,U,375.01
+Highway Improvement,District 04,Hardin,8383101U,2027,4,2,4,153.01,FD52,U,46459.13
 Highway Improvement,District 09,Carter,1525701U,2027,4,2,9,80200.0,FD52,U,292.76
-Highway Improvement,Various,Various,THSP27IIC,2027,4,2,0,0.0,FL03,I,198.38
-Highway Improvement,Various,Various,THSP27PA,2027,4,2,0,0.0,FL03,A,1619.2
-Highway Improvement,Various,Various,THSP27IDC,2027,4,2,0,0.0,FL03,D,44.82
+Highway Improvement,Various,Various,9269901N,2027,4,2,99,0.0,FD52,N,3320.12
+Highway Improvement,Various,Various,THSP27IDC,2027,4,2,0,0.0,FL03,D,2320.98
+Highway Improvement,District 08,Pulaski,6780813R,2027,4,2,8,59.25,FD52,R,144.78
+Highway Improvement,Various,Various,THSP27PA,2027,4,2,0,0.0,FL03,A,9520.19
+Highway Improvement,Various,Various,THSP27IIC,2027,4,2,0,0.0,FL03,I,2187.38
 Highway Improvement,District 12,Lawrence,2117501C,2027,4,2,12,0.0,FD51,C,275.31
 Highway Improvement,District 12,Letcher,2118701C,2027,4,2,12,0.0,FD51,C,632.52
 Highway Improvement,District 12,Letcher,1841801C,2027,4,2,12,0.0,FD51,C,54326.01
@@ -151429,7 +151434,7 @@ Highway Improvement,District 10,Magoffin,2119001C,2027,2,1,10,0.0,FD51,C,34269.3
 Highway Improvement,District 10,Magoffin,2150001C,2027,1,1,10,0.0,FD51,C,0.0
 Highway Improvement,District 10,Morgan,2154701C,2027,4,2,10,0.0,FD51,C,0.0
 Highway Improvement,District 10,Morgan,2154601C,2027,4,2,10,0.0,FD51,C,35412.0
-Highway Improvement,District 10,Morgan,2022301C,2027,4,2,10,0.0,CB01,C,6213.6
+Highway Improvement,District 10,Morgan,2022301C,2027,4,2,10,0.0,CB01,C,20213.6
 Highway Improvement,District 10,Magoffin,2150001C,2027,2,1,10,0.0,FD51,C,30334.74
 Highway Improvement,District 09,Bath,1721201C,2027,4,2,9,0.0,FD05,C,40000.0
 Highway Improvement,District 07,Montgomery,6901101C,2027,1,1,7,250.1,FD52,C,0.0
@@ -151453,7 +151458,6 @@ Safety,District 10,Powell,1841101C,2027,1,1,10,941.0,FD52,C,0.0
 Bridge Asset Management,District 09,Carter,1804601C,2027,1,1,9,10077.0,FD55,C,0.0
 Bridge Asset Management,District 10,Estill,1531001C,2027,1,1,10,10050.0,FD55,C,0.0
 Highway Improvement,District 09,Clark,2034501C,2027,4,2,9,22044.0,FD52,C,60173.23
-Highway Improvement,District 07,Montgomery,2034401C,2027,4,2,7,22043.0,FD52,C,228035.03
 Pavement Asset Management,District 07,Montgomery,1894501C,2027,1,1,7,0.0,FD05,C,0.0
 Pavement Asset Management,District 10,Menifee,1942601C,2027,1,1,10,0.0,FD05,C,3126.94
 Highway Improvement,District 10,Menifee,1983901C,2027,1,1,10,0.0,CB06,C,1931.76
@@ -151614,7 +151618,7 @@ Highway Improvement,District 12,Knott,1755401C,2027,4,2,12,0.0,FD51,C,1914.75
 Highway Improvement,District 12,Knott,2059101C,2027,4,2,12,0.0,FD52,C,801.0
 Highway Improvement,District 10,Estill,2048801C,2027,4,2,10,0.0,CB06,C,440.0
 Pavement Asset Management,District 12,Knott,1916901C,2027,4,2,12,0.0,FD05,C,3400.0
-Highway Improvement,District 12,Pike,2158601C,2027,4,2,12,0.0,FD51,C,10670.0
+Highway Improvement,District 12,Pike,2158601C,2027,4,2,12,0.0,FD51,C,167127.25
 Bridge Asset Management,District 12,Knott,1778401C,2027,4,2,12,0.0,EK58,C,187.85
 Bridge Asset Management,District 12,Knott,1778401C,2027,4,2,12,0.0,FD51,C,1257.15
 Highway Improvement,District 07,Fayette,8534102D,2027,4,2,7,113.0,FD04,D,43340.0
@@ -151776,7 +151780,7 @@ Highway Improvement,District 09,Nicholas,2134401C,2027,2,1,9,0.0,FD14,C,0.0
 Highway Improvement,Various,Various,THSP26PT,2027,1,1,0,0.0,FL03,T,139581.13
 Highway Improvement,Various,Various,THSP26PT,2027,2,1,0,0.0,FL03,T,195154.22
 Highway Improvement,Various,Various,THSP26PT,2027,3,1,0,0.0,FL03,T,222913.56
-Highway Improvement,Various,Various,THSP26PT,2027,4,2,0,0.0,FL03,T,278815.7
+Highway Improvement,Various,Various,THSP26PT,2027,4,2,0,0.0,FL03,T,315461.16
 Highway Improvement,District 09,Rowan,8054301U,2027,1,1,9,192.01,FD52,U,0.0
 Highway Improvement,District 04,Grayson,1902301C,2027,1,1,4,0.0,FD15,C,16392.74
 Highway Improvement,District 04,Grayson,2141101C,2027,1,1,4,0.0,FD15,C,0.0
@@ -151859,7 +151863,7 @@ Highway Improvement,District 03,Allen,1547501R,2027,1,1,3,80206.0,FD04,R,0.0
 Highway Improvement,District 10,Magoffin,1064701R,2027,3,1,10,213.0,FD52,R,4000.0
 Highway Improvement,Various,Various,THSP26B2,2027,1,1,0,0.0,FL03,2,19723.46
 Highway Improvement,Various,Various,THSP26B2,2027,2,1,0,0.0,FL03,2,30616.64
-Highway Improvement,Various,Various,THSP26B2,2027,4,2,0,0.0,FL03,2,19064.97
+Highway Improvement,Various,Various,THSP26B2,2027,4,2,0,0.0,FL03,2,30999.58
 Highway Improvement,Various,Various,THSP26B2,2027,3,1,0,0.0,FL03,2,28702.24
 Highway Improvement,District 07,Jessamine,KY003900,2027,1,1,0,0.0,FE04,0,398.94
 Highway Improvement,District 07,Madison,KY005200,2027,2,1,0,0.0,FE04,0,221.24
@@ -152093,6 +152097,7 @@ Highway Improvement,District 11,Leslie,KY069900,2027,4,2,0,0.0,FE01,0,24570.0
 Highway Improvement,District 11,Leslie,KY011800,2027,4,2,0,0.0,FE01,0,1915.5
 Highway Improvement,District 11,Leslie,KY040600,2027,4,2,0,0.0,FE01,0,3072.0
 Highway Improvement,District 12,Pike,KY341900,2027,4,2,0,0.0,FE01,0,2158.2
+Highway Improvement,District 11,Leslie,HR900600,2027,4,2,0,0.0,FE01,0,9150.0
 Pavement Asset Management,District 12,Lawrence,1570301C,2027,1,1,12,4379.0,FD04,C,0.0
 Pavement Asset Management,District 07,Boyle,1733201C,2027,1,1,7,4309.0,FD04,C,0.0
 Bridge Asset Management,District 03,Warren,1317401C,2027,1,1,3,10015.0,FD55,C,0.0
@@ -152322,6 +152327,7 @@ Highway Improvement,District 10,Magoffin,2118801C,2027,4,2,10,0.0,FD51,C,0.0
 Highway Improvement,District 10,Morgan,1892001C,2027,1,1,10,0.0,CB01,C,63475.78
 Highway Improvement,District 12,Floyd,2176201C,2027,4,2,12,0.0,CB01,C,4210.0
 Highway Improvement,District 12,Floyd,2150301C,2027,4,2,12,0.0,FD51,C,27903.13
+Highway Improvement,District 12,Lawrence,2109301C,2027,4,2,12,0.0,FD51,C,23453.75
 Highway Improvement,District 11,Clay,8768201C,2027,1,1,11,8711.0,FD52,C,0.0
 Highway Improvement,District 10,Owsley,6981102C,2027,1,1,10,292.1,FD52,C,0.0
 Safety,District 10,Estill,9514401C,2027,1,1,10,9014.0,FD52,C,0.0
@@ -152402,7 +152408,7 @@ Pavement Asset Management,District 11,Harlan,2016801C,2027,2,1,11,4403.0,FD04,C,
 Pavement Asset Management,District 12,Martin,2045501C,2027,1,1,12,4407.0,FD04,C,0.0
 Pavement Asset Management,District 11,Whitley,2058101C,2027,1,1,11,4409.0,FD04,C,0.0
 Highway Improvement,Various,Various,THSP26OP,2027,3,1,0,0.0,FL03,P,75287.37
-Highway Improvement,Various,Various,THSP26OP,2027,4,2,0,0.0,FL03,P,56244.55
+Highway Improvement,Various,Various,THSP26OP,2027,4,2,0,0.0,FL03,P,72174.78
 Highway Improvement,District 01,Calloway,6879006D,2027,1,1,1,314.2,FD52,D,0.0
 Highway Improvement,District 01,Calloway,6879005D,2027,1,1,1,314.2,FD52,D,0.0
 Highway Improvement,District 01,Calloway,6879004D,2027,2,1,1,314.2,FD52,D,0.0
@@ -152476,6 +152482,7 @@ Pavement Asset Management,Various,Various,1875401N,2027,4,2,99,0.0,BC53,N,12375.
 Bridge Asset Management,District 04,Hart,2070301D,2027,4,2,4,10095.0,FD52,D,102906.04
 Highway Improvement,District 07,Boyle,2044701D,2027,4,2,7,473.0,FD52,D,123722.26
 Highway Improvement,District 07,Fayette,1529101D,2027,4,2,7,438.0,FD52,D,73782.39
+Highway Improvement,District 01,Ballard,2010501D,2027,4,2,1,80300.0,FD52,D,50007.9
 Highway Improvement,District 12,Pike,5122135C,2027,1,1,12,263.55,FD52,C,79.66
 Highway Improvement,District 12,Pike,5122136C,2027,1,1,12,263.63,FD52,C,0.0
 Highway Improvement,District 12,Pike,5122136C,2027,2,1,12,263.63,FD52,C,265000.0
@@ -152735,6 +152742,7 @@ Highway Improvement,District 01,Marshall,2177101C,2027,3,1,1,0.0,CB06,C,0.0
 Highway Improvement,District 01,Calloway,2177001C,2027,3,1,1,0.0,CB06,C,0.0
 Bridge Asset Management,District 01,Marshall,1715401C,2027,3,1,1,10174.0,FD55,C,-46387.39
 Highway Improvement,District 01,Calloway,2141301C,2027,4,2,1,0.0,FD15,C,0.0
+Highway Improvement,District 01,Calloway,2086501C,2027,4,2,1,0.0,FD15,C,0.0
 Highway Improvement,District 01,Carlisle,2086601C,2027,2,1,1,0.0,FD15,C,212500.0
 Highway Improvement,District 01,Hickman,2062401C,2027,2,1,1,0.0,FD15,C,74320.16
 Bridge Asset Management,District 01,Marshall,1715301C,2027,1,1,1,10173.0,FD55,C,0.0
@@ -152844,10 +152852,18 @@ Pavement Asset Management,District 05,Spencer,2045201C,2027,3,1,5,0.0,FD05,C,900
 Pavement Asset Management,District 05,Jefferson,2045702C,2027,3,1,5,0.0,FD05,C,2550.0
 Highway Improvement,District 05,Shelby,2048601C,2027,3,1,5,0.0,CB06,C,750.0
 Pavement Asset Management,District 05,Shelby,1948201C,2027,3,1,5,20071.0,FD52,C,4714.0
+Pavement Asset Management,District 05,Shelby,1948201C,2027,4,2,5,20071.0,FD52,C,30.0
+Highway Improvement,District 05,Jefferson,5824002C,2027,4,2,5,247.1,FD52,C,120227.52
+Highway Improvement,District 05,Jefferson,KY006100,2027,4,2,0,0.0,FE02,0,60959.1
+Bridge Asset Management,District 05,Jefferson,1564603C,2027,4,2,5,10074.0,FJ11,C,2035.0
+Pavement Asset Management,District 05,Bullitt,2057001C,2027,4,2,5,0.0,FD05,C,10237.5
+Pavement Asset Management,District 05,Jefferson,2045702C,2027,4,2,5,0.0,FD05,C,59795.0
+Pavement Asset Management,District 05,Spencer,2045201C,2027,4,2,5,0.0,FD05,C,3075.0
 Bridge Asset Management,District 01,Ballard,8580703D,2027,3,1,1,1140.01,FD52,D,525285.86
 Highway Improvement,Various,Various,1756001N,2027,3,1,99,0.0,FD52,N,72872.8
 Highway Improvement,Various,Various,1239401N,2027,4,2,99,327.16,FD52,N,200734.61
 Highway Improvement,Various,Various,2022425N,2027,4,2,99,388.1,FD52,N,35681.83
+Highway Improvement,District 05,Jefferson,I0006500,2027,4,2,0,0.0,FE02,0,2700.0
 Highway Improvement,District 06,Kenton,6977703U,2027,1,1,6,162.3,FD52,U,0.0
 Bridge Asset Management,District 06,Kenton,1209901U,2027,1,1,6,1086.0,FD52,U,0.0
 Highway Improvement,District 06,Campbell,I0047100,2027,1,1,0,0.0,FE04,0,2753.06
@@ -152917,7 +152933,7 @@ Safety,District 05,Jefferson,2151601D,2027,3,1,5,9082.0,FD52,D,0.0
 Safety,District 05,Jefferson,2151601D,2027,4,2,5,9082.0,FD52,D,64769.3
 Highway Improvement,District 11,Laurel,9251301C,2027,1,1,4,1090.0,FD52,C,0.0
 Highway Improvement,Various,Various,5122140C,2027,2,1,12,263.67,FD52,C,2746.76
-Highway Improvement,Various,Various,5122140C,2027,4,2,12,263.67,FD52,C,3130.6
+Highway Improvement,Various,Various,5122140C,2027,4,2,12,263.67,FD52,C,3300.35
 Highway Improvement,District 09,Nicholas,8954001D,2027,1,1,9,8811.0,FD04,D,0.0
 Highway Improvement,District 04,Nelson,9278301U,2027,1,1,4,8809.0,FD52,U,0.0
 Highway Improvement,District 03,Simpson,1209701D,2027,1,1,3,8856.0,FD52,D,0.0
@@ -152948,7 +152964,7 @@ Highway Improvement,Various,Various,RAILMAIN,2027,2,1,0,0.0,FE02,N,175450.4
 Highway Improvement,District 07,Mercer,1340001U,2027,2,1,7,352.15,FD52,U,118841.46
 Bridge Asset Management,District 05,Jefferson,9504801D,2027,2,1,5,10015.0,FD52,D,6100.4
 Highway Improvement,District 08,Lincoln,1705001U,2027,2,1,8,0.0,FD52,U,41813.78
-Bridge Asset Management,District 05,Jefferson,9504801D,2027,4,2,5,10015.0,FD52,D,1438.07
+Bridge Asset Management,District 05,Jefferson,9504801D,2027,4,2,5,10015.0,FD52,D,2756.09
 Highway Improvement,District 12,Pike,RAILMAIN,2027,3,1,0,0.0,FE02,N,3480.64
 Highway Improvement,District 08,Lincoln,1705001U,2027,3,1,8,0.0,FD52,U,121235.52
 Highway Improvement,District 05,Shelby,1339901U,2027,4,2,5,352.15,FD52,U,801.59
@@ -152983,6 +152999,8 @@ Highway Improvement,District 05,Jefferson,9265301C,2027,3,1,5,537.0,FD52,C,1737.
 Highway Improvement,District 02,Hopkins,7334401U,2027,3,1,2,137.01,FD04,U,0.0
 Bridge Asset Management,Various,Various,9414001U,2027,3,1,99,10000.0,FD04,U,600.0
 Highway Improvement,District 10,Estill,1831901D,2027,4,2,10,80300.0,FD04,D,1123.0
+Bridge Asset Management,District 05,Jefferson,1796401U,2027,4,2,5,10064.0,FD52,U,7680.93
+Highway Improvement,District 11,Knox,1578201D,2027,4,2,11,80203.0,FD52,D,2174.0
 Highway Improvement,District 02,Daviess,2056001C,2027,2,1,2,0.0,CB06,C,92.4
 Bridge Asset Management,District 02,Hopkins,2003401C,2027,2,1,2,10024.0,FD55,C,342.2
 Highway Improvement,District 09,Rowan,KY116700,2027,2,1,0,0.0,FE01,0,324.5
@@ -153693,6 +153711,8 @@ Highway Improvement,District 10,Morgan,1715701C,2027,4,2,10,0.0,CB01,C,0.0
 Highway Improvement,District 10,Powell,1675901C,2027,4,2,10,0.0,EK51,C,0.0
 Highway Improvement,District 10,Powell,1675901C,2027,4,2,10,0.0,FD51,C,0.0
 Highway Improvement,District 10,Estill,6260804C,2027,4,2,10,8500.16,JL04,C,0.0
+Highway Improvement,District 10,Magoffin,2018301C,2027,4,2,10,0.0,CB01,C,0.0
+Highway Improvement,District 10,Magoffin,1921701C,2027,4,2,10,0.0,CB01,C,0.0
 Highway Improvement,District 11,Knox,1483901C,2027,1,1,11,0.0,FD51,C,2400.0
 Highway Improvement,District 11,Knox,1435102C,2027,1,1,11,0.0,FD51,C,4080.0
 Highway Improvement,District 09,Rowan,1966901C,2027,1,1,9,0.0,FD05,C,108833.77
@@ -153908,7 +153928,7 @@ Highway Improvement,District 10,Magoffin,1976301C,2027,1,1,10,0.0,FD14,C,0.0
 Highway Improvement,District 10,Magoffin,2136501C,2027,2,1,10,0.0,FD14,C,0.0
 Highway Improvement,Various,Various,THSP26AL,2027,1,1,0,0.0,FL03,L,35108.28
 Highway Improvement,Various,Various,THSP26AL,2027,3,1,0,0.0,FL03,L,46328.92
-Highway Improvement,Various,Various,THSP26AL,2027,4,2,0,0.0,FL03,L,74410.45
+Highway Improvement,Various,Various,THSP26AL,2027,4,2,0,0.0,FL03,L,90672.35
 Highway Improvement,District 02,Hopkins,2127801C,2027,2,1,2,0.0,FD14,C,0.0
 Highway Improvement,District 05,Bullitt,7991602D,2027,1,1,5,391.2,FD04,D,0.0
 Highway Improvement,Various,Various,6170801R,2027,1,1,10,126.05,FD52,R,0.0
@@ -153950,6 +153970,7 @@ Highway Improvement,Various,Various,6170801R,2027,4,2,10,126.05,FD52,R,595.0
 Highway Improvement,Various,Various,8963001R,2027,4,2,3,8821.0,FD52,R,82620.46
 Highway Improvement,District 01,McCracken,8687701D,2027,4,2,1,153.0,FD04,D,147838.0
 Highway Improvement,District 09,Greenup,2039701D,2027,4,2,9,416.0,FD52,D,18770.91
+Highway Improvement,District 02,Caldwell,6934306R,2027,4,2,1,187.6,FD52,R,8649.77
 Highway Improvement,District 08,Russell,6903802D,2027,1,1,8,115.0,FD04,D,0.0
 Highway Improvement,District 08,Russell,1549301D,2027,1,1,8,8600.0,FD04,D,0.0
 Highway Improvement,District 08,Russell,6903801D,2027,1,1,8,115.0,FD04,D,0.0
@@ -153984,6 +154005,7 @@ Highway Improvement,District 03,Barren,1761701C,2027,2,1,3,205.0,FD52,C,1435.35
 Highway Improvement,District 07,Mercer,1932701C,2027,2,1,7,80355.0,FD59,C,1506.53
 Bridge Asset Management,District 04,Green,2171501C,2027,3,1,4,80358.0,FD55,C,1374.45
 Highway Improvement,District 12,Knott,1675601C,2027,3,1,12,163.0,EK57,C,182478.29
+Highway Improvement,District 05,Jefferson,8631301C,2027,4,2,5,481.0,FD52,C,2247.12
 Highway Improvement,District 05,Bullitt,7991601C,2027,1,1,5,391.2,FD52,C,0.0
 Highway Improvement,District 05,Bullitt,7991601C,2027,1,1,5,391.1,FD52,C,0.0
 Highway Improvement,District 05,Bullitt,7991601C,2027,2,1,5,391.2,FD52,C,0.0
@@ -154032,7 +154054,7 @@ Highway Improvement,District 03,Allen,1067803D,2027,1,1,3,3215.0,FD04,D,0.0
 Highway Improvement,District 10,Owsley,1568201D,2027,1,1,10,80105.0,FD04,D,1680.0
 Highway Improvement,District 07,Fayette,9148803D,2027,1,1,7,3207.0,FD04,D,0.0
 Highway Improvement,District 07,Fayette,9148803D,2027,4,2,7,3207.0,FD04,D,2894.4
-Highway Improvement,District 03,Allen,1067803D,2027,4,2,3,3215.0,FD04,D,-1500.8
+Highway Improvement,District 03,Allen,1067803D,2027,4,2,3,3215.0,FD04,D,1216.3
 Highway Improvement,District 06,Boone,1408001D,2027,1,1,6,80102.0,FD04,D,0.0
 Highway Improvement,District 07,Boyle,1600701D,2027,1,1,7,80250.0,FD04,D,0.0
 Highway Improvement,District 11,Laurel,1546101D,2027,1,1,11,169.0,FD04,D,0.0
@@ -154196,7 +154218,7 @@ Highway Improvement,District 10,Menifee,1369801C,2027,1,1,10,0.0,FD39,C,0.0
 Highway Improvement,Various,Various,THSP26DRE,2027,1,1,0,0.0,FL03,R,49550.55
 Highway Improvement,Various,Various,THSP26DRE,2027,2,1,0,0.0,FL03,R,18713.47
 Highway Improvement,Various,Various,THSP26DRE,2027,3,1,0,0.0,FL03,R,56128.6
-Highway Improvement,Various,Various,THSP26DRE,2027,4,2,0,0.0,FL03,R,20905.6
+Highway Improvement,Various,Various,THSP26DRE,2027,4,2,0,0.0,FL03,R,53122.99
 Highway Improvement,District 10,Menifee,1712001C,2027,1,1,10,0.0,FD39,C,0.0
 Highway Improvement,District 10,Menifee,1903101C,2027,1,1,10,0.0,FD15,C,0.0
 Highway Improvement,District 10,Menifee,2133201C,2027,4,2,10,0.0,FD14,C,0.0
@@ -154332,7 +154354,7 @@ Highway Improvement,Various,Various,2115202N,2027,4,2,99,0.0,FA01,N,177047.12
 Highway Improvement,Various,Various,1951602N,2027,4,2,99,0.0,FA01,N,364022.96
 Highway Improvement,Various,Various,1951602N,2027,4,2,99,0.0,FD52,N,91005.74
 Highway Improvement,Various,Various,9400301N,2027,3,1,99,0.0,FD52,N,11196.06
-Highway Improvement,Various,Various,THSP26M3,2027,4,2,0,0.0,FL03,3,120202.33
+Highway Improvement,Various,Various,THSP26M3,2027,4,2,0,0.0,FL03,3,154667.2
 Highway Improvement,Various,Various,8763801N,2027,4,2,99,0.0,FD52,N,104121.8
 Highway Improvement,Various,Various,6968301D,2027,4,2,7,593.0,FD52,D,1587.94
 Highway Improvement,Various,Various,9400301N,2027,4,2,99,0.0,FD52,N,82141.22
@@ -154405,6 +154427,7 @@ Highway Improvement,District 05,Trimble,8888501U,2027,1,1,5,8712.0,FD04,U,0.0
 Highway Improvement,District 08,Adair,1910901C,2027,1,1,8,0.0,CB01,C,0.0
 Highway Improvement,District 08,Adair,1910901C,2027,4,2,8,0.0,CB01,C,0.0
 Highway Improvement,District 08,Adair,1991501C,2027,1,1,8,0.0,CB01,C,5057.7
+Highway Improvement,District 08,Russell,2196501C,2027,4,2,8,0.0,CB01,C,0.0
 Highway Improvement,District 08,Cumberland,1828201C,2027,2,1,8,0.0,CB01,C,53450.19
 Highway Improvement,District 08,Cumberland,2027201C,2027,3,1,8,0.0,FD51,C,232430.31
 Highway Improvement,District 08,Russell,1369301C,2027,1,1,8,20007.0,FD52,C,0.0
@@ -154630,8 +154653,8 @@ Highway Improvement,District 07,Montgomery,KY021300,2027,2,1,0,0.0,FE01,0,2479.4
 Highway Improvement,District 07,Montgomery,KY234600,2027,2,1,0,0.0,FE01,0,754.6
 Highway Improvement,District 07,Montgomery,KY011000,2027,2,1,0,0.0,FE01,0,14337.4
 Highway Improvement,District 07,Clark,KY192400,2027,2,1,0,0.0,FE01,0,539.0
-Highway Improvement,District 07,Clark,KY195800,2027,2,1,0,0.0,FE01,0,4743.2
 Highway Improvement,District 07,Clark,KY062700,2027,2,1,0,0.0,FE01,0,11103.4
+Highway Improvement,District 07,Clark,KY195800,2027,2,1,0,0.0,FE01,0,4743.2
 Highway Improvement,District 07,Clark,KY288800,2027,2,1,0,0.0,FE01,0,2156.0
 Highway Improvement,District 07,Clark,KY008900,2027,2,1,0,0.0,FE01,0,8085.0
 Highway Improvement,District 07,Montgomery,KY199100,2027,2,1,0,0.0,FE01,0,754.6
@@ -155033,6 +155056,7 @@ Highway Improvement,District 06,Campbell,7763501U,2027,1,1,6,8101.0,FD04,U,0.0
 Highway Improvement,District 06,Campbell,7763511C,2027,4,2,6,8101.0,FD04,C,0.0
 Highway Improvement,District 06,Boone,9441001U,2027,4,2,6,444.0,FD52,U,20250.0
 Highway Improvement,District 06,Kenton,6977702D,2027,4,2,6,162.01,FD04,D,33149.78
+Highway Improvement,District 06,Campbell,7763501U,2027,4,2,6,8101.0,FD04,U,0.0
 Highway Improvement,District 01,Marshall,1237001U,2027,1,1,1,398.0,FD04,U,0.0
 Highway Improvement,District 06,Boone,1218801D,2027,1,1,6,466.0,FD52,D,0.0
 Highway Improvement,District 06,Boone,1218801C,2027,1,1,6,466.0,FD52,C,0.0
@@ -155185,7 +155209,6 @@ Highway Improvement,District 06,Grant,2141001C,2027,1,1,6,0.0,FD15,C,0.0
 Highway Improvement,District 06,Grant,2127201C,2027,2,1,6,0.0,FD14,C,0.0
 Highway Improvement,District 03,Edmonson,2124901C,2027,2,1,3,0.0,FD14,C,0.0
 Highway Improvement,Various,Various,1918101P,2027,2,1,1,0.0,FH03,P,12960.32
-Highway Improvement,District 02,Caldwell,6934306R,2027,4,2,1,187.6,FD52,R,3530.0
 Highway Improvement,District 02,Henderson,9440201R,2027,1,1,2,383.0,FD52,R,0.0
 Highway Improvement,District 04,Washington,1284102R,2027,4,2,4,164.2,FD52,R,13687.5
 Highway Improvement,District 08,McCreary,2023301C,2027,1,1,8,179.0,FD52,C,0.0
@@ -155364,7 +155387,7 @@ Highway Improvement,District 03,Warren,8963201R,2027,2,1,3,8853.0,FD04,R,32100.0
 Highway Improvement,District 03,Warren,8963201R,2027,3,1,3,8853.0,FD04,R,62400.0
 Highway Improvement,District 02,Christian,1279702R,2027,1,1,2,381.2,FD52,R,378600.0
 Highway Improvement,Various,Various,THSP26PRT,2027,3,1,0,0.0,FL03,R,33945.4
-Highway Improvement,Various,Various,THSP26PRT,2027,4,2,0,0.0,FL03,R,87229.36
+Highway Improvement,Various,Various,THSP26PRT,2027,4,2,0,0.0,FL03,R,104671.83
 Highway Improvement,District 11,Knox,8987001R,2027,3,1,11,8857.0,FD04,R,62500.0
 Highway Improvement,District 05,Jefferson,9099901R,2027,4,2,5,536.0,FD52,R,116.11
 Pavement Asset Management,Various,Various,1853001N,2027,1,1,4,0.0,BC53,N,0.0
@@ -155644,6 +155667,7 @@ Pavement Asset Management,District 07,Boyle,2095801C,2027,1,1,7,470.0,FD52,C,298
 Pavement Asset Management,District 07,Mercer,2095901C,2027,2,1,7,471.0,FD52,C,6558.0
 Pavement Asset Management,District 07,Boyle,2095801C,2027,3,1,7,470.0,FD52,C,10179.0
 Pavement Asset Management,District 07,Mercer,2095901C,2027,3,1,7,471.0,FD52,C,3795.0
+Safety,District 08,Wayne,2192001C,2027,4,2,8,956.0,FD52,C,0.0
 Highway Improvement,District 07,Fayette,KY126700,2027,1,1,0,0.0,FE01,0,288.0
 Highway Improvement,District 07,Fayette,KY192300,2027,1,1,0,0.0,FE01,0,432.0
 Highway Improvement,District 07,Fayette,KY196600,2027,1,1,0,0.0,FE01,0,720.0
@@ -155730,7 +155754,6 @@ Highway Improvement,District 05,Bullitt,9246701C,2027,4,2,5,538.0,FD52,C,193201.
 Pavement Asset Management,District 05,Jefferson,9419101C,2027,1,1,5,0.0,FD05,C,0.0
 Highway Improvement,District 05,Jefferson,1200201C,2027,1,1,5,20010.0,FD52,C,0.0
 Highway Improvement,District 05,Jefferson,5824002C,2027,1,1,5,247.1,FD52,C,0.0
-Highway Improvement,District 05,Jefferson,5824002C,2027,4,2,5,247.1,FD52,C,115232.52
 Bridge Asset Management,District 05,Jefferson,1300001C,2027,1,1,5,10018.0,FD55,C,0.0
 Highway Improvement,District 05,Oldham,6484601C,2027,1,1,5,367.2,FD52,C,0.0
 Highway Improvement,District 05,Jefferson,1216101C,2027,1,1,5,20014.0,FD52,C,0.0
@@ -155832,6 +155855,7 @@ Highway Improvement,District 05,Trimble,2137601C,2027,2,1,5,0.0,FD14,C,0.0
 Highway Improvement,Various,Various,1465201C,2027,1,1,5,0.0,FD04,C,12716.0
 Highway Improvement,District 06,Owen,2139201C,2027,3,1,6,0.0,FD51,C,18675.0
 Highway Improvement,District 04,Grayson,2101301C,2027,2,1,4,0.0,FD52,C,0.0
+Highway Improvement,District 04,Grayson,2101301C,2027,4,2,4,0.0,FD52,C,340960.95
 Highway Improvement,District 05,Bullitt,2107501C,2027,3,1,5,0.0,CB01,C,194384.02
 Highway Improvement,District 04,Hardin,8383101C,2027,1,1,4,153.0,FD52,C,0.0
 Highway Improvement,District 04,Hardin,8383101C,2027,3,1,4,153.0,FD52,C,36022.8
@@ -155852,6 +155876,7 @@ Highway Improvement,District 08,Casey,2187201C,2027,3,1,8,0.0,CB01,C,0.0
 Highway Improvement,District 10,Magoffin,2195301C,2027,4,2,10,0.0,CB01,C,0.0
 Highway Improvement,District 02,Henderson,2163801C,2027,3,1,2,0.0,CB01,C,33413.04
 Highway Improvement,District 08,Casey,2187201C,2027,4,2,8,0.0,CB01,C,19086.08
+Highway Improvement,District 02,Ohio,2141401C,2027,4,2,2,0.0,CB01,C,16690.75
 Highway Improvement,District 01,Hickman,KY078000,2027,1,1,0,0.0,FE01,0,0.0
 Bridge Asset Management,District 01,Graves,2011801C,2027,1,1,1,10262.0,FD04,C,95280.92
 Highway Improvement,District 01,Marshall,1929101C,2027,1,1,1,0.0,CB06,C,29887.0
@@ -155898,7 +155923,6 @@ Highway Improvement,District 10,Morgan,2033001C,2027,1,1,10,0.0,CB01,C,0.0
 Highway Improvement,District 10,Magoffin,1948001C,2027,1,1,10,0.0,FD04,C,0.0
 Highway Improvement,District 10,Magoffin,2018301C,2027,1,1,10,0.0,CB01,C,0.0
 Highway Improvement,District 10,Breathitt,2149501C,2027,1,1,10,0.0,FD51,C,141922.16
-Highway Improvement,District 10,Magoffin,2018301C,2027,4,2,10,0.0,CB01,C,0.0
 Highway Improvement,District 12,Letcher,1282901C,2027,1,1,12,0.0,FD51,C,0.0
 Highway Improvement,District 12,Letcher,1283501C,2027,1,1,12,0.0,FD51,C,0.0
 Highway Improvement,District 12,Letcher,1283601C,2027,1,1,12,0.0,FD51,C,0.0
@@ -156076,6 +156100,8 @@ Highway Improvement,District 08,Rockcastle,2144701C,2027,3,1,8,0.0,FD51,C,135844
 Highway Improvement,District 01,Graves,2155201C,2027,2,1,1,0.0,CB01,C,0.0
 Highway Improvement,District 01,Graves,2155201C,2027,4,2,1,0.0,CB01,C,155187.62
 Highway Improvement,District 01,Graves,2197301C,2027,4,2,1,0.0,CB01,C,0.0
+Highway Improvement,District 12,Knott,2106601C,2027,4,2,12,0.0,FD51,C,73069.94
+Highway Improvement,District 11,Harlan,2117901C,2027,4,2,12,0.0,FD51,C,59411.88
 Highway Improvement,District 10,Perry,1806201C,2027,1,1,10,0.0,CB01,C,0.0
 Highway Improvement,District 04,Marion,2131901C,2027,2,1,4,0.0,FD14,C,0.0
 Bridge Asset Management,District 05,Jefferson,9416401C,2027,2,1,5,10027.0,FD52,C,9558742.86
@@ -156116,7 +156142,6 @@ Bridge Asset Management,District 12,Knott,1703201C,2027,1,1,12,0.0,EK58,C,0.0
 Pavement Asset Management,District 09,Fleming,1872101C,2027,1,1,9,5020.0,FD52,C,0.0
 Pavement Asset Management,District 09,Fleming,1872101C,2027,2,1,9,5020.0,FD52,C,5902.1
 Highway Improvement,District 06,Grant,KY194200,2027,2,1,0,0.0,FE02,0,13555.22
-Highway Improvement,District 05,Jefferson,KY006100,2027,4,2,0,0.0,FE02,0,47509.1
 Bridge Asset Management,District 06,Boone,1811901C,2027,1,1,6,10028.1,FD52,C,127566.0
 Highway Improvement,District 06,Bracken,KY053900,2027,1,1,0,0.0,FE02,0,0.0
 Highway Improvement,District 06,Bracken,KY053900,2027,3,1,0,0.0,FE02,0,1513.18
@@ -156147,7 +156172,7 @@ Highway Improvement,District 12,Lawrence,2098901C,2027,3,1,12,0.0,FD52,C,1289987
 Highway Improvement,District 12,Pike,2044601C,2027,4,2,12,0.0,FD51,C,410251.6
 Highway Improvement,District 12,Lawrence,2089701C,2027,4,2,12,0.0,FD52,C,163602.31
 Highway Improvement,District 12,Johnson,2110801C,2027,4,2,12,0.0,FD51,C,133160.02
-Highway Improvement,District 04,Grayson,2101301C,2027,4,2,4,0.0,FD52,C,335503.1
+Highway Improvement,District 12,Pike,KY046800,2027,4,2,0,0.0,FD51,0,68985.0
 Pavement Asset Management,District 09,Fleming,1872001C,2027,1,1,9,5012.0,FD52,C,0.0
 Pavement Asset Management,District 02,Union,1871801C,2027,1,1,2,5011.0,FD52,C,0.0
 Highway Improvement,Various,Various,2069301C,2027,1,1,99,930.0,FD52,C,318750.0

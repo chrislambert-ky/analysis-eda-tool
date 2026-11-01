@@ -1,6 +1,9 @@
 {
   "datasetName": "eda_expenditures",
-  "totalRecords": 156570,
+  "datasetLabel": "Expenditures (Data Hub)",
+  "description": "Expenditures over the last six years. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/eda_tool?dataset=expenditures",
+  "totalRecords": 156595,
   "dimensions": [
     "DISTRICT",
     "COUNTY"

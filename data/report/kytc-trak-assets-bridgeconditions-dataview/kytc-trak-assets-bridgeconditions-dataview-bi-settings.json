@@ -1,0 +1,29 @@
+{
+  "datasetName": "kytc-trak-assets-bridgeconditions-dataview",
+  "datasetLabel": "Bridge Conditions (TRAK Dashboard)",
+  "description": "Matches the Assets Bridges dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/Assets_Bridges",
+  "totalRecords": 14543,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ],
+  "map": {
+    "latitudeField": "latitude",
+    "longitudeField": "longitude"
+  }
+}

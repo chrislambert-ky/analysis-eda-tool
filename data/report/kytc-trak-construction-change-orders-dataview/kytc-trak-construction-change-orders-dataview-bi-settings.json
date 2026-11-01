@@ -1,0 +1,24 @@
+{
+  "datasetName": "kytc-trak-construction-change-orders-dataview",
+  "datasetLabel": "Construction Change Orders",
+  "description": "Matches the Change Orders dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/ProjectDelivery_ChangeOrders",
+  "totalRecords": 5493,
+  "dimensions": [
+    "District"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

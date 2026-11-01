@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-construction-procurement-altdelivery-dataview",
+  "datasetLabel": "Construction Procurement (Alternative Delivery)",
+  "description": "Matches the Awarded Projects Alternative Delivery dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/Awarded_Projects",
+  "totalRecords": 56,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

@@ -172,6 +172,7 @@
 	.catalog-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 	.catalog-detail-title { margin: 0; font-size: 18px; font-weight: 600; }
 	.catalog-detail-description { margin: 6px 0; color: #6c757d; font-size: 12px; line-height: 1.45; }
+	.catalog-source-link { margin: 4px 0 6px; font-size: 12px; }
 	.catalog-detail-id { color: #adb5bd; font-family: 'IBM Plex Mono', monospace; font-size: 10px; overflow-wrap: anywhere; }
 	.catalog-preview-tabs { display: flex; gap: 4px; margin: 16px 0 10px; border-bottom: 1px solid #dee2e6; }
 	.catalog-preview-tabs button { padding: 6px 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #6c757d; font-size: 12px; }

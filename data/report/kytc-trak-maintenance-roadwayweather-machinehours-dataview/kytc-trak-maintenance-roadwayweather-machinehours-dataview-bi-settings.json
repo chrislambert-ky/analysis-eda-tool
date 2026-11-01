@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-maintenance-roadwayweather-machinehours-dataview",
+  "datasetLabel": "Roadway Weather Machine Hours",
+  "description": "Matches the Snow and Ice dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/Maintenance_SNIC",
+  "totalRecords": 11985,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

@@ -1,5 +1,8 @@
 {
   "datasetName": "eda_construction_procurement",
+  "datasetLabel": "Construction Procurement (Data Hub)",
+  "description": "Awarded contracts from the past six years, including Alternative Delivery. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/eda_tool?dataset=awarded_projects",
   "totalRecords": 5183,
   "dimensions": [
     "DISTRICT",

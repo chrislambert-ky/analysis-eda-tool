@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-programmanagement-enactedplan-dataview",
+  "datasetLabel": "Program Management Enacted Plan",
+  "description": "Matches the Enacted Highway Plan dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/ProjectDevelopment_EnactedHighwayPlan",
+  "totalRecords": 4298,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

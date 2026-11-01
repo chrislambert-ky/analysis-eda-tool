@@ -36,21 +36,30 @@ export function encodeDatasetShareValue(datasetId, presetDatasetSlugs) {
 	return presetDatasetSlugs[datasetId] || normalizeShareToken(datasetId).replace(/^eda_/, '');
 }
 
-export function decodeDatasetShareValue(rawValue, datasets, presetDatasetSlugs) {
+export function decodeDatasetShareValue(rawValue, datasets, presetDatasetSlugs, legacyDatasetIds = {}) {
 	if (!rawValue) return null;
 	const token = normalizeShareToken(rawValue);
 	const mapped = Object.entries(presetDatasetSlugs)
 		.find(([, slug]) => normalizeShareToken(slug) === token)?.[0];
 	if (mapped) return mapped;
+	const migrated = Object.entries(legacyDatasetIds)
+		.find(([legacyId]) => normalizeShareToken(legacyId) === token
+			|| normalizeShareToken(encodeDatasetShareValue(legacyId, {})) === token)?.[1];
+	if (migrated && datasets.some(ds => ds.id === migrated)) return migrated;
 	const byId = datasets.find(ds => normalizeShareToken(ds.id) === token);
 	return byId?.id || null;
 }
 
-export function parseSharedState(search, datasets, presetDatasetSlugs) {
+export function parseSharedState(search, datasets, presetDatasetSlugs, legacyDatasetIds = {}) {
 	const params = new URLSearchParams(search);
 	if (!SHARE_PARAM_KEYS.some(key => params.has(key))) return null;
 
-	const datasetId = decodeDatasetShareValue(params.get('data'), datasets, presetDatasetSlugs);
+	const datasetId = decodeDatasetShareValue(
+		params.get('data'),
+		datasets,
+		presetDatasetSlugs,
+		legacyDatasetIds
+	);
 	if (!datasetId || !isPresetDatasetId(datasetId, datasets)) return null;
 
 	const chartToken = normalizeShareToken(params.get('graph'));

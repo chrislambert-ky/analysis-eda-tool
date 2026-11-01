@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-analysis-planning-systemmobility-dataview",
+  "datasetLabel": "System Mobility (DVMT)",
+  "description": "Matches the Travel Flow dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/Travel_Flow",
+  "totalRecords": 600,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "datasetName": "kytc-trak-assets-regionalroutelist-10thmile-dataview",
+  "datasetLabel": "Regional Route List (10th-mile)",
+  "description": "KYTC regional route list data at 10th-mile resolution. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/",
+  "totalRecords": 308365,
+  "dimensions": [],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ],
+  "map": {
+    "latitudeField": "Latitude",
+    "longitudeField": "Longitude"
+  }
+}

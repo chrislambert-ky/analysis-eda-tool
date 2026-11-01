@@ -1,5 +1,8 @@
 {
   "datasetName": "eda_current_enact_plan_data_set",
+  "datasetLabel": "Current Enacted Plan (Data Hub)",
+  "description": "The most recent Highway Enacted Plan. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/eda_tool?dataset=enacted_plan",
   "totalRecords": 4344,
   "dimensions": [
     "DISTRICT",

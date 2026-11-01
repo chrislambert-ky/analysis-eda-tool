@@ -30,6 +30,7 @@ import {
 } from './workspace-preferences.mjs';
 import { CANVAS_TYPES, createCanvas, normalizeCanvas } from './canvas-state.mjs';
 import { detectCoordinateFields } from './map-utils.mjs';
+import { getDatasetCatalog } from './dataset-catalog.mjs';
 
 (function () {
 	'use strict';
@@ -37,25 +38,22 @@ import { detectCoordinateFields } from './map-utils.mjs';
 	const MAP_ALL_OPTION = '__all__';
 	// ECharts 5 default palette — used for both charts and map markers so colors stay consistent
 	const CHART_PALETTE = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
-	const DATASETS = [
-		{ id: 'eda_assets_bridge_condition_owner_area', title: 'Assets Bridge Conditions', description: 'The most up-to-date inventory of Kentucky bridges, including attributes and classifications used for management and maintenance. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_awarded_projects', title: 'Awarded Projects', description: 'Transportation improvement projects awarded to construction, including all awarded contracts from the past six years and Alternative Delivery. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_construction_procurement', title: 'Construction Procurement', description: 'Awarded contracts from the past six years, including Alternative Delivery. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_current_enact_plan_data_set', title: 'Current Enact Plan Data Set', description: 'The most recent Highway Enacted Plan. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_expenditures', title: 'Expenditures', description: 'Expenditures over the last six years. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'eda_programmanagement_authorized_detailed', title: 'Authorized Dollars', description: 'Approved authorizations from Program Management over the past six years. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'export-bi-agency-construction-change-orders-dataview', title: 'Agency Construction Change Orders', description: 'Matches the Change Orders dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/ProjectDelivery_ChangeOrders' },
-		{ id: 'export-bi-agency-constructionprocurement-altdelivery-dataview', title: 'Agency Construction Procurement Alt Delivery', description: 'Matches the Awarded Projects Alternative Delivery dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Awarded_Projects' },
-		{ id: 'export-bi-agency-constructionprocurement-dataview', title: 'Agency Construction Procurement', description: 'Matches the Awarded Projects dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Awarded_Projects' },
-		{ id: 'export-bi-agency-maintenance-roadwayweather-machinehours-dataview', title: 'Agency Maintenance Roadway Weather Machine Hours', description: 'Matches the Snow and Ice dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Maintenance_SNIC' },
-		{ id: 'export-bi-agency-toc-roadwayweather-roadwayreport-dataview', title: 'Agency TOC Roadway Weather Roadway Report', description: 'Matches the Road Closures dashboard Data View. VPN required. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Internal_RoadClosures' },
-		{ id: 'export-bi-analysis-planning-systemmobility-dataview', title: 'Analysis Planning System Mobility', description: 'Matches the Travel Flow dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Travel_Flow' },
-		{ id: 'export-bi-analysis-programmanagement-cost-change-dataview', title: 'Analysis Program Management Cost Change', description: 'Program Management cost change data view. Data supplied by Kentucky Transportation Cabinet. Browse datasets at https://trak.kytc.ky.gov/data-hub' },
-		{ id: 'export-bi-analysis-roadwayweatherevents-expenditures-dataview', title: 'Analysis Roadway Weather Events Expenditures', description: 'Matches the Emergency Response dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/Maintenance_EmergencyResponse' },
-		{ id: 'export-bi-economic-fueltyperegistration-dataview', title: 'Economic Fuel Type Registration', description: 'Matches the Vehicle Registrations dashboard Data View. Data supplied by Kentucky Transportation Cabinet. Dashboard: https://trak.kytc.ky.gov/VehicleRegistrations' }
-	];
-	const DUCKDB_DATASET_IDS = new Set(DATASETS.map(dataset => dataset.id));
+	let DATASETS = [];
+	let DUCKDB_DATASET_IDS = new Set();
 	const APP_VERSION = '1.5.0';
+	const DEFAULT_DATASET_ID = 'eda_assets_bridge_condition_owner_area';
+	const LEGACY_DATASET_IDS = {
+		eda_awarded_projects: 'eda_construction_procurement',
+		'export-bi-agency-construction-change-orders-dataview': 'kytc-trak-construction-change-orders-dataview',
+		'export-bi-agency-constructionprocurement-altdelivery-dataview': 'kytc-trak-construction-procurement-altdelivery-dataview',
+		'export-bi-agency-constructionprocurement-dataview': 'kytc-trak-constructionprocurement-dataview',
+		'export-bi-agency-maintenance-roadwayweather-machinehours-dataview': 'kytc-trak-maintenance-roadwayweather-machinehours-dataview',
+		'export-bi-agency-toc-roadwayweather-roadwayreport-dataview': 'kytc-trak-toc-roadwayweather-roadwayreport-dataview',
+		'export-bi-analysis-planning-systemmobility-dataview': 'kytc-trak-analysis-planning-systemmobility-dataview',
+		'export-bi-analysis-programmanagement-cost-change-dataview': 'kytc-trak-programmanagement-cost-change-dataview',
+		'export-bi-analysis-roadwayweatherevents-expenditures-dataview': 'kytc-trak-roadwayweatherevents-expenditures-dataview',
+		'export-bi-economic-fueltyperegistration-dataview': 'kytc-trak-economic-fueltyperegistration-dataview'
+	};
 	const PRESET_DATASET_SLUGS = {
 		eda_assets_bridge_condition_owner_area: 'assets_bridge_condition_owner_area',
 		eda_construction_procurement: 'construction_procurement',
@@ -122,14 +120,38 @@ import { detectCoordinateFields } from './map-utils.mjs';
 	let chartResizeObserver = null;
 	let tableControlsResizeObserver = null;
 
-	document.addEventListener('DOMContentLoaded', init);
+	document.addEventListener('DOMContentLoaded', () => {
+		init().catch(error => {
+			console.error('Application startup failed:', error);
+			const summary = document.getElementById('catalogSummary');
+			if (summary) summary.textContent = `Could not load datasets: ${error.message}`;
+			updateProgress(`Application startup failed: ${error.message}`);
+		});
+	});
+
+	function migrateDatasetId(datasetId) {
+		return LEGACY_DATASET_IDS[datasetId] || datasetId;
+	}
 
 	async function init() {
 		const verEl = document.getElementById('appVersion');
 		if (verEl) verEl.textContent = `v${APP_VERSION}`;
-		startupShareState = parseSharedState(window.location.search, DATASETS, PRESET_DATASET_SLUGS);
+		DATASETS = await getDatasetCatalog();
+		DUCKDB_DATASET_IDS = new Set(DATASETS.map(dataset => dataset.id));
+		startupShareState = parseSharedState(
+			window.location.search,
+			DATASETS,
+			PRESET_DATASET_SLUGS,
+			LEGACY_DATASET_IDS
+		);
+		if (startupShareState?.datasetId) {
+			startupShareState.datasetId = migrateDatasetId(startupShareState.datasetId);
+		}
 		try {
 			startupWorkspacePreferences = readWorkspacePreferences();
+			if (startupWorkspacePreferences?.datasetId) {
+				startupWorkspacePreferences.datasetId = migrateDatasetId(startupWorkspacePreferences.datasetId);
+			}
 		} catch (error) {
 			console.warn('Could not restore workspace preferences:', error);
 		}
@@ -157,6 +179,7 @@ import { detectCoordinateFields } from './map-utils.mjs';
 			} else if (!restoredWorkspace && !canvas.datasetId) {
 				canvas.datasetId = [
 					startupWorkspacePreferences?.datasetId,
+					DEFAULT_DATASET_ID,
 					DATASETS[0]?.id
 				].find(datasetId => datasetId && availableDatasetIds.has(datasetId)) || null;
 			}
@@ -181,11 +204,16 @@ import { detectCoordinateFields } from './map-utils.mjs';
 			console.error('Could not restore canvas workspace:', error);
 			updateProgress(`Could not restore saved canvases: ${error.message}`);
 		}
-		canvases = (saved?.canvases || []).map(normalizeCanvas).filter(Boolean);
+		canvases = (saved?.canvases || []).map(savedCanvas => {
+			const canvas = normalizeCanvas(savedCanvas);
+			if (canvas?.datasetId) canvas.datasetId = migrateDatasetId(canvas.datasetId);
+			return canvas;
+		}).filter(Boolean);
 		if (!canvases.length) {
 			const initial = createCanvas('all-in-one', 1, {
 				datasetId: startupShareState?.datasetId
 					|| startupWorkspacePreferences?.datasetId
+					|| DEFAULT_DATASET_ID
 					|| DATASETS[0]?.id
 					|| null
 			});
@@ -2358,6 +2386,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 			id:          ds.id,
 			title:       ds.title,
 			description: ds.description || '',
+			dashboardLocation: ds.dashboardLocation || null,
 			sourceType:  'preloaded',
 			settingsUrl: `${DATA_ROOT}/${ds.id}/${ds.id}-bi-settings.json`,
 			indexUrl:    `${DATA_ROOT}/${ds.id}/${ds.id}.index.json`
@@ -2464,6 +2493,9 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 		const description = dataset.description
 			? linkifyDesc(dataset.description)
 			: escHtml(dataset.fileName || dataset.url || 'Imported in this browser');
+		const sourceLink = dataset.dashboardLocation
+			? `<div class="catalog-source-link"><a href="${escHtml(dataset.dashboardLocation)}" target="_blank" rel="noopener noreferrer">${dataset.id.startsWith('kytc-trak-') ? 'Open TRAK dashboard' : 'Open related EDA view'} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>`
+			: '';
 		document.getElementById('datasetPreviewTitle').textContent = `Preview: ${dataset.title}`;
 		const analyzeButton = document.getElementById('datasetPreviewAnalyzeBtn');
 		analyzeButton.dataset.datasetId = dataset.id;
@@ -2474,6 +2506,7 @@ document.getElementById('mapPopupShowAll').addEventListener('click', () => {
 				<div>
 					<h4 class="catalog-detail-title">${escHtml(dataset.title)}</h4>
 					<div class="catalog-detail-description">${description}</div>
+					${sourceLink}
 					<div class="catalog-detail-id">${escHtml(dataset.id)}</div>
 				</div>
 			</div>

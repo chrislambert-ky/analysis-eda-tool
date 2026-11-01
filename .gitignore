@@ -79,6 +79,7 @@ Thumbs.db
 
 # Local data
 *.local
+/data/raw/kytc-trak-*.csv
 
 # Storybook
 storybook-static/

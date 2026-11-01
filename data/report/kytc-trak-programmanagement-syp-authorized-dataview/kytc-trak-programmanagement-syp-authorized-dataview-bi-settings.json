@@ -1,0 +1,25 @@
+{
+  "datasetName": "kytc-trak-programmanagement-syp-authorized-dataview",
+  "datasetLabel": "SYP Authorized Projects",
+  "description": "Statewide Transportation Improvement Plan project authorizations. Data supplied by Kentucky Transportation Cabinet.",
+  "dashboardLocation": "https://trak.kytc.ky.gov/ProjectDevelopment_AuthorizedDollars",
+  "totalRecords": 4344,
+  "dimensions": [
+    "District",
+    "County"
+  ],
+  "metrics": [
+    "Record Count"
+  ],
+  "aggregationTypes": [
+    "Count"
+  ],
+  "orderBy": [
+    "Dimension",
+    "Metric Agg Result"
+  ],
+  "order": [
+    "Ascending",
+    "Descending"
+  ]
+}
