@@ -1,6 +1,6 @@
 {
   "datasetName": "kytc-trak-programmanagement-authorized-dataview",
-  "datasetLabel": "Program Management Authorized Dollars",
+  "datasetLabel": "Authorized Dollars",
   "description": "Matches the Authorized Dollars dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/ProjectDevelopment_AuthorizedDollars",
   "totalRecords": 25790,

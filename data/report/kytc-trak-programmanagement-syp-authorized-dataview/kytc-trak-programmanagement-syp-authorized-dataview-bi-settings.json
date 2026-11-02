@@ -1,6 +1,6 @@
 {
   "datasetName": "kytc-trak-programmanagement-syp-authorized-dataview",
-  "datasetLabel": "SYP Authorized Projects",
+  "datasetLabel": "Enacted Plan Authorizations",
   "description": "Statewide Transportation Improvement Plan project authorizations. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/ProjectDevelopment_AuthorizedDollars",
   "totalRecords": 4344,
