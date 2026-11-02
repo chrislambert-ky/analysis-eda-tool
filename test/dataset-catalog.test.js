@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { before, describe, it } = require('node:test');
 
 describe('dataset catalog', () => {
@@ -34,6 +36,13 @@ describe('dataset catalog', () => {
 			parquetUrl: null,
 			dashboardLocation: null
 		}]);
+	});
+
+	it('keeps the 1-mile route list and omits the oversized 10th-mile list', () => {
+		const manifest = fs.readFileSync(path.join(__dirname, '..', 'data-links.csv'), 'utf8');
+		const names = parseDatasetCatalog(manifest).map(dataset => dataset.id);
+		assert.ok(names.includes('kytc-trak-assets-regionalroutelist-1mile-dataview'));
+		assert.ok(!names.includes('kytc-trak-assets-regionalroutelist-10thmile-dataview'));
 	});
 
 	it('rejects duplicate names and malformed source URLs', () => {
