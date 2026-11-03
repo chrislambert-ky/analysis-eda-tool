@@ -3,7 +3,7 @@
   "datasetLabel": "Cost Change Analysis",
   "description": "Matches the Cost Change data view. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/Project_Cost_Comparison",
-  "totalRecords": 36,
+  "totalRecords": 37,
   "dimensions": [
     "District",
     "County"

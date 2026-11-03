@@ -148121,8 +148121,8 @@ Highway Improvement,District 03,Allen,1834701D,2027,1,1,3,80353.0,FD04,D,10743.9
 Highway Improvement,District 03,Metcalfe,1938601D,2027,1,1,3,0.0,CB06,D,9713.82
 Highway Improvement,District 03,Simpson,8963301R,2027,1,1,3,8855.0,FD04,R,129900.5
 Highway Improvement,District 03,Warren,1835001D,2027,1,1,3,21.0,FD52,D,49887.47
-Highway Improvement,District 04,Hardin,8383103D,2027,1,1,4,153.02,FD04,D,2313.99
 Highway Improvement,District 04,Green,1355201D,2027,1,1,4,80102.0,FD04,D,5698.85
+Highway Improvement,District 04,Hardin,8383103D,2027,1,1,4,153.02,FD04,D,2313.99
 Highway Improvement,District 04,Hardin,8383101R,2027,1,1,4,153.01,JP02,R,9775.08
 Highway Improvement,District 04,Meade,8666901R,2027,1,1,4,8705.0,FD04,R,35196.02
 Highway Improvement,District 04,Washington,2085101C,2027,1,1,4,0.0,CB06,C,2122.25
@@ -148271,8 +148271,8 @@ Highway Improvement,District 10,Breathitt,KY181200,2027,1,1,0,0.0,FE04,0,2824.66
 Highway Improvement,District 10,Wolfe,KY019100,2027,1,1,0,0.0,FE04,0,4539.84
 Pavement Asset Management,District 11,Laurel,1998301C,2027,1,1,11,0.0,FD05,C,171915.93
 Pavement Asset Management,District 11,Knox,1750002C,2027,1,1,11,4357.0,FD04,C,22199.31
-Highway Improvement,District 11,Laurel,8063901R,2027,1,1,11,147.0,FD04,R,264491.84
 Pavement Asset Management,District 11,Whitley,2001301C,2027,1,1,11,0.0,FD05,C,625064.58
+Highway Improvement,District 11,Laurel,8063901R,2027,1,1,11,147.0,FD04,R,264491.84
 Highway Improvement,District 11,Leslie,2074201C,2027,1,1,11,0.0,CB06,C,618441.23
 Highway Improvement,District 11,Bell,1982001C,2027,1,1,11,0.0,CB06,C,575915.88
 Pavement Asset Management,District 11,Whitley,2072601C,2027,1,1,11,0.0,FD05,C,6627.43
@@ -148912,8 +148912,8 @@ Bridge Asset Management,District 05,Jefferson,1796401U,2027,1,1,5,10064.0,FD52,U
 Highway Improvement,District 09,Rowan,1203501U,2027,1,1,9,8915.0,FD52,U,1675.47
 Safety,District 07,Woodford,1188701U,2027,1,1,7,9020.0,FD52,U,1187.27
 Highway Improvement,District 05,Franklin,9541702U,2027,1,1,5,805.0,FD52,U,534.28
-Highway Improvement,District 08,McCreary,1705201C,2027,1,1,8,0.0,FD52,C,389.82
 Highway Improvement,District 08,Lincoln,1342801C,2027,1,1,8,352.15,FD52,C,389.83
+Highway Improvement,District 08,McCreary,1705201C,2027,1,1,8,0.0,FD52,C,389.82
 Highway Improvement,District 11,Laurel,1341201C,2027,1,1,11,352.15,FD52,C,194.91
 Highway Improvement,District 11,Bell,2114101C,2027,1,1,11,0.0,FD51,C,6766.04
 Highway Improvement,Various,Various,9269901N,2027,1,1,99,0.0,FD52,N,2637.16
@@ -148984,8 +148984,8 @@ Safety,District 05,Oldham,1366801D,2027,2,1,5,9009.0,FD04,D,81.96
 Highway Improvement,District 05,Bullitt,8065601D,2027,2,1,5,347.5,FD04,D,2873.16
 Highway Improvement,District 05,Jefferson,1314501C,2027,2,1,5,193.0,FD04,C,1061.37
 Highway Improvement,District 05,Franklin,1627901R,2027,2,1,5,586.0,FD04,R,817.05
-Pavement Asset Management,District 05,Jefferson,2045701C,2027,2,1,5,0.0,FD04,C,1233.62
 Highway Improvement,District 05,Jefferson,7839101U,2027,2,1,5,8203.0,FD04,U,2316.56
+Pavement Asset Management,District 05,Jefferson,2045701C,2027,2,1,5,0.0,FD04,C,1233.62
 Highway Improvement,District 05,Franklin,1493702D,2027,2,1,5,582.1,FD52,D,1649.12
 Highway Improvement,District 05,Jefferson,6167101D,2027,2,1,5,323.01,FD04,D,879.72
 Highway Improvement,District 05,Jefferson,9208402C,2027,2,1,5,543.0,FD52,C,175.83
@@ -154653,8 +154653,8 @@ Highway Improvement,District 07,Montgomery,KY021300,2027,2,1,0,0.0,FE01,0,2479.4
 Highway Improvement,District 07,Montgomery,KY234600,2027,2,1,0,0.0,FE01,0,754.6
 Highway Improvement,District 07,Montgomery,KY011000,2027,2,1,0,0.0,FE01,0,14337.4
 Highway Improvement,District 07,Clark,KY192400,2027,2,1,0,0.0,FE01,0,539.0
-Highway Improvement,District 07,Clark,KY062700,2027,2,1,0,0.0,FE01,0,11103.4
 Highway Improvement,District 07,Clark,KY195800,2027,2,1,0,0.0,FE01,0,4743.2
+Highway Improvement,District 07,Clark,KY062700,2027,2,1,0,0.0,FE01,0,11103.4
 Highway Improvement,District 07,Clark,KY288800,2027,2,1,0,0.0,FE01,0,2156.0
 Highway Improvement,District 07,Clark,KY008900,2027,2,1,0,0.0,FE01,0,8085.0
 Highway Improvement,District 07,Montgomery,KY199100,2027,2,1,0,0.0,FE01,0,754.6
