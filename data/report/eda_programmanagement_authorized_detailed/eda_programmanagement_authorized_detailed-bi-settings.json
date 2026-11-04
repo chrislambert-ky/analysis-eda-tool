@@ -3,7 +3,7 @@
   "datasetLabel": "Authorizations Details (Data Hub)",
   "description": "Approved authorizations over the past six years. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/eda_tool?dataset=program_management",
-  "totalRecords": 34051,
+  "totalRecords": 34098,
   "dimensions": [
     "DISTRICT",
     "COUNTY"
