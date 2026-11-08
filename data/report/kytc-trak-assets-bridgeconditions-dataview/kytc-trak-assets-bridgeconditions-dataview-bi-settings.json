@@ -3,7 +3,7 @@
   "datasetLabel": "Bridge Conditions (TRAK Dashboard)",
   "description": "Matches the Assets Bridges dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/Assets_Bridges",
-  "totalRecords": 14553,
+  "totalRecords": 14552,
   "dimensions": [
     "District",
     "County"
