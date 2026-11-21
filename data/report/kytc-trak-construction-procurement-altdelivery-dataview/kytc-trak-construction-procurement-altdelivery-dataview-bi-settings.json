@@ -3,7 +3,7 @@
   "datasetLabel": "Construction Procurement (Alternative Delivery)",
   "description": "Matches the Awarded Projects Alternative Delivery dashboard Data View. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/Awarded_Projects",
-  "totalRecords": 56,
+  "totalRecords": 57,
   "dimensions": [
     "District",
     "County"
