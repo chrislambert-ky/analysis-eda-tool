@@ -3,7 +3,7 @@
   "datasetLabel": "TOC Roadway Weather Reports",
   "description": "Matches the Road Closures dashboard Data View. VPN required. Data supplied by Kentucky Transportation Cabinet.",
   "dashboardLocation": "https://trak.kytc.ky.gov/Internal_RoadClosures",
-  "totalRecords": 4109,
+  "totalRecords": 4111,
   "dimensions": [
     "District",
     "County"
